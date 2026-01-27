@@ -24,7 +24,7 @@ test.describe('Color Generator', () => {
 		expect(gridCount).toBeGreaterThan(0);
 		
 		// Check if there are color items in the generated palettes
-		const colorItems = page.locator('.color-item');
+		const colorItems = page.locator('.color-swatch');
 		const itemCount = await colorItems.count();
 		expect(itemCount).toBeGreaterThan(0);
 	});
@@ -34,7 +34,7 @@ test.describe('Color Generator', () => {
 		await expect(page.locator('.color-display').first()).toBeVisible({ timeout: 10000 });
 		
 		// Get middle color hex (has visible chroma, not edge white/black)
-		const paletteHexes = page.locator('.color-display').nth(1).locator('.color-hex');
+		const paletteHexes = page.locator('.color-display').nth(1).locator('.hex');
 		const initialHex = await paletteHexes.nth(5).textContent();
 		
 		// Change the base color to a very different color (bright green)
@@ -142,16 +142,16 @@ test.describe('Color Generator', () => {
 
 	test('allows copying colors to clipboard', async ({ page }) => {
 		// Wait for colors to be generated
-		const colorItems = page.locator('.color-item');
+		const colorItems = page.locator('.color-swatch');
 		const itemCount = await colorItems.count();
 		expect(itemCount).toBeGreaterThan(0);
 		
 		// Get the first color item
-		const firstColorItem = page.locator('.color-item').first();
+		const firstColorItem = page.locator('.color-swatch').first();
 		await expect(firstColorItem).toBeVisible();
 		
 		// Get the color value from the item
-		const colorHex = await firstColorItem.locator('.color-hex').textContent();
+		const colorHex = await firstColorItem.locator('.hex').textContent();
 		expect(colorHex).toMatch(/^#[0-9A-Fa-f]{6}$/);
 		
 		// Click to copy (we can't actually test clipboard in Playwright easily, but we can test the click)
@@ -171,7 +171,7 @@ test.describe('Color Generator', () => {
 			await expect(neutralSection).toBeVisible();
 			
 			// Check for neutral color items
-			const neutralItems = neutralSection.locator('.color-item, .neutral-color');
+			const neutralItems = neutralSection.locator('.color-swatch, .neutral-color');
 			const neutralCount = await neutralItems.count();
 			if (neutralCount > 0) {
 				expect(neutralCount).toBeGreaterThan(0);

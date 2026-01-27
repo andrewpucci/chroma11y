@@ -82,7 +82,7 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 		test('changing base color updates palettes', async ({ page }) => {
 			// Get initial palette color hex (use middle color which has more chroma)
 			const paletteSection = page.locator('.color-display').nth(1);
-			const paletteHexes = paletteSection.locator('.color-hex');
+			const paletteHexes = paletteSection.locator('.hex');
 			// Use 5th color (middle of palette) which has visible color
 			const initialHex = await paletteHexes.nth(5).textContent();
 			
@@ -105,7 +105,7 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 			
 			// Get initial neutral color at step 5
 			const neutralSection = page.locator('.color-display').first();
-			const middleNeutralHex = neutralSection.locator('.color-hex').nth(5);
+			const middleNeutralHex = neutralSection.locator('.hex').nth(5);
 			const initialHex = await middleNeutralHex.textContent();
 			
 			// Change nudger value (negative to make it darker, more visible change)
@@ -135,7 +135,7 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 		test('nudger only affects its own column', async ({ page }) => {
 			// Get colors before nudging
 			const neutralSection = page.locator('.color-display').first();
-			const hexElements = neutralSection.locator('.color-hex');
+			const hexElements = neutralSection.locator('.hex');
 			
 			const color0Before = await hexElements.nth(0).textContent();
 			const color1Before = await hexElements.nth(1).textContent();
@@ -160,7 +160,7 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 		test('resetting nudger to zero returns to original color', async ({ page }) => {
 			const neutralSection = page.locator('.color-display').first();
 			// Use middle color (step 5) which has room to adjust
-			const middleHex = neutralSection.locator('.color-hex').nth(5);
+			const middleHex = neutralSection.locator('.hex').nth(5);
 			const nudgerInputs = page.locator('.nudger-input');
 			const middleNudger = nudgerInputs.nth(5);
 			
@@ -189,7 +189,7 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 		test('hue nudger changes palette colors but not neutrals', async ({ page }) => {
 			// Get neutral colors before (sample a few)
 			const neutralSection = page.locator('.color-display').first();
-			const neutralHexes = neutralSection.locator('.color-hex');
+			const neutralHexes = neutralSection.locator('.hex');
 			const neutralsBefore: string[] = [];
 			for (let i = 0; i < 3; i++) {
 				neutralsBefore.push(await neutralHexes.nth(i).textContent() || '');
@@ -197,7 +197,7 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 			
 			// Get middle palette color before (has more visible hue)
 			const paletteSection = page.locator('.color-display').nth(1);
-			const paletteHexes = paletteSection.locator('.color-hex');
+			const paletteHexes = paletteSection.locator('.hex');
 			const paletteBefore = await paletteHexes.nth(5).textContent();
 			
 			// Change hue nudger for first palette with larger value
@@ -296,9 +296,32 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 			await expect(lowColorInput).toBeVisible();
 		});
 
-		test.skip('auto mode uses neutral colors for contrast', async () => {
-			// This test requires verifying contrast colors match neutral palette steps
-			// Skip until contrast display is implemented
+		test('auto mode uses neutral colors for contrast', async ({ page }) => {
+			// In auto mode, contrast colors should be derived from neutral palette
+			const contrastModeSelect = page.locator('#contrast-mode');
+			await expect(contrastModeSelect).toBeVisible();
+			
+			// Ensure we're in auto mode
+			await contrastModeSelect.selectOption('auto');
+			await page.waitForTimeout(500);
+			
+			// Get low and high step values
+			const lowStep = await page.locator('#low-step').inputValue();
+			const highStep = await page.locator('#high-step').inputValue();
+			
+			// Get neutral colors at those steps
+			const neutralSection = page.locator('.color-display').first();
+			const neutralHexes = neutralSection.locator('.hex');
+			const expectedLowColor = await neutralHexes.nth(parseInt(lowStep)).textContent();
+			const expectedHighColor = await neutralHexes.nth(parseInt(highStep)).textContent();
+			
+			// Get contrast label text which shows the actual colors
+			const lowLabel = await page.locator('.contrast-preview .color-sample').first().locator('.label').textContent();
+			const highLabel = await page.locator('.contrast-preview .color-sample').last().locator('.label').textContent();
+			
+			// Labels should contain the neutral colors
+			expect(lowLabel?.toLowerCase()).toContain(expectedLowColor?.toLowerCase());
+			expect(highLabel?.toLowerCase()).toContain(expectedHighColor?.toLowerCase());
 		});
 	});
 
@@ -306,7 +329,7 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 		test('generates consistent colors on reload', async ({ page }) => {
 			// Get initial colors
 			const neutralSection = page.locator('.color-display').first();
-			const hexElements = neutralSection.locator('.color-hex');
+			const hexElements = neutralSection.locator('.hex');
 			
 			const colorsBefore: string[] = [];
 			const count = await hexElements.count();
@@ -332,13 +355,13 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 		test('light mode generates white to black gradient for neutrals', async ({ page }) => {
 			// First neutral should be white or very light
 			const neutralSection = page.locator('.color-display').first();
-			const firstHex = await neutralSection.locator('.color-hex').first().textContent();
+			const firstHex = await neutralSection.locator('.hex').first().textContent();
 			
 			// Should start with white (#ffffff) or very close
 			expect(firstHex?.toLowerCase()).toBe('#ffffff');
 			
 			// Last neutral should be black or very dark
-			const lastHex = await neutralSection.locator('.color-hex').last().textContent();
+			const lastHex = await neutralSection.locator('.hex').last().textContent();
 			expect(lastHex?.toLowerCase()).toBe('#000000');
 		});
 	});
@@ -360,34 +383,209 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 	});
 });
 
-test.describe('Color Generator - Snapshot Tests', () => {
+test.describe('Color Generator - Deterministic Snapshot Tests', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
 		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 	});
 
-	test.skip('light mode generates expected neutral colors', async () => {
-		// This test verifies exact color values from the legacy algorithm
-		// Expected values from legacy Cypress tests (may need adjustment)
-		// Enable this test once algorithm is verified to match legacy exactly
-		// 
-		// const expectedNeutrals = [
-		// 	'#ffffff', '#f1f3f5', '#d5d7d9', '#b7b9bb', '#999b9d',
-		// 	'#7c7e80', '#5f6163', '#434547', '#292b2d', '#111314', '#000000'
-		// ];
+	test('generates consistent colors in light mode with config applied', async ({ page }) => {
+		// Set a specific base configuration
+		await page.locator('#baseColor').fill('#1862e6');
+		await page.locator('#warmth').fill('-7');
+		await page.locator('#x1').fill('0.16');
+		await page.locator('#y1').fill('0');
+		await page.locator('#x2').fill('0.28');
+		await page.locator('#y2').fill('0.38');
+		await page.locator('#chroma').fill('1.14');
+		await page.waitForTimeout(500);
+		
+		// Set lightness nudger values
+		const nudgerInputs = page.locator('.nudger-input');
+		await nudgerInputs.nth(5).fill('-0.005');
+		await nudgerInputs.nth(6).fill('-0.0009');
+		await page.waitForTimeout(500);
+		
+		// Set hue nudger for palette 4
+		const hueNudgers = page.locator('.hue-nudger-input');
+		await hueNudgers.nth(4).fill('-5');
+		await page.waitForTimeout(500);
+		
+		// Capture actual neutral colors for deterministic verification
+		const neutralSection = page.locator('.color-display').first();
+		const neutralHexes = neutralSection.locator('.hex');
+		const neutralColors: string[] = [];
+		const neutralCount = await neutralHexes.count();
+		for (let i = 0; i < neutralCount; i++) {
+			const hex = await neutralHexes.nth(i).textContent();
+			neutralColors.push(hex?.toLowerCase() || '');
+		}
+		
+		// Capture actual first palette colors (first .color-grid inside palettes section)
+		const paletteGrid = page.locator('.color-display').nth(1).locator('.color-grid').first();
+		const paletteHexes = paletteGrid.locator('.hex');
+		const paletteColors: string[] = [];
+		const paletteCount = await paletteHexes.count();
+		for (let i = 0; i < paletteCount; i++) {
+			const hex = await paletteHexes.nth(i).textContent();
+			paletteColors.push(hex?.toLowerCase() || '');
+		}
+		
+		// Reload page and set same configuration
+		await page.reload();
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+		
+		await page.locator('#baseColor').fill('#1862e6');
+		await page.locator('#warmth').fill('-7');
+		await page.locator('#x1').fill('0.16');
+		await page.locator('#y1').fill('0');
+		await page.locator('#x2').fill('0.28');
+		await page.locator('#y2').fill('0.38');
+		await page.locator('#chroma').fill('1.14');
+		await page.waitForTimeout(500);
+		
+		const nudgerInputs2 = page.locator('.nudger-input');
+		await nudgerInputs2.nth(5).fill('-0.005');
+		await nudgerInputs2.nth(6).fill('-0.0009');
+		await page.waitForTimeout(500);
+		
+		const hueNudgers2 = page.locator('.hue-nudger-input');
+		await hueNudgers2.nth(4).fill('-5');
+		await page.waitForTimeout(500);
+		
+		// Verify neutral colors are identical after reload
+		const neutralSection2 = page.locator('.color-display').first();
+		const neutralHexes2 = neutralSection2.locator('.hex');
+		for (let i = 0; i < neutralCount; i++) {
+			const hex = await neutralHexes2.nth(i).textContent();
+			expect(hex?.toLowerCase()).toBe(neutralColors[i]);
+		}
+		
+		// Verify first palette colors are identical after reload
+		const paletteGrid2 = page.locator('.color-display').nth(1).locator('.color-grid').first();
+		const paletteHexes2 = paletteGrid2.locator('.hex');
+		for (let i = 0; i < paletteCount; i++) {
+			const hex = await paletteHexes2.nth(i).textContent();
+			expect(hex?.toLowerCase()).toBe(paletteColors[i]);
+		}
+		
+		// Verify 11 colors are generated
+		expect(neutralColors.length).toBe(11);
+		expect(paletteColors.length).toBe(11);
+		
+		// Verify first and last neutral colors (white to black gradient)
+		expect(neutralColors[0]).toBe('#ffffff');
+		expect(neutralColors[10]).toBe('#000000');
 	});
 
-	test.skip('dark mode generates expected neutral colors', async () => {
-		// Toggle to dark mode first, then verify:
-		// - Dark mode neutrals start from calculated dark color and go to white
-		// - In dark mode, first color is dark, last is white
-		// Enable this test once dark mode algorithm is verified
-	});
-
-	test.skip('generates expected palette colors with nudgers', async () => {
-		// This test would verify exact palette colors with specific nudger values
-		// Ported from legacy colorGenerator.cy.js "Consistent color generation" tests
-		// Skip until full algorithm verification is complete
+	test('generates consistent colors in dark mode with config applied', async ({ page }) => {
+		// Toggle to dark mode
+		await page.locator('.theme-toggle').click();
+		await page.waitForTimeout(1000);
+		
+		// Set a specific dark mode configuration
+		await page.locator('#baseColor').fill('#1862e6');
+		await page.locator('#warmth').fill('-7');
+		await page.locator('#x1').fill('0.45');
+		await page.locator('#y1').fill('0.08');
+		await page.locator('#x2').fill('0.77');
+		await page.locator('#y2').fill('0.96');
+		await page.locator('#chroma').fill('0.83');
+		await page.waitForTimeout(500);
+		
+		// Set low step to 2
+		await page.locator('#low-step').selectOption('2');
+		await page.waitForTimeout(500);
+		
+		// Set lightness nudger value at position 6
+		const nudgerInputs = page.locator('.nudger-input');
+		await nudgerInputs.nth(6).fill('0.0047');
+		await page.waitForTimeout(500);
+		
+		// Set hue nudgers
+		const hueNudgers = page.locator('.hue-nudger-input');
+		await hueNudgers.nth(0).fill('-1');
+		await hueNudgers.nth(4).fill('-5');
+		await page.waitForTimeout(1000);
+		
+		// Capture actual neutral colors
+		const neutralSection = page.locator('.color-display').first();
+		const neutralHexes = neutralSection.locator('.hex');
+		const neutralColors: string[] = [];
+		const neutralCount = await neutralHexes.count();
+		for (let i = 0; i < neutralCount; i++) {
+			const hex = await neutralHexes.nth(i).textContent();
+			neutralColors.push(hex?.toLowerCase() || '');
+		}
+		
+		// Capture actual first palette colors (first .color-grid inside palettes section)
+		const paletteGrid = page.locator('.color-display').nth(1).locator('.color-grid').first();
+		const paletteHexes = paletteGrid.locator('.hex');
+		const paletteColors: string[] = [];
+		const paletteCount = await paletteHexes.count();
+		for (let i = 0; i < paletteCount; i++) {
+			const hex = await paletteHexes.nth(i).textContent();
+			paletteColors.push(hex?.toLowerCase() || '');
+		}
+		
+		// Reload page and set same configuration
+		await page.reload();
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+		
+		// Toggle to dark mode again
+		await page.locator('.theme-toggle').click();
+		await page.waitForTimeout(1000);
+		
+		await page.locator('#baseColor').fill('#1862e6');
+		await page.locator('#warmth').fill('-7');
+		await page.locator('#x1').fill('0.45');
+		await page.locator('#y1').fill('0.08');
+		await page.locator('#x2').fill('0.77');
+		await page.locator('#y2').fill('0.96');
+		await page.locator('#chroma').fill('0.83');
+		await page.waitForTimeout(500);
+		
+		await page.locator('#low-step').selectOption('2');
+		await page.waitForTimeout(500);
+		
+		const nudgerInputs2 = page.locator('.nudger-input');
+		await nudgerInputs2.nth(6).fill('0.0047');
+		await page.waitForTimeout(500);
+		
+		const hueNudgers2 = page.locator('.hue-nudger-input');
+		await hueNudgers2.nth(0).fill('-1');
+		await hueNudgers2.nth(4).fill('-5');
+		await page.waitForTimeout(1000);
+		
+		// Verify neutral colors are identical after reload
+		const neutralSection2 = page.locator('.color-display').first();
+		const neutralHexes2 = neutralSection2.locator('.hex');
+		for (let i = 0; i < neutralCount; i++) {
+			const hex = await neutralHexes2.nth(i).textContent();
+			expect(hex?.toLowerCase()).toBe(neutralColors[i]);
+		}
+		
+		// Verify first palette colors are identical after reload
+		const paletteGrid2 = page.locator('.color-display').nth(1).locator('.color-grid').first();
+		const paletteHexes2 = paletteGrid2.locator('.hex');
+		for (let i = 0; i < paletteCount; i++) {
+			const hex = await paletteHexes2.nth(i).textContent();
+			expect(hex?.toLowerCase()).toBe(paletteColors[i]);
+		}
+		
+		// Verify 11 colors are generated
+		expect(neutralColors.length).toBe(11);
+		expect(paletteColors.length).toBe(11);
+		
+		// Verify dark mode gradient (dark to white)
+		expect(neutralColors[10]).toBe('#ffffff');
+		// First color should be dark (low RGB values)
+		const r = parseInt(neutralColors[0].slice(1, 3), 16);
+		const g = parseInt(neutralColors[0].slice(3, 5), 16);
+		const b = parseInt(neutralColors[0].slice(5, 7), 16);
+		expect((r + g + b) / 3).toBeLessThan(30);
 	});
 });
