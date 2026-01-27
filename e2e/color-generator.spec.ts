@@ -33,21 +33,19 @@ test.describe('Color Generator', () => {
 		// Wait for palettes to be generated
 		await expect(page.locator('.color-display').first()).toBeVisible({ timeout: 10000 });
 		
-		// Get a non-white color swatch (from the generated palettes, not neutrals)
-		const colorSwatches = page.locator('.color-display').nth(1).locator('.color-swatch');
-		const firstSwatch = colorSwatches.first();
-		const initialColor = await firstSwatch.evaluate(el => getComputedStyle(el).backgroundColor);
+		// Get middle color hex (has visible chroma, not edge white/black)
+		const paletteHexes = page.locator('.color-display').nth(1).locator('.color-hex');
+		const initialHex = await paletteHexes.nth(5).textContent();
 		
 		// Change the base color to a very different color (bright green)
 		await page.locator('#baseColor').fill('#00ff00');
 		
 		// Wait for color generation to complete
-		await page.waitForTimeout(2000);
+		await page.waitForTimeout(1000);
 		
-		// Verify the swatch color has changed
-		const newSwatch = page.locator('.color-display').nth(1).locator('.color-swatch').first();
-		const newColor = await newSwatch.evaluate(el => getComputedStyle(el).backgroundColor);
-		expect(newColor).not.toBe(initialColor);
+		// Verify the color hex has changed
+		const newHex = await paletteHexes.nth(5).textContent();
+		expect(newHex).not.toBe(initialHex);
 		
 		// Also verify the color input value changed
 		const inputColor = await page.locator('#baseColor').inputValue();

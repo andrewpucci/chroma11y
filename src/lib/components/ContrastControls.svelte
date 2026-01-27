@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { contrastMode, contrastColors, lowStep, highStep, updateColorState } from '$lib/stores';
+	import { contrastMode, contrastColors, lowStep, highStep, updateColorState, updateContrastStep } from '$lib/stores';
 	import { getContrast } from '$lib/colorUtils';
 
 	// Local variables for reactive updates
@@ -63,21 +63,13 @@
 	function handleLowStepChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		const newStep = parseInt(target.value);
-		
-		updateColorState({
-			lowStep: newStep,
-			contrastMode: 'auto'
-		});
+		updateContrastStep('low', newStep);
 	}
 
 	function handleHighStepChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		const newStep = parseInt(target.value);
-		
-		updateColorState({
-			highStep: newStep,
-			contrastMode: 'auto'
-		});
+		updateContrastStep('high', newStep);
 	}
 
 	// Generate step options (0-10 for 11 color steps)

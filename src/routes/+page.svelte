@@ -14,12 +14,13 @@
 		y2,
 		lightnessNudgers,
 		hueNudgers,
-		contrastColors,
-		updateColorState
+		currentTheme,
+		updateColorState,
+		updateContrastFromNeutrals
 	} from '$lib/stores';
 	
-	import { generateNeutralPalette, generateMultiplePalettes, normalizeChromaValues } from '$lib/colorUtils';
-	import type { PaletteGenParams } from '$lib/types/colorTypes';
+	import { generatePalettesLegacy } from '$lib/colorUtils';
+	import type { ColorGenParams } from '$lib/colorUtils';
 	
 	import ColorControls from '$lib/components/ColorControls.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
@@ -42,7 +43,7 @@
 	let y1Local: number = 0.0;
 	let x2Local: number = 0.28;
 	let y2Local: number = 0.38;
-	let contrastColorsLocal: { low: string, high: string } = { low: '#ffffff', high: '#000000' };
+	let currentThemeLocal: 'light' | 'dark' = 'light';
 	
 	onMount(() => {
 		const unsubscribeNeutrals = neutrals.subscribe(value => neutralsLocal = value);
@@ -58,7 +59,7 @@
 		const unsubscribeY1 = y1.subscribe(value => y1Local = value);
 		const unsubscribeX2 = x2.subscribe(value => x2Local = value);
 		const unsubscribeY2 = y2.subscribe(value => y2Local = value);
-		const unsubscribeContrastColors = contrastColors.subscribe(value => contrastColorsLocal = value);
+		const unsubscribeCurrentTheme = currentTheme.subscribe(value => currentThemeLocal = value);
 
 		return () => {
 			unsubscribeNeutrals();
@@ -74,20 +75,22 @@
 			unsubscribeY1();
 			unsubscribeX2();
 			unsubscribeY2();
-			unsubscribeContrastColors();
+			unsubscribeCurrentTheme();
 		};
 	});
 
-	$: if (baseColorLocal && warmthLocal !== undefined && chromaMultiplierLocal && numColorsLocal && numPalettesLocal && x1Local !== undefined && y1Local !== undefined && x2Local !== undefined && y2Local !== undefined && contrastColorsLocal) {
+	$: if (baseColorLocal && warmthLocal !== undefined && chromaMultiplierLocal && numColorsLocal && numPalettesLocal && x1Local !== undefined && y1Local !== undefined && x2Local !== undefined && y2Local !== undefined && currentThemeLocal) {
 		generateColors();
 	}
 	
-	$: if (lightnessNudgerValues && lightnessNudgerValues.length > 0) {
+	$: if (lightnessNudgerValues || hueNudgerValues) {
 		generateColors();
 	}
 	
 	function generateColors() {
-		const params: PaletteGenParams = {
+		const params: ColorGenParams = {
+			numColors: numColorsLocal,
+			numPalettes: numPalettesLocal,
 			baseColor: baseColorLocal,
 			warmth: warmthLocal,
 			x1: x1Local,
@@ -95,28 +98,23 @@
 			x2: x2Local,
 			y2: y2Local,
 			chromaMultiplier: chromaMultiplierLocal,
-			numColors: numColorsLocal,
-			numPalettes: numPalettesLocal,
-			contrastLow: contrastColorsLocal.low,
-			contrastHigh: contrastColorsLocal.high,
+			currentTheme: currentThemeLocal,
 			lightnessNudgers: lightnessNudgerValues,
 			hueNudgers: hueNudgerValues
 		};
 
 		try {
-			const neutralPalette = generateNeutralPalette(params, lightnessNudgerValues);
-			const generatedPalettes = generateMultiplePalettes(params);
-			
-			// Apply chroma normalization if chroma multiplier > 0
-			if (chromaMultiplierLocal > 0) {
-				normalizeChromaValues(generatedPalettes, chromaMultiplierLocal);
-			}
+			// Use the legacy algorithm which handles everything in one call
+			const result = generatePalettesLegacy(params, true);
 			
 			// Update stores
 			updateColorState({
-				neutrals: neutralPalette,
-				palettes: generatedPalettes
+				neutrals: result.neutrals,
+				palettes: result.palettes
 			});
+			
+			// Update contrast colors from neutrals if in auto mode
+			updateContrastFromNeutrals();
 		} catch (error) {
 			console.error('Error generating colors:', error);
 			updateColorState({
@@ -157,7 +155,7 @@
 	<!-- Right Column: Palettes -->
 	<div class="palettes-column">
 		<NeutralPalette bind:neutrals={neutralsLocal} bind:lightnessNudgerValues={lightnessNudgerValues} />
-		<PaletteGrid palettes={palettesLocal} />
+		<PaletteGrid palettes={palettesLocal} bind:hueNudgerValues={hueNudgerValues} />
 	</div>
 </div>
 

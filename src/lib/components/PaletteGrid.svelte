@@ -1,27 +1,42 @@
 <script lang="ts">
-	import { copyToClipboard } from '$lib/colorUtils';
+	import { getPaletteName } from '$lib/colorUtils';
+	import { updateHueNudger } from '$lib/stores';
+	import ColorSwatch from './ColorSwatch.svelte';
 
 	export let palettes: string[][] = [];
+	export let hueNudgerValues: number[] = [];
+	
+	function handleHueNudgerChange(paletteIndex: number, event: Event) {
+		const target = event.target as HTMLInputElement;
+		const value = parseFloat(target.value) || 0;
+		updateHueNudger(paletteIndex, value);
+	}
 </script>
 
 <section class="color-display">
 	<h2>Generated Color Palettes</h2>
 	{#if palettes.length > 0}
 		{#each palettes as palette, paletteIndex}
-			<h3>Palette {paletteIndex + 1}</h3>
+			<div class="palette-header">
+				<h3>{getPaletteName(palette)}</h3>
+				<div class="hue-nudger">
+					<label for="hue-nudger-{paletteIndex}">Hue:</label>
+					<input 
+						id="hue-nudger-{paletteIndex}"
+						type="number" 
+						min="-180" 
+						max="180" 
+						step="1"
+						value={hueNudgerValues[paletteIndex] || 0}
+						on:input={(e) => handleHueNudgerChange(paletteIndex, e)}
+						class="hue-nudger-input"
+						title="Hue adjustment for palette {paletteIndex + 1} (-180 to 180 degrees)"
+					/>
+				</div>
+			</div>
 			<div class="color-grid compact">
 				{#each palette as color, index}
-					<button 
-						class="color-item compact"
-						on:click={() => copyToClipboard(color)}
-						title="Click to copy {color}"
-					>
-						<div class="color-swatch" style="background-color: {color};"></div>
-						<div class="color-info">
-							<span class="color-hex">{color}</span>
-							<span class="color-index">P{paletteIndex + 1}-{index}</span>
-						</div>
-					</button>
+					<ColorSwatch {color} label={String(index * 10)} showContrast={true} />
 				{/each}
 			</div>
 		{/each}
@@ -48,10 +63,42 @@
 		font-size: 0.7rem;
 	}
 
-	.color-display h3 {
+	.palette-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
 		margin: 0.1rem 0 0.05rem 0;
+	}
+
+	.color-display h3 {
+		margin: 0;
 		color: var(--text-primary);
 		font-size: 0.6rem;
+		text-transform: capitalize;
+	}
+	
+	.hue-nudger {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+	
+	.hue-nudger label {
+		font-size: 0.5rem;
+		color: var(--text-secondary);
+	}
+	
+	.hue-nudger-input {
+		width: 50px;
+		padding: 2px 4px;
+		border: 1px solid var(--border);
+		border-radius: 2px;
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		font-size: 0.5rem;
+		font-family: monospace;
+		text-align: center;
 	}
 
 	.color-grid {
@@ -68,62 +115,6 @@
 		align-items: flex-start;
 		flex: 1;
 		overflow-y: auto;
-	}
-
-	.color-item {
-		padding: 0.5rem;
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		background: var(--bg-primary);
-		cursor: pointer;
-		transition: all 0.2s ease;
-		text-align: center;
-	}
-
-	.color-item:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-	}
-
-	.color-item.compact {
-		padding: 4px;
-		border-radius: 3px;
-		display: flex;
-		flex-direction: column;
-		justify-content: flex-start;
-		align-items: center;
-		min-width: 60px;
-		width: fit-content;
-		height: 60px;
-		overflow: hidden;
-	}
-
-	.color-swatch {
-		flex: 1;
-		width: 100%;
-		height: 16px;
-		border-radius: 2px;
-		border: 1px solid var(--border);
-		margin-bottom: 2px;
-	}
-
-	.color-info {
-		display: flex;
-		flex-direction: column;
-		gap: 1px;
-		font-size: 8px;
-		width: 100%;
-	}
-
-	.color-hex {
-		font-size: 0.875rem;
-		font-family: monospace;
-		color: var(--text-secondary);
-	}
-
-	.color-index {
-		font-size: 7px;
-		color: var(--text-secondary);
 	}
 
 	.no-colors {

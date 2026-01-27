@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { copyToClipboard, updateLightnessNudgerValue } from '$lib/colorUtils';
+	import { updateLightnessNudgerValue } from '$lib/colorUtils';
 	import { updateLightnessNudger } from '$lib/stores';
+	import ColorSwatch from './ColorSwatch.svelte';
 
 	export let neutrals: string[] = [];
 	export let lightnessNudgerValues: number[] = [];
@@ -11,17 +12,7 @@
 	{#if neutrals.length > 0}
 		<div class="color-grid compact">
 			{#each neutrals as color, index}
-				<button 
-					class="color-item compact"
-					on:click={() => copyToClipboard(color)}
-					title="Click to copy {color}"
-				>
-					<div class="color-swatch" style="background-color: {color};"></div>
-					<div class="color-info">
-						<span class="color-hex">{color}</span>
-						<span class="color-index">N{index}</span>
-					</div>
-				</button>
+				<ColorSwatch {color} label="N{index}" showContrast={true} />
 			{/each}
 		</div>
 		
@@ -89,56 +80,6 @@
 		align-items: flex-start;
 		flex: 0 0 auto;
 		overflow-y: auto;
-	}
-
-	.color-item {
-		padding: 4px;
-		border-radius: 3px;
-		display: flex;
-		flex-direction: column;
-		justify-content: flex-start;
-		align-items: center;
-		min-width: 60px;
-		width: fit-content;
-		height: 60px;
-		overflow: hidden;
-		background: var(--bg-primary);
-		cursor: pointer;
-		transition: all 0.2s ease;
-		text-align: center;
-	}
-
-	.color-item:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-	}
-
-	.color-swatch {
-		flex: 1;
-		width: 100%;
-		height: 16px;
-		border-radius: 2px;
-		border: 1px solid var(--border);
-		margin-bottom: 2px;
-	}
-
-	.color-info {
-		display: flex;
-		flex-direction: column;
-		gap: 1px;
-		font-size: 8px;
-		width: 100%;
-	}
-
-	.color-hex {
-		font-size: 0.875rem;
-		font-family: monospace;
-		color: var(--text-secondary);
-	}
-
-	.color-index {
-		font-size: 7px;
-		color: var(--text-secondary);
 	}
 
 	.no-colors {
