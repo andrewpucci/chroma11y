@@ -1,0 +1,443 @@
+# Migration Plan: Legacy Color Generator → Svelte Implementation
+
+**Status**: 🟡 **In Progress** (75% Complete)
+**Last Updated**: 2026-01-19
+**Target**: Full feature parity with legacy implementation
+
+---
+
+## 📊 **Current Progress Overview**
+
+### ✅ **Completed Features (75%)**
+- [x] **Basic Color Generation**
+  - [x] OKLCH color space implementation
+  - [x] Neutral palette generation with warmth control
+  - [x] Multiple palette generation (11 palettes)
+  - [x] Bezier curve controls (x1, y1, x2, y2)
+  - [x] Chroma multiplier
+
+- [x] **UI Components**
+  - [x] Theme switching (light/dark) with presets
+  - [x] Color controls panel
+  - [x] Neutral palette display
+  - [x] Palette grid display
+  - [x] Export buttons (JSON, CSS, SCSS)
+  - [x] Click-to-copy functionality
+  - [x] Contrast controls component
+
+- [x] **State Management**
+  - [x] Svelte stores for reactive state
+  - [x] Theme presets (light/dark)
+  - [x] Lightness nudgers array
+  - [x] Hue nudgers array (store only)
+  - [x] Contrast mode and colors stores
+
+- [x] **Color Algorithms**
+  - [x] Contrast-based neutral generation
+  - [x] Chroma normalization with mathjs
+  - [x] WCAG contrast calculations
+  - [x] Named color detection (CIEDE2000)
+
+- [x] **Export Functionality**
+  - [x] Design tokens JSON export
+  - [x] CSS custom properties export
+  - [x] SCSS variables export
+  - [x] File download functionality
+
+### ❌ **Missing Critical Features (25%)**
+
+---
+
+## 🚨 **Phase 1: Core Algorithm Fixes** 🔴 **CRITICAL**
+
+### 1.1 Fix Neutral Palette Generation
+**Status**: 🟡 **In Progress**
+**Priority**: 🔴 **Critical**
+**Files**: `src/lib/colorUtils.ts`
+
+**Issue**: Current implementation uses hardcoded white/black instead of contrast colors
+
+**Legacy Algorithm** (`legacy-colorgenerator/colorUtils.js:56-97`):
+```javascript
+const initialSamples = samples(colorState.numColors).map(
+  interpolate([
+    colorState.contrast.low,   // Uses state contrast colors
+    easing(colorState.x1, colorState.y1, colorState.x2, colorState.y2), 
+    colorState.contrast.high
+  ])
+);
+```
+
+**Current Issue** (`src/lib/colorUtils.ts:57-63`):
+```typescript
+// ❌ Uses hardcoded colors instead of state contrast
+interpolate([
+  { mode: 'rgb', r: 255, g: 255, b: 255 }, // Hardcoded white
+  easing(params.x1, params.y1, params.x2, params.y2),
+  { mode: 'rgb', r: 0, g: 0, b: 0 }  // Hardcoded black
+])
+```
+
+**Tasks**:
+- [x] Update `generateNeutralPalette()` to accept contrast colors
+- [x] Modify `PaletteGenParams` interface to include contrast
+- [x] Update main page to pass contrast colors from stores
+- [ ] Test neutral generation matches legacy exactly
+
+### 1.2 Add Chroma Normalization
+**Status**: ✅ **Completed**
+**Priority**: 🔴 **Critical**
+**Files**: `src/lib/colorUtils.ts`, `package.json`
+
+**Issue**: Missing mathjs-based chroma normalization across palettes
+
+**Legacy Reference** (`legacy-colorgenerator/colorUtils.js:186-214`):
+- Uses `mathjs` transpose and mean functions
+- Normalizes chroma values across all palettes for consistency
+- Applies chromaMultiplier to normalized values
+
+**Tasks**:
+- [x] Add mathjs dependency to package.json
+- [x] Implement `normalizeChromaValues()` function
+- [x] Call normalization after palette generation
+- [ ] Verify chroma values match legacy output
+
+---
+
+## 🎨 **Phase 2: Contrast System** 🔴 **CRITICAL**
+
+### 2.1 Contrast Functions Implementation
+**Status**: ✅ **Completed**
+**Priority**: 🔴 **Critical**
+**Files**: `src/lib/colorUtils.ts`
+
+**Required Functions** (from `legacy-colorgenerator/colorUtils.js:40-339`):
+- [x] `getContrast(color1, color2)` - WCAG contrast ratio
+- [x] `getPrintableContrast(color1, color2)` - Formatted ratio
+- [ ] `autoContrast()` - Set contrast from neutral steps
+- [ ] `manualContrast()` - Use manual color pickers
+- [ ] `updateContrast(low, high)` - Update contrast colors
+- [ ] `setContrastMode()` - Switch between auto/manual
+
+**Tasks**:
+- [x] Import required culori functions (wcagContrast)
+- [x] Implement all contrast calculation functions
+- [x] Add proper error handling
+- [ ] Test contrast calculations match legacy
+
+### 2.2 Contrast Controls Component
+**Status**: ✅ **Completed**
+**Priority**: 🔴 **Critical**
+**Files**: `src/lib/components/ContrastControls.svelte`
+
+**Component Requirements**:
+```svelte
+- Mode selector (auto/manual radio buttons)
+- Auto mode: Low/High step dropdowns
+- Manual mode: Low/High color pickers
+- Display current contrast colors
+- Update contrast state on changes
+```
+
+**Tasks**:
+- [x] Create ContrastControls.svelte component
+- [x] Implement mode switching UI
+- [x] Add step selector dropdowns
+- [x] Add manual color pickers
+- [x] Wire up to contrast stores
+- [x] Add to main page layout
+- [x] Display current contrast colors
+- [x] Update contrast state on changes
+
+### 2.3 Dynamic Text Color Logic
+**Status**: ❌ **Not Started**
+**Priority**: 🔴 **Critical**
+**Files**: `src/lib/components/NeutralPalette.svelte`, `src/lib/components/PaletteGrid.svelte`
+
+**Algorithm** (`legacy-colorgenerator/domUtils.js:166-184`):
+```javascript
+const minContrastRatio = 4.5;
+const lowContrastRatio = getContrast(backgroundColor, lowTextColor);
+const highContrastRatio = getContrast(backgroundColor, highTextColor);
+
+if (highContrastRatio >= minContrastRatio && highContrastRatio > lowContrastRatio) {
+  textColor = '--high-text-color';
+} else if (lowContrastRatio >= minContrastRatio) {
+  textColor = '--low-text-color';
+} else {
+  textColor = highContrastRatio > lowContrastRatio 
+    ? '--high-text-color' 
+    : '--low-text-color';
+}
+```
+
+**Tasks**:
+- [ ] Implement contrast calculation in swatch components
+- [ ] Add dynamic text color CSS variables
+- [ ] Update swatch text color based on contrast
+- [ ] Test text readability matches legacy
+
+---
+
+## 🏷️ **Phase 3: Named Color Detection** 🟡 **HIGH PRIORITY**
+
+### 3.1 Add Culori Color Functions
+**Status**: ❌ **Not Started**
+**Priority**: 🟡 **High**
+**Files**: `src/lib/colorUtils.ts`
+
+**Required Imports** (`legacy-colorgenerator/colorUtils.js:6-25`):
+```javascript
+import { 
+  colorsNamed,           // ❌ Missing
+  differenceCiede2000,   // ❌ Missing
+  nearest                // ❌ Missing
+} from "culori";
+
+export const nearestNamedColors = nearest(
+  Object.keys(colorsNamed), 
+  differenceCiede2000()
+);
+
+export const getPaletteName = (palette) => {
+  const middleIndex = Math.round(palette.length * 0.6);
+  const middleColor = palette[middleIndex];
+  return nearestNamedColors(middleColor);
+};
+```
+
+**Tasks**:
+- [ ] Import missing culori functions
+- [ ] Implement `nearestNamedColors` function
+- [ ] Implement `getPaletteName` function
+- [ ] Test color naming accuracy
+
+### 3.2 Update Palette Display
+**Status**: ❌ **Not Started**
+**Priority**: 🟡 **High**
+**Files**: `src/lib/components/PaletteGrid.svelte`
+
+**Tasks**:
+- [ ] Show palette names above each palette
+- [ ] Use CIEDE2000 color difference for accurate naming
+- [ ] Display names on neutral palette too
+- [ ] Test naming matches legacy output
+
+---
+
+## 🎛️ **Phase 4: Hue Nudgers UI** 🟡 **HIGH PRIORITY**
+
+### 4.1 Create Hue Nudgers Component
+**Status**: ❌ **Not Started**
+**Priority**: 🟡 **High**
+**Files**: `src/lib/components/HueNudgers.svelte`
+
+**Legacy Reference** (`legacy-colorgenerator/domUtils.js:125-136`):
+```javascript
+const rowContent = `<ul class="generated-${index} generated-hue">
+  <li>
+    <label for="hue-nudger-${index}">Color Name</label>
+    <input id="hue-nudger-${index}" class="hue-nudger-input" 
+           type="number" value=0 step=1 />
+  </li>
+  ${"<li></li>".repeat(colorState.numColors)}
+</ul>`;
+```
+
+**Component Requirements**:
+- Display per-palette hue adjustment inputs
+- Show palette name label
+- Bind to `hueNudgers` store array
+- Update on input with debouncing
+
+**Tasks**:
+- [ ] Create HueNudgers.svelte component
+- [ ] Implement per-palette hue inputs
+- [ ] Add palette name labels
+- [ ] Wire up to hueNudgers store
+- [ ] Add to main page layout
+- [ ] Test hue adjustments work
+
+---
+
+## 🎯 **Phase 5: Enhanced Swatch Display** 🟡 **HIGH PRIORITY**
+
+### 5.1 Update Swatch Component
+**Status**: ❌ **Not Started**
+**Priority**: 🟡 **High**
+**Files**: `src/lib/components/NeutralPalette.svelte`, `src/lib/components/PaletteGrid.svelte`
+
+**Current**: Shows only hex code
+**Required** (`legacy-colorgenerator/domUtils.js:143-185`):
+```html
+<div class="swatch">
+  {hexColor}
+  <br>
+  <span class="low">{contrastRatioLow}</span>  <!-- ❌ Missing -->
+  <br>
+  <span class="high">{contrastRatioHigh}</span> <!-- ❌ Missing -->
+</div>
+```
+
+**Tasks**:
+- [ ] Add contrast ratio display to swatches
+- [ ] Implement low/high contrast spans
+- [ ] Style contrast numbers appropriately
+- [ ] Test contrast ratios match legacy
+
+### 5.2 Swatch Layout Improvements
+**Status**: ❌ **Not Started**
+**Priority**: 🟡 **High**
+
+**Tasks**:
+- [ ] Match legacy swatch sizing and spacing
+- [ ] Ensure proper contrast text visibility
+- [ ] Add hover states matching legacy
+- [ ] Test responsive behavior
+
+---
+
+## ✨ **Phase 6: Additional Features** 🟢 **MEDIUM PRIORITY**
+
+### 6.1 URL State Persistence
+**Status**: ❌ **Not Started**
+**Priority**: 🟢 **Medium**
+
+**Tasks**:
+- [ ] Encode state in URL parameters
+- [ ] Load state from URL on mount
+- [ ] Enable shareable configurations
+- [ ] Test URL sharing functionality
+
+### 6.2 Local Storage
+**Status**: ❌ **Not Started**
+**Priority**: 🟢 **Medium**
+
+**Tasks**:
+- [ ] Save user preferences to localStorage
+- [ ] Restore last configuration on load
+- [ ] Remember theme preference
+- [ ] Test persistence across sessions
+
+### 6.3 Keyboard Shortcuts
+**Status**: ❌ **Not Started**
+**Priority**: 🟢 **Medium**
+
+**Tasks**:
+- [ ] Copy color: `Cmd/Ctrl + C`
+- [ ] Toggle theme: `Cmd/Ctrl + T`
+- [ ] Export: `Cmd/Ctrl + E`
+- [ ] Add keyboard shortcut documentation
+
+---
+
+## 🧪 **Phase 7: Testing & Validation** 🟢 **FINAL**
+
+### 7.1 Visual Comparison
+**Status**: ❌ **Not Started**
+**Priority**: 🟢 **Final**
+
+**Tasks**:
+- [ ] Generate same colors in both apps
+- [ ] Compare contrast ratios
+- [ ] Verify color naming accuracy
+- [ ] Document any differences
+
+### 7.2 Algorithm Validation
+**Status**: ❌ **Not Started**
+**Priority**: 🟢 **Final**
+
+**Tasks**:
+- [ ] Test bezier curve interpolation
+- [ ] Verify chroma normalization
+- [ ] Check warmth application
+- [ ] Validate all calculations
+
+### 7.3 Export Format Validation
+**Status**: ❌ **Not Started**
+**Priority**: 🟢 **Final**
+
+**Tasks**:
+- [ ] Compare JSON output structure
+- [ ] Verify CSS/SCSS variable names
+- [ ] Check design token format
+- [ ] Test file downloads
+
+---
+
+## 📈 **Implementation Timeline**
+
+### **Week 1**: Critical Path (Phase 1-2)
+- Fix neutral palette generation
+- Add chroma normalization
+- Implement contrast system
+- Create contrast controls component
+
+### **Week 2**: High Value Features (Phase 3-5)
+- Add named color detection
+- Create hue nudgers UI
+- Enhance swatch display
+- Dynamic text colors
+
+### **Week 3**: Polish & Testing (Phase 6-7)
+- URL state persistence
+- Local storage
+- Keyboard shortcuts
+- Final validation
+
+---
+
+## 🎯 **Success Criteria**
+
+### **Must-Have for MVP**:
+- [x] Basic color generation
+- [ ] Contrast system working
+- [ ] Dynamic text colors
+- [ ] All algorithms match legacy
+
+### **Complete Feature Parity**:
+- [ ] All legacy features implemented
+- [ ] Visual output matches legacy
+- [ ] Export formats identical
+- [ ] Performance equal or better
+
+---
+
+## 📝 **Notes & Decisions**
+
+### **Technical Decisions Made**:
+- ✅ Using Svelte stores instead of vanilla JS state
+- ✅ Component-based architecture
+- ✅ TypeScript for type safety
+- ✅ Culori for color calculations
+
+### **Dependencies to Add**:
+- `mathjs` - For chroma normalization
+- Additional culori functions for named colors
+
+### **Architecture Notes**:
+- Current component structure is good
+- Store-based state management working well
+- Need to add contrast-specific stores/actions
+
+---
+
+## 🔗 **Related Files**
+
+### **Legacy Reference**:
+- `legacy-colorgenerator/colorUtils.js` - Core color algorithms
+- `legacy-colorgenerator/state.js` - State management
+- `legacy-colorgenerator/domUtils.js` - UI rendering
+- `legacy-colorgenerator/events.js` - Event handling
+
+### **Current Implementation**:
+- `src/lib/colorUtils.ts` - Color utilities (needs updates)
+- `src/lib/stores.ts` - State management (needs contrast)
+- `src/lib/components/` - UI components (needs contrast controls)
+- `src/routes/+page.svelte` - Main page (needs contrast integration)
+
+---
+
+**Last Review**: 2026-01-11
+**Next Review**: After Phase 1 completion
+**Maintainer**: Migration Team

@@ -1,0 +1,26 @@
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+# dependencies
+/node_modules/
+
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
+/cypress/downloads/
+cypress.env.json
+
+# misc
+/.env*
+/.sass-cache
+/.eslintcache
+.npmrc
+.DS_Store
+
+# VS Code
+.vscode/*.code-snippets
+
+# Cypress test artifacts
+/cypress/fixtures/example.json
+
+# Local Cypress cache
+.cypress-cache/

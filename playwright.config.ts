@@ -1,0 +1,35 @@
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+	webServer: { command: 'npm run build && npm run preview', port: 4173 },
+	testDir: 'e2e',
+	timeout: 30000,
+	expect: {
+		timeout: 10000
+	},
+	use: {
+		trace: 'on-first-retry',
+		screenshot: 'only-on-failure',
+		video: 'retain-on-failure',
+	},
+	projects: [
+		{
+			name: 'chromium',
+			use: { ...devices['Desktop Chrome'] },
+		},
+		{
+			name: 'firefox',
+			use: { ...devices['Desktop Firefox'] },
+		},
+		{
+			name: 'webkit',
+			use: { ...devices['Desktop Safari'] },
+		},
+	],
+	reporter: [
+		['html', { outputFolder: 'playwright-report' }],
+		['json', { outputFile: 'playwright-report/results.json' }],
+		['junit', { outputFile: 'playwright-report/results.xml' }],
+		['list']
+	],
+});

@@ -1,0 +1,133 @@
+import { test, expect } from '@playwright/test';
+import { AxeBuilder } from '@axe-core/playwright';
+
+test.describe('Accessibility Tests', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('/');
+		// Wait for the app to be ready - look for the main heading
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+	});
+
+	test('should have no critical accessibility violations', async ({ page }) => {
+		const accessibilityScanResults = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+			.analyze();
+
+		expect(accessibilityScanResults.violations).toEqual([]);
+	});
+
+	test('should have no serious accessibility violations', async ({ page }) => {
+		const accessibilityScanResults = await new AxeBuilder({ page })
+			.withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+			.analyze();
+
+		// Filter for critical and serious violations
+		const criticalOrSerious = accessibilityScanResults.violations.filter(
+			v => v.impact === 'critical' || v.impact === 'serious'
+		);
+		expect(criticalOrSerious).toEqual([]);
+	});
+
+	test('color picker should be accessible', async ({ page }) => {
+		// Test the color picker component
+		const colorPicker = page.locator('#baseColor');
+		await expect(colorPicker).toHaveAttribute('type', 'color');
+		await expect(colorPicker).toBeVisible();
+		
+		// Check accessibility of the color picker specifically
+		const accessibilityScanResults = await new AxeBuilder({ page })
+			.include('#baseColor')
+			.analyze();
+
+		expect(accessibilityScanResults.violations).toEqual([]);
+	});
+
+	test('color generation controls should be accessible', async ({ page }) => {
+		// Test the warmth slider
+		const warmth = page.locator('#warmth');
+		await expect(warmth).toHaveAttribute('type', 'range');
+		await expect(warmth).toBeVisible();
+		
+		// Test the chroma multiplier
+		const chroma = page.locator('#chroma');
+		await expect(chroma).toBeVisible();
+		
+		// Check accessibility of color controls
+		const accessibilityScanResults = await new AxeBuilder({ page })
+			.include('.generator-controls')
+			.analyze();
+
+		expect(accessibilityScanResults.violations).toEqual([]);
+	});
+
+	test('palette controls should be accessible', async ({ page }) => {
+		// Check that the controls exist and are visible
+		const numberInputs = page.locator('input[type="number"]');
+		const inputCount = await numberInputs.count();
+		expect(inputCount).toBeGreaterThan(0);
+		
+		// Check accessibility of palette controls
+		const accessibilityScanResults = await new AxeBuilder({ page })
+			.include('.control-grid')
+			.analyze();
+
+		expect(accessibilityScanResults.violations).toEqual([]);
+	});
+
+	test('generated palettes should be accessible', async ({ page }) => {
+		// Check that palettes exist
+		const paletteGrid = page.locator('.palette-grid');
+		await expect(paletteGrid).toBeVisible();
+		
+		// Check that there are color chips
+		const colorChips = page.locator('.color-chip');
+		const chipCount = await colorChips.count();
+		expect(chipCount).toBeGreaterThan(0);
+		
+		// Check accessibility of generated palettes
+		const accessibilityScanResults = await new AxeBuilder({ page })
+			.include('.palette-grid')
+			.analyze();
+
+		expect(accessibilityScanResults.violations).toEqual([]);
+	});
+
+	test('keyboard navigation should work', async ({ page }) => {
+		// Start from the body and tab through focusable elements
+		await page.keyboard.press('Tab');
+		const firstFocused = page.locator(':focus');
+		await expect(firstFocused).toBeVisible();
+		
+		// Continue tabbing through elements
+		for (let i = 0; i < 5; i++) {
+			await page.keyboard.press('Tab');
+			const focused = page.locator(':focus');
+			await expect(focused).toBeVisible();
+		}
+	});
+
+	test('theme toggle should be accessible via keyboard', async ({ page }) => {
+		// Find the theme toggle button
+		const themeToggle = page.locator('button[aria-label*="theme"], button:has(.theme-icon), .theme-toggle');
+		await expect(themeToggle).toBeVisible();
+		
+		// Focus the theme toggle button
+		await themeToggle.focus();
+		
+		// Press Space to toggle the theme
+		await page.keyboard.press('Space');
+		
+		// Wait for theme transition
+		await page.waitForTimeout(1000);
+		
+		// Verify the theme toggle is still focused and interactive
+		await expect(themeToggle).toBeFocused();
+		
+		// Toggle back
+		await page.keyboard.press('Space');
+		await page.waitForTimeout(1000);
+		
+		// Verify the theme toggle is still focused
+		await expect(themeToggle).toBeFocused();
+	});
+});

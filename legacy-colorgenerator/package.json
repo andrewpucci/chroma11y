@@ -1,0 +1,43 @@
+{
+  "name": "colorgenerator",
+  "version": "1.0.0",
+  "description": "A color palette generator with accessibility features",
+  "main": "main.js",
+  "scripts": {
+    "preinstall": "npx update-browserslist-db@latest",
+    "pretest": "npx update-browserslist-db@latest",
+    "test": "npm run test:color-generator && npm run test:accessibility",
+    "test:color-generator": "cypress run --browser chrome --spec 'cypress/e2e/colorGenerator.cy.js'",
+    "test:accessibility": "cypress run --browser chrome --spec 'cypress/e2e/accessibility.cy.js'",
+    "test:all": "cypress run --browser chrome",
+    "test:open": "cypress open",
+    "test:headed": "cypress run --headed",
+    "test:ci": "npx concurrently -k -n 'SERVER,TEST' -c 'bgBlue.bold,bgGreen.bold' --success first --kill-others \"npx http-server -p 3001 -c-1 -s\" \"npx wait-on http://localhost:3001 && CYPRESS_baseUrl=http://localhost:3001 npm run test:all\"",
+    "start": "npx http-server -p 3001 -c-1"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  },
+  "keywords": [
+    "color",
+    "palette",
+    "generator",
+    "accessibility"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "axe-core": "^4.10.3",
+    "buffer": "^6.0.3",
+    "concurrently": "^9.1.2",
+    "crypto-browserify": "^3.12.1",
+    "cypress": "^14.4.1",
+    "cypress-axe": "^1.6.0",
+    "cypress-plugin-tab": "^1.0.5",
+    "path-browserify": "^1.0.1",
+    "stream-browserify": "^3.0.0",
+    "util": "^0.12.5",
+    "wait-on": "^8.0.3"
+  },
+  "browserslist": "> 0.5%, last 2 major versions, not dead"
+}

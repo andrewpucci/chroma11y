@@ -1,0 +1,86 @@
+/* Base theme variables (light theme by default) */
+:root {
+  --low-text-color: #FFFFFF;
+  --high-text-color: #000000;
+  --bg-color: #ffffff;
+  --text-color: #000000;
+  --border-color: #e0e0e0;
+}
+
+/* Dark theme overrides */
+.dark-theme {
+  --bg-color: #1a1a1a;
+  --text-color: #f0f0f0;
+  --border-color: #333333;
+}
+
+/* Apply theme colors to the page */
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+ul {
+  list-style: none;
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 0.5em;
+}
+
+li {
+  aspect-ratio: 1;
+  display: grid;
+  place-content: center;
+  font-size: 1.25vw;
+}
+
+.generated-hue > li:first-child > input {  
+  width: 4rem;
+  margin-bottom: 0px;
+  margin-top: 0.25em;
+}
+
+input,
+select {
+  display: block;
+  margin: 1em auto;
+  width: 100%;
+}
+
+html,
+body {
+  display: grid;
+  place-content: center;
+  text-align: center;
+  margin: 2rem 5%;
+}
+
+.row {
+  display: grid;
+  gap: 0.5em;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+}
+
+.high {
+  color: var(--high-text-color);
+}
+
+.low {
+  color: var(--low-text-color);
+}
+
+.d-none {
+  display: none;
+}
