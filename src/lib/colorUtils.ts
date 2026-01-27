@@ -254,7 +254,7 @@ function applyLightnessNudgers(
 
 /**
  * Normalizes chroma values across palettes for consistent appearance
- * Matches the legacy implementation - does NOT multiply by chromaMultiplier again
+ * Averages chroma values across all palettes for each color step
  */
 function normalizeChromaValuesInternal(palettes: Oklch[][]): number[] {
   // Extract chroma values from all palettes
@@ -263,7 +263,7 @@ function normalizeChromaValuesInternal(palettes: Oklch[][]): number[] {
   );
   
   // Calculate mean chroma for each column
-  // Note: chroma multiplier is already applied in generatePalette, so don't apply it again
+  // chromaMultiplier already applied in generatePalette, so just average
   const normalizedCs = (transpose(cValues) as number[][]).map(column => {
     const avgChroma = mean(column) || 0;
     return Math.max(0, avgChroma);
@@ -367,7 +367,7 @@ export function normalizeChromaValues(palettes: string[][], _chromaMultiplier: n
     palette.map(color => oklch(color) as Oklch)
   );
   
-  // Normalize
+  // Normalize (chromaMultiplier not used in current implementation)
   normalizeChromaValuesInternal(oklchPalettes);
   
   // Convert back to hex
