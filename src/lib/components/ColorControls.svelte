@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { toggleTheme, currentTheme } from '$lib/stores';
-	import type { ComponentProps } from '$lib/types/colorTypes';
+	import { currentTheme } from '$lib/stores';
 
 	export let baseColor: string = '#1862E6';
 	export let warmth: number = 0;

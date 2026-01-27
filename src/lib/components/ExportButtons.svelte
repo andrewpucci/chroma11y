@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/utils/exportUtils';
+	import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/exportUtils';
 
 	export let neutrals: string[] = [];
 	export let palettes: string[][] = [];
