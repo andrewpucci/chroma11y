@@ -1,14 +1,16 @@
 <script lang="ts">
-	import { updateLightnessNudgerValue } from '$lib/colorUtils';
+	import { updateLightnessNudgerValue, getPaletteName } from '$lib/colorUtils';
 	import { updateLightnessNudger } from '$lib/stores';
 	import ColorSwatch from './ColorSwatch.svelte';
 
 	export let neutrals: string[] = [];
 	export let lightnessNudgerValues: number[] = [];
+
+	$: neutralName = neutrals.length > 0 ? getPaletteName(neutrals) : 'Neutral';
 </script>
 
 <section class="color-display">
-	<h2>Neutral Palette</h2>
+	<h2>Neutral Palette <span class="palette-name">({neutralName})</span></h2>
 	{#if neutrals.length > 0}
 		<div class="color-grid compact">
 			{#each neutrals as color, index}
@@ -58,6 +60,12 @@
 		margin: 0 0 0.1rem 0;
 		color: var(--text-primary);
 		font-size: 0.7rem;
+	}
+
+	.palette-name {
+		font-weight: normal;
+		color: var(--text-secondary);
+		text-transform: capitalize;
 	}
 
 	.color-display h3 {
