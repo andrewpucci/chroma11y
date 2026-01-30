@@ -39,19 +39,19 @@ const THEME_PRESETS = {
   light: {
     numColors: 11,
     numPalettes: 11,
-    baseColor: "#1862E6",
+    baseColor: '#1862E6',
     warmth: -7,
     x1: 0.16,
     y1: 0.0,
     x2: 0.28,
     y2: 0.38,
     chromaMultiplier: 1.14,
-    contrastMode: "auto" as const,
+    contrastMode: 'auto' as const,
     lowStep: 0,
     highStep: 10,
     contrast: {
-      low: "#ffffff",
-      high: "#000000"
+      low: '#ffffff',
+      high: '#000000'
     },
     neutrals: [],
     palettes: [],
@@ -61,19 +61,19 @@ const THEME_PRESETS = {
   dark: {
     numColors: 11,
     numPalettes: 11,
-    baseColor: "#1862E6",
+    baseColor: '#1862E6',
     warmth: -7,
     x1: 0.45,
     y1: 0.08,
     x2: 0.77,
     y2: 0.96,
     chromaMultiplier: 0.83,
-    contrastMode: "auto" as const,
+    contrastMode: 'auto' as const,
     lowStep: 2,
     highStep: 10,
     contrast: {
-      low: "#071531",
-      high: "#ffffff"
+      low: '#071531',
+      high: '#ffffff'
     },
     neutrals: [],
     palettes: [],
@@ -152,7 +152,7 @@ export const hueNudgers = derived(colorStore, ($colorStore) => $colorStore.hueNu
  * Updates the color state with new values
  */
 export const updateColorState = (newState: Partial<ColorState>) => {
-  colorStore.update(currentState => {
+  colorStore.update((currentState) => {
     return { ...currentState, ...newState };
   });
 };
@@ -166,7 +166,7 @@ export const setTheme = (theme: 'light' | 'dark') => {
     return;
   }
 
-  colorStore.update(currentState => {
+  colorStore.update((currentState) => {
     const themePreset = THEME_PRESETS[theme];
     return {
       ...currentState,
@@ -181,10 +181,10 @@ export const setTheme = (theme: 'light' | 'dark') => {
  * Toggles between light and dark themes
  */
 export const toggleTheme = () => {
-  colorStore.update(currentState => {
+  colorStore.update((currentState) => {
     const newTheme = currentState.currentTheme === 'light' ? 'dark' : 'light';
     const themePreset = THEME_PRESETS[newTheme];
-    
+
     return {
       ...currentState,
       ...themePreset,
@@ -198,7 +198,7 @@ export const toggleTheme = () => {
  * Updates individual lightness nudger value
  */
 export const updateLightnessNudger = (index: number, value: number) => {
-  colorStore.update(currentState => {
+  colorStore.update((currentState) => {
     const newNudgers = [...currentState.lightnessNudgers];
     newNudgers[index] = value;
     return { ...currentState, lightnessNudgers: newNudgers };
@@ -209,7 +209,7 @@ export const updateLightnessNudger = (index: number, value: number) => {
  * Updates individual hue nudger value
  */
 export const updateHueNudger = (paletteIndex: number, value: number) => {
-  colorStore.update(currentState => {
+  colorStore.update((currentState) => {
     const newNudgers = [...currentState.hueNudgers];
     newNudgers[paletteIndex] = value;
     return { ...currentState, hueNudgers: newNudgers };
@@ -220,14 +220,16 @@ export const updateHueNudger = (paletteIndex: number, value: number) => {
  * Updates contrast colors from neutrals based on lowStep and highStep (auto mode)
  */
 export const updateContrastFromNeutrals = () => {
-  colorStore.update(currentState => {
+  colorStore.update((currentState) => {
     if (currentState.contrastMode !== 'auto' || currentState.neutrals.length === 0) {
       return currentState;
     }
-    
+
     const lowColor = currentState.neutrals[currentState.lowStep] || currentState.neutrals[0];
-    const highColor = currentState.neutrals[currentState.highStep] || currentState.neutrals[currentState.neutrals.length - 1];
-    
+    const highColor =
+      currentState.neutrals[currentState.highStep] ||
+      currentState.neutrals[currentState.neutrals.length - 1];
+
     return {
       ...currentState,
       contrast: {
@@ -242,20 +244,21 @@ export const updateContrastFromNeutrals = () => {
  * Updates contrast step and immediately updates contrast colors from neutrals
  */
 export const updateContrastStep = (stepType: 'low' | 'high', step: number) => {
-  colorStore.update(currentState => {
+  colorStore.update((currentState) => {
     const newState = {
       ...currentState,
       contrastMode: 'auto' as const,
       [stepType === 'low' ? 'lowStep' : 'highStep']: step
     };
-    
+
     // Immediately derive contrast colors from neutrals
     if (newState.neutrals.length > 0) {
       const lowColor = newState.neutrals[newState.lowStep] || newState.neutrals[0];
-      const highColor = newState.neutrals[newState.highStep] || newState.neutrals[newState.neutrals.length - 1];
+      const highColor =
+        newState.neutrals[newState.highStep] || newState.neutrals[newState.neutrals.length - 1];
       newState.contrast = { low: lowColor, high: highColor };
     }
-    
+
     return newState;
   });
 };
@@ -264,10 +267,11 @@ export const updateContrastStep = (stepType: 'low' | 'high', step: number) => {
  * Resets the color state to default values
  */
 export const resetColorState = (theme?: 'light' | 'dark') => {
-  colorStore.update(currentState => {
-    const targetTheme = theme && THEME_PRESETS[theme] ? theme : currentState.currentTheme as 'light' | 'dark';
+  colorStore.update((currentState) => {
+    const targetTheme =
+      theme && THEME_PRESETS[theme] ? theme : (currentState.currentTheme as 'light' | 'dark');
     const themePreset = THEME_PRESETS[targetTheme];
-    
+
     return {
       ...themePreset,
       currentTheme: targetTheme,

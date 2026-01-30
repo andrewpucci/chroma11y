@@ -36,8 +36,17 @@ interface DesignTokens {
  * Palette names in order
  */
 const PALETTE_NAMES = [
-  'blue', 'purple', 'orchid', 'pink', 'red', 
-  'orange', 'gold', 'lime', 'green', 'turquoise', 'skyblue'
+  'blue',
+  'purple',
+  'orchid',
+  'pink',
+  'red',
+  'orange',
+  'gold',
+  'lime',
+  'green',
+  'turquoise',
+  'skyblue'
 ];
 
 /**
@@ -46,7 +55,7 @@ const PALETTE_NAMES = [
 export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): DesignTokens {
   const exportedData: DesignTokens = {
     color: {
-      name: "color",
+      name: 'color',
       _base: {
         gray: {},
         blue: {},
@@ -59,7 +68,7 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
         lime: {},
         green: {},
         turquoise: {},
-        skyblue: {},
+        skyblue: {}
       }
     }
   };
@@ -69,24 +78,24 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
     const step = index * 10;
     exportedData.color._base.gray[step] = {
       name: `_base/gray/${step}`,
-      description: "",
+      description: '',
       value: color,
-      type: "color"
+      type: 'color'
     };
   });
 
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
     const paletteName = PALETTE_NAMES[paletteIndex] || `palette-${paletteIndex + 1}`;
-    
+
     if (exportedData.color._base[paletteName as keyof typeof exportedData.color._base]) {
       palette.forEach((color, index) => {
         const step = index * 10;
         exportedData.color._base[paletteName as keyof typeof exportedData.color._base][step] = {
           name: `_base/${paletteName}/${step}`,
-          description: "",
+          description: '',
           value: color,
-          type: "color"
+          type: 'color'
         };
       });
     }
@@ -100,25 +109,25 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
  */
 export function exportAsCSS(neutrals: string[], palettes: string[][]): string {
   let css = ':root {\n';
-  
+
   // Export neutral colors
   css += '  /* Neutral Colors */\n';
   neutrals.forEach((color, index) => {
     const step = index * 10;
     css += `  --color-gray-${step}: ${color};\n`;
   });
-  
+
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
     const paletteName = PALETTE_NAMES[paletteIndex] || `palette-${paletteIndex + 1}`;
     css += `\n  /* ${paletteName.charAt(0).toUpperCase() + paletteName.slice(1)} Palette */\n`;
-    
+
     palette.forEach((color, index) => {
       const step = index * 10;
       css += `  --color-${paletteName}-${step}: ${color};\n`;
     });
   });
-  
+
   css += '}\n';
   return css;
 }
@@ -128,25 +137,25 @@ export function exportAsCSS(neutrals: string[], palettes: string[][]): string {
  */
 export function exportAsSCSS(neutrals: string[], palettes: string[][]): string {
   let scss = '// Color Variables\n';
-  
+
   // Export neutral colors
   scss += '// Neutral Colors\n';
   neutrals.forEach((color, index) => {
     const step = index * 10;
     scss += `$color-gray-${step}: ${color};\n`;
   });
-  
+
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
     const paletteName = PALETTE_NAMES[paletteIndex] || `palette-${paletteIndex + 1}`;
     scss += `\n// ${paletteName.charAt(0).toUpperCase() + paletteName.slice(1)} Palette\n`;
-    
+
     palette.forEach((color, index) => {
       const step = index * 10;
       scss += `$color-${paletteName}-${step}: ${color};\n`;
     });
   });
-  
+
   return scss;
 }
 
@@ -156,14 +165,14 @@ export function exportAsSCSS(neutrals: string[], palettes: string[][]): string {
 export function downloadFile(content: string, filename: string, mimeType: string = 'text/plain') {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   URL.revokeObjectURL(url);
 }
 

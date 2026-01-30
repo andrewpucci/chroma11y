@@ -10,12 +10,12 @@
 
 The current Svelte implementation achieves **100% exact color match** with expected values from the documented algorithm.
 
-| Test Suite | Match Rate |
-|------------|------------|
-| Neutral colors | 11/11 (100%) |
-| Palette 0 (Blue) | 11/11 (100%) |
-| Palette 4 (Red) | 11/11 (100%) |
-| **Total** | **33/33 (100%)** |
+| Test Suite       | Match Rate       |
+| ---------------- | ---------------- |
+| Neutral colors   | 11/11 (100%)     |
+| Palette 0 (Blue) | 11/11 (100%)     |
+| Palette 4 (Red)  | 11/11 (100%)     |
+| **Total**        | **33/33 (100%)** |
 
 ### Resolution
 
@@ -52,51 +52,51 @@ The original Cypress test expected values were from an undocumented algorithm va
 
 All 11 neutral colors match exactly:
 
-| Step | Color | Status |
-|------|-------|--------|
-| 0 | #ffffff | ✓ |
-| 1 | #f1f3f5 | ✓ |
-| 2 | #d5d7d9 | ✓ |
-| 3 | #b6b8b9 | ✓ |
-| 4 | #97999b | ✓ |
-| 5 | #797b7c | ✓ |
-| 6 | #5e6062 | ✓ |
-| 7 | #454748 | ✓ |
-| 8 | #2c2e30 | ✓ |
-| 9 | #151718 | ✓ |
-| 10 | #000000 | ✓ |
+| Step | Color   | Status |
+| ---- | ------- | ------ |
+| 0    | #ffffff | ✓      |
+| 1    | #f1f3f5 | ✓      |
+| 2    | #d5d7d9 | ✓      |
+| 3    | #b6b8b9 | ✓      |
+| 4    | #97999b | ✓      |
+| 5    | #797b7c | ✓      |
+| 6    | #5e6062 | ✓      |
+| 7    | #454748 | ✓      |
+| 8    | #2c2e30 | ✓      |
+| 9    | #151718 | ✓      |
+| 10   | #000000 | ✓      |
 
 ### ⚠️ Palette 0 - Blue (63.6% Match)
 
-| Step | Current | Legacy | Status | Delta |
-|------|---------|--------|--------|-------|
-| 0 | #ffffff | #ffffff | ✓ | - |
-| 1 | #ecf3ff | #e5f4ff | ✗ | Lighter/more saturated |
-| 2 | #c2d8ff | #acd8ff | ✗ | Lighter/more saturated |
-| 3 | #90b8ff | #7eb6ff | ✗ | Lighter/more saturated |
-| 4 | #5b96ff | #5995ff | ✗ | Slightly lighter |
-| 5 | #3a75e1 | #3a75e1 | ✓ | - |
-| 6 | #295bb7 | #295bb7 | ✓ | - |
-| 7 | #1b428a | #1b428a | ✓ | - |
-| 8 | #0f2b5d | #0f2b5d | ✓ | - |
-| 9 | #051433 | #051433 | ✓ | - |
-| 10 | #000000 | #000000 | ✓ | - |
+| Step | Current | Legacy  | Status | Delta                  |
+| ---- | ------- | ------- | ------ | ---------------------- |
+| 0    | #ffffff | #ffffff | ✓      | -                      |
+| 1    | #ecf3ff | #e5f4ff | ✗      | Lighter/more saturated |
+| 2    | #c2d8ff | #acd8ff | ✗      | Lighter/more saturated |
+| 3    | #90b8ff | #7eb6ff | ✗      | Lighter/more saturated |
+| 4    | #5b96ff | #5995ff | ✗      | Slightly lighter       |
+| 5    | #3a75e1 | #3a75e1 | ✓      | -                      |
+| 6    | #295bb7 | #295bb7 | ✓      | -                      |
+| 7    | #1b428a | #1b428a | ✓      | -                      |
+| 8    | #0f2b5d | #0f2b5d | ✓      | -                      |
+| 9    | #051433 | #051433 | ✓      | -                      |
+| 10   | #000000 | #000000 | ✓      | -                      |
 
 ### ⚠️ Palette 4 - Red/Pink (72.7% Match)
 
-| Step | Current | Legacy | Status | Delta |
-|------|---------|--------|--------|-------|
-| 0 | #ffffff | #ffffff | ✓ | - |
-| 1 | #ffefec | #ffeae5 | ✗ | Lighter/less saturated |
-| 2 | #ffc8c0 | #ffb9ad | ✗ | Lighter/less saturated |
-| 3 | #ff968b | #ff8d80 | ✗ | Lighter/less saturated |
-| 4 | #f1665b | #f1665b | ✓ | - |
-| 5 | #ce433c | #ce433c | ✓ | - |
-| 6 | #a6302b | #a6302b | ✓ | - |
-| 7 | #7d201d | #7d201d | ✓ | - |
-| 8 | #541310 | #541310 | ✓ | - |
-| 9 | #2e0605 | #2e0605 | ✓ | - |
-| 10 | #000000 | #000000 | ✓ | - |
+| Step | Current | Legacy  | Status | Delta                  |
+| ---- | ------- | ------- | ------ | ---------------------- |
+| 0    | #ffffff | #ffffff | ✓      | -                      |
+| 1    | #ffefec | #ffeae5 | ✗      | Lighter/less saturated |
+| 2    | #ffc8c0 | #ffb9ad | ✗      | Lighter/less saturated |
+| 3    | #ff968b | #ff8d80 | ✗      | Lighter/less saturated |
+| 4    | #f1665b | #f1665b | ✓      | -                      |
+| 5    | #ce433c | #ce433c | ✓      | -                      |
+| 6    | #a6302b | #a6302b | ✓      | -                      |
+| 7    | #7d201d | #7d201d | ✓      | -                      |
+| 8    | #541310 | #541310 | ✓      | -                      |
+| 9    | #2e0605 | #2e0605 | ✓      | -                      |
+| 10   | #000000 | #000000 | ✓      | -                      |
 
 ---
 
@@ -134,7 +134,7 @@ Compare the `normalizeChromaValuesInternal` function with the legacy implementat
 
 ```typescript
 // Current implementation
-const normalizedCs = (transpose(cValues) as number[][]).map(column => {
+const normalizedCs = (transpose(cValues) as number[][]).map((column) => {
   const avgChroma = mean(column) || 0;
   return Math.max(0, avgChroma);
 });
@@ -165,6 +165,7 @@ const targetChroma = (baseColor.c || 0) * chromaMultiplier;
 ### 4. Consider Acceptable Tolerance (Low Priority)
 
 The differences are **visually minor** (1-2 hex values per channel). Consider:
+
 - Whether 78.8% match is acceptable for production
 - If visual differences are noticeable to users
 - Whether to document as "known minor differences"
@@ -201,10 +202,10 @@ The algorithm validation reveals that the **core color generation works correctl
 
 **Even replicating the legacy algorithm exactly does not produce the Cypress expected values.**
 
-| Approach | Match Rate |
-|----------|------------|
-| Current implementation | 78.8% (6/11 palette colors) |
-| Legacy algorithm trace | 18.2% (2/11 palette colors) |
+| Approach                | Match Rate                  |
+| ----------------------- | --------------------------- |
+| Current implementation  | 78.8% (6/11 palette colors) |
+| Legacy algorithm trace  | 18.2% (2/11 palette colors) |
 | With chromaMultiplier×2 | 18.2% (2/11 palette colors) |
 
 This proves the Cypress expected values were generated with a **different algorithm version** than what's currently in the legacy codebase.
@@ -214,17 +215,18 @@ This proves the Cypress expected values were generated with a **different algori
 The Cypress expected values have:
 
 | Step | Cypress L | Current L | Cypress H | Current H |
-|------|-----------|-----------|-----------|-----------|
-| 1 | 0.9593 | 0.9632 | 239.42° | 261.24° |
-| 2 | 0.8644 | 0.8788 | 245.51° | 261.24° |
-| 3 | 0.7668 | 0.7810 | 255.45° | 261.24° |
-| 4 | 0.6798 | 0.6823 | 260.91° | 261.24° |
+| ---- | --------- | --------- | --------- | --------- |
+| 1    | 0.9593    | 0.9632    | 239.42°   | 261.24°   |
+| 2    | 0.8644    | 0.8788    | 245.51°   | 261.24°   |
+| 3    | 0.7668    | 0.7810    | 255.45°   | 261.24°   |
+| 4    | 0.6798    | 0.6823    | 260.91°   | 261.24°   |
 
 **The Cypress values have varying hues per step** (239° → 261°), while the algorithm uses a **fixed base color hue** (261.24°). This is a fundamental algorithmic difference that cannot be explained by rounding or precision.
 
 ### Root Cause Hypothesis
 
 The Cypress expected values were likely generated when:
+
 1. A different interpolation method was used (possibly RGB-space vs OKLCH-space)
 2. The hue was derived differently (possibly from the interpolated neutral color)
 3. A different version of culori was used with different gamut clamping behavior
@@ -238,12 +240,14 @@ The Cypress expected values were likely generated when:
 **The current implementation is algorithmically correct** per the documented legacy code. The differences exist because the Cypress test values are outdated/incorrect.
 
 **Pros:**
+
 - 100% neutral color match validates core algorithm
 - Algorithm follows documented legacy behavior
 - Produces visually correct, accessible color palettes
 - All 29 E2E tests pass for deterministic behavior
 
 **Cons:**
+
 - Does not match the specific hardcoded Cypress values
 
 ### Option 2: Update Cypress Expected Values
@@ -251,10 +255,12 @@ The Cypress expected values were likely generated when:
 Update the Cypress test values to match the current algorithm output.
 
 **Pros:**
+
 - Tests would pass with 100% match
 - Values would be consistent with algorithm
 
 **Cons:**
+
 - Loses historical reference to "original" output
 - Requires understanding why original values were different
 
@@ -263,9 +269,11 @@ Update the Cypress test values to match the current algorithm output.
 Attempt to discover what algorithm produced the original Cypress values.
 
 **Pros:**
+
 - Would achieve exact historical parity
 
 **Cons:**
+
 - High effort, potentially impossible
 - Original algorithm may have been buggy
 - No documentation of what it was

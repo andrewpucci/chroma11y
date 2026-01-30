@@ -5,18 +5,45 @@
 
 // Legacy expected values from cypress test
 const legacyExpectedNeutrals = [
-  '#ffffff', '#f1f3f5', '#d5d7d9', '#b6b8b9', '#97999b',
-  '#797b7c', '#5e6062', '#454748', '#2c2e30', '#151718', '#000000'
+  '#ffffff',
+  '#f1f3f5',
+  '#d5d7d9',
+  '#b6b8b9',
+  '#97999b',
+  '#797b7c',
+  '#5e6062',
+  '#454748',
+  '#2c2e30',
+  '#151718',
+  '#000000'
 ];
 
 const legacyExpectedPalette0 = [
-  '#ffffff', '#e5f4ff', '#acd8ff', '#7eb6ff', '#5995ff',
-  '#3a75e1', '#295bb7', '#1b428a', '#0f2b5d', '#051433', '#000000'
+  '#ffffff',
+  '#e5f4ff',
+  '#acd8ff',
+  '#7eb6ff',
+  '#5995ff',
+  '#3a75e1',
+  '#295bb7',
+  '#1b428a',
+  '#0f2b5d',
+  '#051433',
+  '#000000'
 ];
 
 const legacyExpectedPalette4 = [
-  '#ffffff', '#ffeae5', '#ffb9ad', '#ff8d80', '#f1665b',
-  '#ce433c', '#a6302b', '#7d201d', '#541310', '#2e0605', '#000000'
+  '#ffffff',
+  '#ffeae5',
+  '#ffb9ad',
+  '#ff8d80',
+  '#f1665b',
+  '#ce433c',
+  '#a6302b',
+  '#7d201d',
+  '#541310',
+  '#2e0605',
+  '#000000'
 ];
 
 // Configuration used in legacy test

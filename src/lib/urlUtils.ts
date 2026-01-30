@@ -35,31 +35,31 @@ export function encodeStateToUrl(state: UrlColorState): string {
   if (state.chromaMultiplier !== undefined) params.set('cm', state.chromaMultiplier.toString());
   if (state.numColors !== undefined) params.set('nc', state.numColors.toString());
   if (state.numPalettes !== undefined) params.set('np', state.numPalettes.toString());
-  
+
   // Bezier curve parameters
   if (state.x1 !== undefined) params.set('x1', state.x1.toString());
   if (state.y1 !== undefined) params.set('y1', state.y1.toString());
   if (state.x2 !== undefined) params.set('x2', state.x2.toString());
   if (state.y2 !== undefined) params.set('y2', state.y2.toString());
-  
+
   // Theme and contrast
   if (state.theme) params.set('t', state.theme);
   if (state.contrastMode) params.set('m', state.contrastMode);
   if (state.lowStep !== undefined) params.set('ls', state.lowStep.toString());
   if (state.highStep !== undefined) params.set('hs', state.highStep.toString());
-  
+
   // Encode nudgers as comma-separated values (only non-zero values with index)
-  if (state.lightnessNudgers?.some(v => v !== 0)) {
+  if (state.lightnessNudgers?.some((v) => v !== 0)) {
     const nudgerStr = state.lightnessNudgers
-      .map((v, i) => v !== 0 ? `${i}:${v}` : null)
+      .map((v, i) => (v !== 0 ? `${i}:${v}` : null))
       .filter(Boolean)
       .join(',');
     if (nudgerStr) params.set('ln', nudgerStr);
   }
-  
-  if (state.hueNudgers?.some(v => v !== 0)) {
+
+  if (state.hueNudgers?.some((v) => v !== 0)) {
     const nudgerStr = state.hueNudgers
-      .map((v, i) => v !== 0 ? `${i}:${v}` : null)
+      .map((v, i) => (v !== 0 ? `${i}:${v}` : null))
       .filter(Boolean)
       .join(',');
     if (nudgerStr) params.set('hn', nudgerStr);
@@ -134,7 +134,7 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
  */
 function parseNudgers(nudgerStr: string, length: number): number[] {
   const result = new Array(length).fill(0);
-  nudgerStr.split(',').forEach(pair => {
+  nudgerStr.split(',').forEach((pair) => {
     const [indexStr, valueStr] = pair.split(':');
     const index = parseInt(indexStr);
     const value = parseFloat(valueStr);
@@ -151,7 +151,7 @@ function parseNudgers(nudgerStr: string, length: number): number[] {
 export function updateBrowserUrl(state: UrlColorState): void {
   const queryString = encodeStateToUrl(state);
   const newUrl = queryString ? `?${queryString}` : window.location.pathname;
-  
+
   // Use replaceState to avoid polluting browser history
   window.history.replaceState({}, '', newUrl);
 }

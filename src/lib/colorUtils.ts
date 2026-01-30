@@ -3,7 +3,18 @@
  * Ported from legacy colorUtils.js to match exact algorithm
  */
 
-import { oklch, formatHex, clampChroma, samples, interpolate, wcagContrast, colorsNamed, differenceCiede2000, nearest, parse } from 'culori';
+import {
+  oklch,
+  formatHex,
+  clampChroma,
+  samples,
+  interpolate,
+  wcagContrast,
+  colorsNamed,
+  differenceCiede2000,
+  nearest,
+  parse
+} from 'culori';
 import easing from 'bezier-easing';
 import { transpose, mean } from 'mathjs';
 import type { Oklch } from 'culori';
@@ -11,19 +22,19 @@ import type { Oklch } from 'culori';
 // ===== UTILITY FUNCTIONS =====
 
 export function copyToClipboard(text: string): void {
-	navigator.clipboard.writeText(text).then(() => {
-		console.log(`Copied ${text} to clipboard`);
-	});
+  navigator.clipboard.writeText(text).then(() => {
+    console.log(`Copied ${text} to clipboard`);
+  });
 }
 
 export function updateLightnessNudgerValue(
-	index: number, 
-	value: number, 
-	values: number[], 
-	updateFn: (index: number, value: number) => void
+  index: number,
+  value: number,
+  values: number[],
+  updateFn: (index: number, value: number) => void
 ): void {
-	values[index] = value;
-	updateFn(index, value);
+  values[index] = value;
+  updateFn(index, value);
 }
 
 // ===== INTERFACES =====
@@ -68,34 +79,34 @@ export const nearestNamedColors = nearest(Object.keys(colorsNamed), differenceCi
  * @param targetColor - The color to contrast against (defaults to white)
  * @returns Hex color string for the dark mode starting color
  */
-function calculateDarkModeStartColor(targetColor: string = "#ffffff"): string {
+function calculateDarkModeStartColor(targetColor: string = '#ffffff'): string {
   const targetContrast = 18;
-  
+
   // Binary search to find a color that gives ~18:1 contrast with white
   let minL = 0;
   let maxL = 0.5; // Expand search range
   let bestL = 0;
   let bestContrast = 21;
-  
+
   // Create a test color to find the right lightness
   for (let i = 0; i < 30; i++) {
     const testL = (minL + maxL) / 2;
     const testColor = { mode: 'oklch' as const, l: testL, c: 0, h: 0 };
     const contrast = wcagContrast(testColor, targetColor);
-    
+
     // Track the best match
     if (Math.abs(contrast - targetContrast) < Math.abs(bestContrast - targetContrast)) {
       bestL = testL;
       bestContrast = contrast;
     }
-    
+
     if (contrast > targetContrast) {
       minL = testL; // Too much contrast, need lighter color (higher L)
     } else {
       maxL = testL; // Too little contrast, need darker color (lower L)
     }
   }
-  
+
   // Convert to hex for interpolation
   return formatHex({ mode: 'oklch', l: bestL, c: 0, h: 0 }) || '#000000';
 }
@@ -134,27 +145,20 @@ export function getPrintableContrast(color1: string, color2: string): number {
  */
 export function generateBaseNeutrals(params: ColorGenParams): Oklch[] {
   // Determine the starting and ending colors for neutral generation
-  const startColor = params.currentTheme === 'dark' 
-    ? calculateDarkModeStartColor("#ffffff") 
-    : "#ffffff"; // Light mode starts with white (step 0 = lightest)
-  
-  const endColor = params.currentTheme === 'dark'
-    ? "#ffffff"
-    : "#000000"; // Light mode ends with black (step 10 = darkest)
-  
+  const startColor =
+    params.currentTheme === 'dark' ? calculateDarkModeStartColor('#ffffff') : '#ffffff'; // Light mode starts with white (step 0 = lightest)
+
+  const endColor = params.currentTheme === 'dark' ? '#ffffff' : '#000000'; // Light mode ends with black (step 10 = darkest)
+
   // Create initial color samples using bezier easing
   const initialSamples = samples(params.numColors).map(
-    interpolate([
-      startColor,
-      easing(params.x1, params.y1, params.x2, params.y2), 
-      endColor
-    ])
+    interpolate([startColor, easing(params.x1, params.y1, params.x2, params.y2), endColor])
   );
 
   // Process each sample to create neutral colors
   const baseNeutrals: Oklch[] = initialSamples.map((color) => {
     const result = { ...color };
-    
+
     // Apply warmth adjustment to ALL colors (legacy behavior)
     result.r = (result.r || 0) + params.warmth * 0.001;
     result.g = (result.g || 0) - params.warmth * 0.0001;
@@ -162,11 +166,11 @@ export function generateBaseNeutrals(params: ColorGenParams): Oklch[] {
 
     // Convert to OKLCH
     const oklchColor = oklch(result);
-    
+
     // Ensure the color is within the OKLCH gamut
     return clampChroma(oklchColor, 'oklch') as Oklch;
   });
-  
+
   return baseNeutrals;
 }
 
@@ -174,9 +178,12 @@ export function generateBaseNeutrals(params: ColorGenParams): Oklch[] {
  * Generates a neutral color palette with lightness nudgers applied
  * Returns hex strings for display
  */
-export function generateNeutralPalette(params: ColorGenParams, lightnessNudgers?: number[]): string[] {
+export function generateNeutralPalette(
+  params: ColorGenParams,
+  lightnessNudgers?: number[]
+): string[] {
   const baseNeutrals = generateBaseNeutrals(params);
-  
+
   // Apply lightness nudgers to create display neutrals
   const neutralsWithNudgers = baseNeutrals.map((color, index) => {
     const lightnessNudger = lightnessNudgers?.[index] || 0;
@@ -185,9 +192,9 @@ export function generateNeutralPalette(params: ColorGenParams, lightnessNudgers?
       l: color.l + lightnessNudger
     };
   });
-  
+
   // Convert to hex strings
-  return neutralsWithNudgers.map(color => {
+  return neutralsWithNudgers.map((color) => {
     try {
       const clampedColor = clampChroma(color, 'oklch');
       return formatHex(clampedColor) || '#000000';
@@ -203,19 +210,23 @@ export function generateNeutralPalette(params: ColorGenParams, lightnessNudgers?
  * Generates a single color palette based on base neutrals and a hue-shifted base color
  * This matches the legacy generatePalette function exactly
  */
-function generatePalette(baseNeutrals: Oklch[], baseColor: Oklch, chromaMultiplier: number): Oklch[] {
+function generatePalette(
+  baseNeutrals: Oklch[],
+  baseColor: Oklch,
+  chromaMultiplier: number
+): Oklch[] {
   // Use base color's chroma multiplied by the chroma multiplier
   const targetChroma = (baseColor.c || 0) * chromaMultiplier;
-  
+
   return baseNeutrals.map((neutralColor) => {
     return clampChroma(
-      { 
-        mode: "oklch" as const, 
-        l: neutralColor.l, 
-        c: targetChroma, 
-        h: baseColor.h 
-      }, 
-      "oklch"
+      {
+        mode: 'oklch' as const,
+        l: neutralColor.l,
+        c: targetChroma,
+        h: baseColor.h
+      },
+      'oklch'
     ) as Oklch;
   });
 }
@@ -225,8 +236,8 @@ function generatePalette(baseNeutrals: Oklch[], baseColor: Oklch, chromaMultipli
  * This is the FINAL step in the legacy algorithm
  */
 function applyLightnessNudgers(
-  neutrals: Oklch[], 
-  palettes: Oklch[][], 
+  neutrals: Oklch[],
+  palettes: Oklch[][],
   lightnessNudgers: number[]
 ): { neutrals: Oklch[]; palettes: Oklch[][] } {
   // Apply to neutrals
@@ -237,9 +248,9 @@ function applyLightnessNudgers(
       l: color.l + lightnessNudger
     };
   });
-  
+
   // Apply to palettes
-  const updatedPalettes = palettes.map(palette => {
+  const updatedPalettes = palettes.map((palette) => {
     return palette.map((color, index) => {
       const lightnessNudger = lightnessNudgers[index] || 0;
       return {
@@ -248,7 +259,7 @@ function applyLightnessNudgers(
       };
     });
   });
-  
+
   return { neutrals: updatedNeutrals, palettes: updatedPalettes };
 }
 
@@ -258,26 +269,24 @@ function applyLightnessNudgers(
  */
 function normalizeChromaValuesInternal(palettes: Oklch[][]): number[] {
   // Extract chroma values from all palettes
-  const cValues = palettes.map(palette => 
-    palette.map(color => color.c || 0)
-  );
-  
+  const cValues = palettes.map((palette) => palette.map((color) => color.c || 0));
+
   // Calculate mean chroma for each column
   // chromaMultiplier already applied in generatePalette, so just average
-  const normalizedCs = (transpose(cValues) as number[][]).map(column => {
+  const normalizedCs = (transpose(cValues) as number[][]).map((column) => {
     const avgChroma = mean(column) || 0;
     return Math.max(0, avgChroma);
   });
-  
+
   // Apply normalized chroma values back to palettes
-  palettes.forEach(palette => {
+  palettes.forEach((palette) => {
     palette.forEach((color, j) => {
       if (normalizedCs[j] !== undefined) {
         color.c = normalizedCs[j];
       }
     });
   });
-  
+
   return normalizedCs;
 }
 
@@ -291,37 +300,40 @@ export function generatePalettesLegacy(
 ): { neutrals: string[]; palettes: string[][]; normalizedChromaValues: number[] } {
   // Generate base neutrals WITHOUT nudgers
   const baseNeutrals = generateBaseNeutrals(params);
-  
+
   // Parse and validate base color
   const baseColor = oklch(parse(params.baseColor));
   if (!baseColor || isNaN(baseColor.h || 0) || isNaN(baseColor.c || 0)) {
     throw new Error('Invalid base color: could not parse or invalid hue/chroma values');
   }
-  
+
   // Generate palettes with hue variations using BASE neutrals (without nudgers)
   const palettes: Oklch[][] = Array.from({ length: params.numPalettes }, (_, i) => {
     const hueNudger = params.hueNudgers?.[i] || 0;
     const hueOffset = (360 / params.numPalettes) * i + hueNudger;
-    const tempColor: Oklch = { 
-      ...baseColor, 
+    const tempColor: Oklch = {
+      ...baseColor,
       h: ((baseColor.h || 0) + hueOffset) % 360
     };
     return generatePalette(baseNeutrals, tempColor, params.chromaMultiplier);
   });
-  
+
   // Normalize chroma values if needed
   let normalizedChromaValues: number[] = [];
   if (shouldNormalizeChroma && params.chromaMultiplier > 0) {
     normalizedChromaValues = normalizeChromaValuesInternal(palettes);
   }
-  
+
   // Apply lightness nudgers as the FINAL step (after chroma normalization)
   const lightnessNudgers = params.lightnessNudgers || [];
-  const { neutrals: neutralsWithNudgers, palettes: palettesWithNudgers } = 
-    applyLightnessNudgers(baseNeutrals, palettes, lightnessNudgers);
-  
+  const { neutrals: neutralsWithNudgers, palettes: palettesWithNudgers } = applyLightnessNudgers(
+    baseNeutrals,
+    palettes,
+    lightnessNudgers
+  );
+
   // Convert to hex strings
-  const neutralsHex = neutralsWithNudgers.map(color => {
+  const neutralsHex = neutralsWithNudgers.map((color) => {
     try {
       const clampedColor = clampChroma(color, 'oklch');
       return formatHex(clampedColor) || '#000000';
@@ -329,9 +341,9 @@ export function generatePalettesLegacy(
       return '#000000';
     }
   });
-  
-  const palettesHex = palettesWithNudgers.map(palette => 
-    palette.map(color => {
+
+  const palettesHex = palettesWithNudgers.map((palette) =>
+    palette.map((color) => {
       try {
         const clampedColor = clampChroma(color, 'oklch');
         return formatHex(clampedColor) || '#000000';
@@ -340,11 +352,11 @@ export function generatePalettesLegacy(
       }
     })
   );
-  
-  return { 
-    neutrals: neutralsHex, 
-    palettes: palettesHex, 
-    normalizedChromaValues 
+
+  return {
+    neutrals: neutralsHex,
+    palettes: palettesHex,
+    normalizedChromaValues
   };
 }
 
@@ -363,13 +375,13 @@ export function generateMultiplePalettes(params: PaletteGenParams): string[][] {
  */
 export function normalizeChromaValues(palettes: string[][], _chromaMultiplier: number): void {
   // Convert hex to OKLCH
-  const oklchPalettes: Oklch[][] = palettes.map(palette => 
-    palette.map(color => oklch(color) as Oklch)
+  const oklchPalettes: Oklch[][] = palettes.map((palette) =>
+    palette.map((color) => oklch(color) as Oklch)
   );
-  
+
   // Normalize (chromaMultiplier not used in current implementation)
   normalizeChromaValuesInternal(oklchPalettes);
-  
+
   // Convert back to hex
   palettes.forEach((palette, paletteIndex) => {
     palette.forEach((_, colorIndex) => {
@@ -392,11 +404,13 @@ export function normalizeChromaValues(palettes: string[][], _chromaMultiplier: n
  */
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      }
+    : null;
 }
 
 /**
@@ -405,12 +419,12 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
 export function getLuminance(hex: string): number {
   const rgb = hexToRgb(hex);
   if (!rgb) return 0;
-  
-  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map(val => {
+
+  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {
     val = val / 255;
     return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
   });
-  
+
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -429,7 +443,7 @@ export function getContrastColor(backgroundColor: string): string {
  */
 export function getPaletteName(palette: string[]): string {
   if (!palette?.length) return 'Unnamed';
-  
+
   try {
     const middleIndex = Math.round(palette.length * 0.6);
     const middleColor = palette[Math.min(middleIndex, palette.length - 1)];
@@ -447,10 +461,13 @@ export function getPaletteName(palette: string[]): string {
  * Legacy function for backward compatibility - generates a single palette
  */
 export function generateColorPalette(params: PaletteGenParams): string[] {
-  const result = generatePalettesLegacy({
-    ...params,
-    numPalettes: 1,
-    currentTheme: 'light'
-  } as ColorGenParams, true);
+  const result = generatePalettesLegacy(
+    {
+      ...params,
+      numPalettes: 1,
+      currentTheme: 'light'
+    } as ColorGenParams,
+    true
+  );
   return result.palettes[0] || [];
 }
