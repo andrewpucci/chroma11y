@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { toggleTheme, currentTheme } from '$lib/stores';
 
-	let currentThemeValue = '';
-	currentTheme.subscribe(value => currentThemeValue = value);
+	const currentThemeValue = $derived($currentTheme);
 </script>
 
 <button 
 	class="theme-toggle"
-	on:click={toggleTheme}
+	onclick={toggleTheme}
 >
 	{currentThemeValue === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
 </button>

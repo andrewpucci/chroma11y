@@ -1,18 +1,27 @@
 <script lang="ts">
-	import { currentTheme } from '$lib/stores';
+	interface Props {
+		baseColor?: string;
+		warmth?: number;
+		chromaMultiplier?: number;
+		numColors?: number;
+		numPalettes?: number;
+		x1?: number;
+		y1?: number;
+		x2?: number;
+		y2?: number;
+	}
 
-	export let baseColor: string = '#1862E6';
-	export let warmth: number = 0;
-	export let chromaMultiplier: number = 1;
-	export let numColors: number = 5;
-	export let numPalettes: number = 1;
-	export let x1: number = 0;
-	export let y1: number = 0;
-	export let x2: number = 1;
-	export let y2: number = 1;
-
-	$: currentThemeValue = '';
-	currentTheme.subscribe(value => currentThemeValue = value);
+	let {
+		baseColor = $bindable('#1862E6'),
+		warmth = $bindable(0),
+		chromaMultiplier = $bindable(1),
+		numColors = $bindable(5),
+		numPalettes = $bindable(1),
+		x1 = $bindable(0),
+		y1 = $bindable(0),
+		x2 = $bindable(1),
+		y2 = $bindable(1)
+	}: Props = $props();
 </script>
 
 <section class="generator-controls">

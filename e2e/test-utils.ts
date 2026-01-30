@@ -14,10 +14,10 @@ export async function waitForAppReady(page: Page): Promise<void> {
  * Wait for color generation to complete
  */
 export async function waitForColorGeneration(page: Page): Promise<void> {
-	// Wait for color grids to be visible and have content
+	// Wait for color swatches to be visible and have content
 	await page.waitForFunction(() => {
-		const colorItems = document.querySelectorAll('.color-item');
-		return colorItems.length > 0;
+		const colorSwatches = document.querySelectorAll('.color-swatch');
+		return colorSwatches.length > 0;
 	}, { timeout: 5000 });
 }
 
@@ -47,10 +47,10 @@ export async function setBaseColor(page: Page, color: string): Promise<void> {
 }
 
 /**
- * Get count of generated color items
+ * Get count of generated color swatches
  */
-export async function getColorItemCount(page: Page): Promise<number> {
-	return await page.locator('.color-item').count();
+export async function getColorSwatchCount(page: Page): Promise<number> {
+	return await page.locator('.color-swatch').count();
 }
 
 /**

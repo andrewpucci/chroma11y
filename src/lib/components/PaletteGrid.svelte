@@ -3,8 +3,12 @@
 	import { updateHueNudger } from '$lib/stores';
 	import ColorSwatch from './ColorSwatch.svelte';
 
-	export let palettes: string[][] = [];
-	export let hueNudgerValues: number[] = [];
+	interface Props {
+		palettes?: string[][];
+		hueNudgerValues?: number[];
+	}
+
+	let { palettes = [], hueNudgerValues = $bindable([]) }: Props = $props();
 	
 	function handleHueNudgerChange(paletteIndex: number, event: Event) {
 		const target = event.target as HTMLInputElement;
@@ -28,7 +32,7 @@
 						max="180" 
 						step="1"
 						value={hueNudgerValues[paletteIndex] || 0}
-						on:input={(e) => handleHueNudgerChange(paletteIndex, e)}
+						oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
 						class="hue-nudger-input"
 						title="Hue adjustment for palette {paletteIndex + 1} (-180 to 180 degrees)"
 					/>

@@ -23,7 +23,7 @@
 		setTheme
 	} from '$lib/stores';
 	import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
-	import { loadStateFromStorage, saveStateToStorage, type StoredColorState } from '$lib/storageUtils';
+	import { loadStateFromStorage, saveStateToStorage } from '$lib/storageUtils';
 	
 	import { generatePalettesLegacy } from '$lib/colorUtils';
 	import type { ColorGenParams } from '$lib/colorUtils';
@@ -34,132 +34,114 @@
 	import NeutralPalette from '$lib/components/NeutralPalette.svelte';
 	import PaletteGrid from '$lib/components/PaletteGrid.svelte';
 	import ContrastControls from '$lib/components/ContrastControls.svelte';
-		
-	// Local variables for reactive updates
-	let neutralsLocal: string[] = [];
-	let palettesLocal: string[][] = [];
-	let lightnessNudgerValues: number[] = [];
-	let hueNudgerValues: number[] = [];
-	let baseColorLocal: string = '#1862E6';
-	let warmthLocal: number = -7;
-	let chromaMultiplierLocal: number = 1.14;
-	let numColorsLocal: number = 11;
-	let numPalettesLocal: number = 11;
-	let x1Local: number = 0.16;
-	let y1Local: number = 0.0;
-	let x2Local: number = 0.28;
-	let y2Local: number = 0.38;
-	let currentThemeLocal: 'light' | 'dark' = 'light';
-	let contrastModeLocal: 'auto' | 'manual' = 'auto';
-	let lowStepLocal: number = 0;
-	let highStepLocal: number = 10;
-	let urlStateLoaded = false;
+
+	// Derived values from stores (auto-subscribed)
+	let neutralsLocal = $derived($neutrals);
+	let palettesLocal = $derived($palettes);
+	let lightnessNudgerValues = $derived($lightnessNudgers);
+	let hueNudgerValues = $derived($hueNudgers);
+	let currentThemeLocal = $derived($currentTheme);
+	let contrastModeLocal = $derived($contrastMode);
+	let lowStepLocal = $derived($lowStep);
+	let highStepLocal = $derived($highStep);
+
+	// Bindable state for controls
+	let baseColorLocal = $state('#1862E6');
+	let warmthLocal = $state(-7);
+	let chromaMultiplierLocal = $state(1.14);
+	let numColorsLocal = $state(11);
+	let numPalettesLocal = $state(11);
+	let x1Local = $state(0.16);
+	let y1Local = $state(0.0);
+	let x2Local = $state(0.28);
+	let y2Local = $state(0.38);
+
+	let urlStateLoaded = $state(false);
 	let urlUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
-	
+
+	// Load initial state from URL or localStorage
 	onMount(() => {
-		// Load state from URL first, then fall back to localStorage
 		const urlState = getUrlState();
 		if (Object.keys(urlState).length > 0) {
 			applyUrlState(urlState);
 		} else {
-			// No URL state, try localStorage
 			const storedState = loadStateFromStorage();
 			if (storedState) {
 				applyUrlState(storedState);
 			}
 		}
 		urlStateLoaded = true;
-		const unsubscribeNeutrals = neutrals.subscribe(value => neutralsLocal = value);
-		const unsubscribePalettes = palettes.subscribe(value => palettesLocal = value);
-		const unsubscribeLightnessNudgers = lightnessNudgers.subscribe(value => lightnessNudgerValues = value);
-		const unsubscribeHueNudgers = hueNudgers.subscribe(value => hueNudgerValues = value);
-		const unsubscribeBaseColor = baseColor.subscribe(value => baseColorLocal = value);
-		const unsubscribeWarmth = warmth.subscribe(value => warmthLocal = value);
-		const unsubscribeChromaMultiplier = chromaMultiplier.subscribe(value => chromaMultiplierLocal = value);
-		const unsubscribeNumColors = numColors.subscribe(value => numColorsLocal = value);
-		const unsubscribeNumPalettes = numPalettes.subscribe(value => numPalettesLocal = value);
-		const unsubscribeX1 = x1.subscribe(value => x1Local = value);
-		const unsubscribeY1 = y1.subscribe(value => y1Local = value);
-		const unsubscribeX2 = x2.subscribe(value => x2Local = value);
-		const unsubscribeY2 = y2.subscribe(value => y2Local = value);
-		const unsubscribeCurrentTheme = currentTheme.subscribe(value => currentThemeLocal = value);
-		const unsubscribeContrastMode = contrastMode.subscribe(value => contrastModeLocal = value);
-		const unsubscribeLowStep = lowStep.subscribe(value => lowStepLocal = value);
-		const unsubscribeHighStep = highStep.subscribe(value => highStepLocal = value);
 
 		return () => {
-			unsubscribeNeutrals();
-			unsubscribePalettes();
-			unsubscribeLightnessNudgers();
-			unsubscribeHueNudgers();
-			unsubscribeBaseColor();
-			unsubscribeWarmth();
-			unsubscribeChromaMultiplier();
-			unsubscribeNumColors();
-			unsubscribeNumPalettes();
-			unsubscribeX1();
-			unsubscribeY1();
-			unsubscribeX2();
-			unsubscribeY2();
-			unsubscribeCurrentTheme();
-			unsubscribeContrastMode();
-			unsubscribeLowStep();
-			unsubscribeHighStep();
 			if (urlUpdateTimeout) clearTimeout(urlUpdateTimeout);
 		};
 	});
 
-	$: if (baseColorLocal && warmthLocal !== undefined && chromaMultiplierLocal && numColorsLocal && numPalettesLocal && x1Local !== undefined && y1Local !== undefined && x2Local !== undefined && y2Local !== undefined && currentThemeLocal) {
+	// Sync local bindable state to stores when they change
+	$effect(() => {
+		const storeBaseColor = $baseColor;
+		const storeWarmth = $warmth;
+		const storeChroma = $chromaMultiplier;
+		const storeNumColors = $numColors;
+		const storeNumPalettes = $numPalettes;
+		const storeX1 = $x1;
+		const storeY1 = $y1;
+		const storeX2 = $x2;
+		const storeY2 = $y2;
+
+		baseColorLocal = storeBaseColor;
+		warmthLocal = storeWarmth;
+		chromaMultiplierLocal = storeChroma;
+		numColorsLocal = storeNumColors;
+		numPalettesLocal = storeNumPalettes;
+		x1Local = storeX1;
+		y1Local = storeY1;
+		x2Local = storeX2;
+		y2Local = storeY2;
+	});
+
+	// Generate colors when parameters change
+	$effect(() => {
 		generateColors();
-	}
-	
-	$: if (lightnessNudgerValues || hueNudgerValues) {
-		generateColors();
-	}
-	
+	});
+
 	// Update URL and localStorage when state changes (debounced)
-	$: if (urlStateLoaded) {
-		// Track all state variables to trigger save
-		void [baseColorLocal, warmthLocal, chromaMultiplierLocal, numColorsLocal, numPalettesLocal,
-			x1Local, y1Local, x2Local, y2Local, currentThemeLocal, contrastModeLocal,
-			lowStepLocal, highStepLocal, lightnessNudgerValues, hueNudgerValues];
-		debouncedUpdateUrl();
-	}
-	
-	function debouncedUpdateUrl() {
+	$effect(() => {
+		if (!urlStateLoaded) return;
+
+		// Access all reactive values to track them
+		const state: UrlColorState = {
+			baseColor: baseColorLocal,
+			warmth: warmthLocal,
+			chromaMultiplier: chromaMultiplierLocal,
+			numColors: numColorsLocal,
+			numPalettes: numPalettesLocal,
+			x1: x1Local,
+			y1: y1Local,
+			x2: x2Local,
+			y2: y2Local,
+			theme: currentThemeLocal,
+			contrastMode: contrastModeLocal,
+			lowStep: lowStepLocal,
+			highStep: highStepLocal,
+			lightnessNudgers: lightnessNudgerValues,
+			hueNudgers: hueNudgerValues
+		};
+
 		if (urlUpdateTimeout) clearTimeout(urlUpdateTimeout);
 		urlUpdateTimeout = setTimeout(() => {
-			const state: UrlColorState = {
-				baseColor: baseColorLocal,
-				warmth: warmthLocal,
-				chromaMultiplier: chromaMultiplierLocal,
-				numColors: numColorsLocal,
-				numPalettes: numPalettesLocal,
-				x1: x1Local,
-				y1: y1Local,
-				x2: x2Local,
-				y2: y2Local,
-				theme: currentThemeLocal,
-				contrastMode: contrastModeLocal,
-				lowStep: lowStepLocal,
-				highStep: highStepLocal,
-				lightnessNudgers: lightnessNudgerValues,
-				hueNudgers: hueNudgerValues
-			};
 			updateBrowserUrl(state);
 			saveStateToStorage(state);
 		}, 500);
-	}
-	
+	});
+
 	function applyUrlState(urlState: UrlColorState) {
-		// Apply theme first if specified
 		if (urlState.theme) {
 			setTheme(urlState.theme);
 		}
-		
-		// Build state update object
+
 		const stateUpdate: Record<string, unknown> = {};
-		
+
 		if (urlState.baseColor) stateUpdate.baseColor = urlState.baseColor;
 		if (urlState.warmth !== undefined) stateUpdate.warmth = urlState.warmth;
 		if (urlState.chromaMultiplier !== undefined) stateUpdate.chromaMultiplier = urlState.chromaMultiplier;
@@ -174,12 +156,12 @@
 		if (urlState.highStep !== undefined) stateUpdate.highStep = urlState.highStep;
 		if (urlState.lightnessNudgers) stateUpdate.lightnessNudgers = urlState.lightnessNudgers;
 		if (urlState.hueNudgers) stateUpdate.hueNudgers = urlState.hueNudgers;
-		
+
 		if (Object.keys(stateUpdate).length > 0) {
 			updateColorState(stateUpdate);
 		}
 	}
-	
+
 	function generateColors() {
 		const params: ColorGenParams = {
 			numColors: numColorsLocal,
@@ -197,16 +179,11 @@
 		};
 
 		try {
-			// Use the legacy algorithm which handles everything in one call
 			const result = generatePalettesLegacy(params, true);
-			
-			// Update stores
 			updateColorState({
 				neutrals: result.neutrals,
 				palettes: result.palettes
 			});
-			
-			// Update contrast colors from neutrals if in auto mode
 			updateContrastFromNeutrals();
 		} catch (error) {
 			console.error('Error generating colors:', error);

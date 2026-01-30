@@ -3,10 +3,14 @@
 	import { updateLightnessNudger } from '$lib/stores';
 	import ColorSwatch from './ColorSwatch.svelte';
 
-	export let neutrals: string[] = [];
-	export let lightnessNudgerValues: number[] = [];
+	interface Props {
+		neutrals?: string[];
+		lightnessNudgerValues?: number[];
+	}
 
-	$: neutralName = neutrals.length > 0 ? getPaletteName(neutrals) : 'Neutral';
+	let { neutrals = $bindable([]), lightnessNudgerValues = $bindable([]) }: Props = $props();
+
+	const neutralName = $derived(neutrals.length > 0 ? getPaletteName(neutrals) : 'Neutral');
 </script>
 
 <section class="color-display">
@@ -28,12 +32,14 @@
 						min="-0.5" 
 						max="0.5" 
 						step="0.01"
-						bind:value={lightnessNudgerValues[index]}
-						on:input={(e) => {
-	if (e && e.target) {
-		updateLightnessNudgerValue(index, parseFloat((e.target as HTMLInputElement).value), lightnessNudgerValues, updateLightnessNudger);
-	}
-}}
+						value={lightnessNudgerValues[index]}
+						oninput={(e) => {
+							if (e && e.target) {
+								const newValue = parseFloat((e.target as HTMLInputElement).value);
+								lightnessNudgerValues[index] = newValue;
+								updateLightnessNudgerValue(index, newValue, lightnessNudgerValues, updateLightnessNudger);
+							}
+						}}
 						class="nudger-input"
 						title="Lightness adjustment for step {index}"
 					/>

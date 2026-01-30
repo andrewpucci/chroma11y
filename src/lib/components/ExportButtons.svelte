@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/exportUtils';
 
-	export let neutrals: string[] = [];
-	export let palettes: string[][] = [];
+	interface Props {
+		neutrals?: string[];
+		palettes?: string[][];
+	}
+
+	let { neutrals = [], palettes = [] }: Props = $props();
 
 	function exportJSON() {
 		downloadDesignTokens(neutrals, palettes);
@@ -20,21 +24,21 @@
 <div class="export-buttons">
 	<button 
 		class="export-button"
-		on:click={exportJSON}
+		onclick={exportJSON}
 		disabled={neutrals.length === 0 && palettes.length === 0}
 	>
 		📄 Export JSON
 	</button>
 	<button 
 		class="export-button"
-		on:click={exportCSS}
+		onclick={exportCSS}
 		disabled={neutrals.length === 0 && palettes.length === 0}
 	>
 		🎨 Export CSS
 	</button>
 	<button 
 		class="export-button"
-		on:click={exportSCSS}
+		onclick={exportSCSS}
 		disabled={neutrals.length === 0 && palettes.length === 0}
 	>
 		📝 Export SCSS

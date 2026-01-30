@@ -1,34 +1,16 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { contrastMode, contrastColors, lowStep, highStep, updateColorState, updateContrastStep } from '$lib/stores';
 	import { getContrast } from '$lib/colorUtils';
 
-	// Local variables for reactive updates
-	let contrastModeLocal: 'auto' | 'manual' = 'auto';
-	let contrastColorsLocal: { low: string, high: string } = { low: '#ffffff', high: '#000000' };
-	let lowStepLocal: number = 0;
-	let highStepLocal: number = 10;
-
-	// Subscribe to stores
-	onMount(() => {
-		const unsubscribeContrastMode = contrastMode.subscribe((value: 'auto' | 'manual') => contrastModeLocal = value);
-		const unsubscribeContrastColors = contrastColors.subscribe((value: { low: string, high: string }) => contrastColorsLocal = value);
-		const unsubscribeLowStep = lowStep.subscribe((value: number) => lowStepLocal = value);
-		const unsubscribeHighStep = highStep.subscribe((value: number) => highStepLocal = value);
-		
-		return () => {
-			unsubscribeContrastMode();
-			unsubscribeContrastColors();
-			unsubscribeLowStep();
-			unsubscribeHighStep();
-		};
-	});
+	// Derived values from stores
+	let contrastModeLocal = $derived($contrastMode);
+	let contrastColorsLocal = $derived($contrastColors);
+	let lowStepLocal = $derived($lowStep);
+	let highStepLocal = $derived($highStep);
 
 	function handleModeChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
 		const newMode = target.value as 'auto' | 'manual';
-		contrastModeLocal = newMode;
-		
 		updateColorState({
 			contrastMode: newMode
 		});
@@ -87,7 +69,7 @@
 	
 	<div class="control-group">
 		<label for="contrast-mode">Contrast Mode</label>
-		<select id="contrast-mode" bind:value={contrastModeLocal} on:change={handleModeChange}>
+		<select id="contrast-mode" value={contrastModeLocal} onchange={handleModeChange}>
 			<option value="auto">Auto</option>
 			<option value="manual">Manual</option>
 		</select>
@@ -101,13 +83,13 @@
 					<input 
 						id="contrast-low"
 						type="color" 
-						bind:value={contrastColorsLocal.low}
-						on:change={handleLowColorChange}
+						value={contrastColorsLocal.low}
+						onchange={handleLowColorChange}
 					/>
 					<input 
 						type="text" 
-						bind:value={contrastColorsLocal.low}
-						on:change={handleLowColorChange}
+						value={contrastColorsLocal.low}
+						onchange={handleLowColorChange}
 						placeholder="#ffffff"
 					/>
 				</div>
@@ -119,13 +101,13 @@
 					<input 
 						id="contrast-high"
 						type="color" 
-						bind:value={contrastColorsLocal.high}
-						on:change={handleHighColorChange}
+						value={contrastColorsLocal.high}
+						onchange={handleHighColorChange}
 					/>
 					<input 
 						type="text" 
-						bind:value={contrastColorsLocal.high}
-						on:change={handleHighColorChange}
+						value={contrastColorsLocal.high}
+						onchange={handleHighColorChange}
 						placeholder="#000000"
 					/>
 				</div>
@@ -135,7 +117,7 @@
 		<div class="auto-controls">
 			<div class="control-group">
 				<label for="low-step">Low Step</label>
-				<select id="low-step" bind:value={lowStepLocal} on:change={handleLowStepChange}>
+				<select id="low-step" value={lowStepLocal} onchange={handleLowStepChange}>
 					{#each generateStepOptions() as step}
 						<option value={step}>{step * 10}</option>
 					{/each}
@@ -144,7 +126,7 @@
 			
 			<div class="control-group">
 				<label for="high-step">High Step</label>
-				<select id="high-step" bind:value={highStepLocal} on:change={handleHighStepChange}>
+				<select id="high-step" value={highStepLocal} onchange={handleHighStepChange}>
 					{#each generateStepOptions() as step}
 						<option value={step}>{step * 10}</option>
 					{/each}

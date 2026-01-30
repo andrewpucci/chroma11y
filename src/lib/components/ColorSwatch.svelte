@@ -1,23 +1,22 @@
 <script lang="ts">
 	import { copyToClipboard, getContrast, getPrintableContrast } from '$lib/colorUtils';
 	import { contrastColors, currentTheme } from '$lib/stores';
-	
-	export let color: string;
-	export let label: string = '';
-	export let showContrast: boolean = true;
-	
-	let contrastColorsLocal: { low: string; high: string } = { low: '#ffffff', high: '#000000' };
-	let currentThemeLocal: 'light' | 'dark' = 'light';
-	
-	$: contrastColors.subscribe(value => contrastColorsLocal = value);
-	$: currentTheme.subscribe(value => currentThemeLocal = value);
-	
-	$: lowContrastRatio = getContrast(color, contrastColorsLocal.low);
-	$: highContrastRatio = getContrast(color, contrastColorsLocal.high);
-	$: lowContrastDisplay = getPrintableContrast(color, contrastColorsLocal.low);
-	$: highContrastDisplay = getPrintableContrast(color, contrastColorsLocal.high);
-	
-	$: textColor = calculateTextColor(color, contrastColorsLocal, currentThemeLocal);
+
+	interface Props {
+		color: string;
+		label?: string;
+		showContrast?: boolean;
+	}
+
+	let { color, label = '', showContrast = true }: Props = $props();
+
+	const contrastColorsLocal = $derived($contrastColors);
+	const currentThemeLocal = $derived($currentTheme);
+
+	const lowContrastDisplay = $derived(getPrintableContrast(color, contrastColorsLocal.low));
+	const highContrastDisplay = $derived(getPrintableContrast(color, contrastColorsLocal.high));
+
+	const textColor = $derived(calculateTextColor(color, contrastColorsLocal, currentThemeLocal));
 	
 	function calculateTextColor(
 		bgColor: string, 
@@ -43,7 +42,7 @@
 <button 
 	class="color-swatch"
 	style="background-color: {color}; color: {textColor};"
-	on:click={() => copyToClipboard(color)}
+	onclick={() => copyToClipboard(color)}
 	title="Click to copy {color}"
 >
 	<span class="hex">{color}</span>
