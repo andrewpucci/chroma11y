@@ -15,9 +15,15 @@
 		lightnessNudgers,
 		hueNudgers,
 		currentTheme,
+		contrastMode,
+		lowStep,
+		highStep,
 		updateColorState,
-		updateContrastFromNeutrals
+		updateContrastFromNeutrals,
+		setTheme
 	} from '$lib/stores';
+	import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
+	import { loadStateFromStorage, saveStateToStorage, type StoredColorState } from '$lib/storageUtils';
 	
 	import { generatePalettesLegacy } from '$lib/colorUtils';
 	import type { ColorGenParams } from '$lib/colorUtils';
@@ -28,7 +34,7 @@
 	import NeutralPalette from '$lib/components/NeutralPalette.svelte';
 	import PaletteGrid from '$lib/components/PaletteGrid.svelte';
 	import ContrastControls from '$lib/components/ContrastControls.svelte';
-	
+		
 	// Local variables for reactive updates
 	let neutralsLocal: string[] = [];
 	let palettesLocal: string[][] = [];
@@ -44,8 +50,25 @@
 	let x2Local: number = 0.28;
 	let y2Local: number = 0.38;
 	let currentThemeLocal: 'light' | 'dark' = 'light';
+	let contrastModeLocal: 'auto' | 'manual' = 'auto';
+	let lowStepLocal: number = 0;
+	let highStepLocal: number = 10;
+	let urlStateLoaded = false;
+	let urlUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
 	
 	onMount(() => {
+		// Load state from URL first, then fall back to localStorage
+		const urlState = getUrlState();
+		if (Object.keys(urlState).length > 0) {
+			applyUrlState(urlState);
+		} else {
+			// No URL state, try localStorage
+			const storedState = loadStateFromStorage();
+			if (storedState) {
+				applyUrlState(storedState);
+			}
+		}
+		urlStateLoaded = true;
 		const unsubscribeNeutrals = neutrals.subscribe(value => neutralsLocal = value);
 		const unsubscribePalettes = palettes.subscribe(value => palettesLocal = value);
 		const unsubscribeLightnessNudgers = lightnessNudgers.subscribe(value => lightnessNudgerValues = value);
@@ -60,6 +83,9 @@
 		const unsubscribeX2 = x2.subscribe(value => x2Local = value);
 		const unsubscribeY2 = y2.subscribe(value => y2Local = value);
 		const unsubscribeCurrentTheme = currentTheme.subscribe(value => currentThemeLocal = value);
+		const unsubscribeContrastMode = contrastMode.subscribe(value => contrastModeLocal = value);
+		const unsubscribeLowStep = lowStep.subscribe(value => lowStepLocal = value);
+		const unsubscribeHighStep = highStep.subscribe(value => highStepLocal = value);
 
 		return () => {
 			unsubscribeNeutrals();
@@ -76,6 +102,10 @@
 			unsubscribeX2();
 			unsubscribeY2();
 			unsubscribeCurrentTheme();
+			unsubscribeContrastMode();
+			unsubscribeLowStep();
+			unsubscribeHighStep();
+			if (urlUpdateTimeout) clearTimeout(urlUpdateTimeout);
 		};
 	});
 
@@ -85,6 +115,69 @@
 	
 	$: if (lightnessNudgerValues || hueNudgerValues) {
 		generateColors();
+	}
+	
+	// Update URL and localStorage when state changes (debounced)
+	$: if (urlStateLoaded) {
+		// Track all state variables to trigger save
+		void [baseColorLocal, warmthLocal, chromaMultiplierLocal, numColorsLocal, numPalettesLocal,
+			x1Local, y1Local, x2Local, y2Local, currentThemeLocal, contrastModeLocal,
+			lowStepLocal, highStepLocal, lightnessNudgerValues, hueNudgerValues];
+		debouncedUpdateUrl();
+	}
+	
+	function debouncedUpdateUrl() {
+		if (urlUpdateTimeout) clearTimeout(urlUpdateTimeout);
+		urlUpdateTimeout = setTimeout(() => {
+			const state: UrlColorState = {
+				baseColor: baseColorLocal,
+				warmth: warmthLocal,
+				chromaMultiplier: chromaMultiplierLocal,
+				numColors: numColorsLocal,
+				numPalettes: numPalettesLocal,
+				x1: x1Local,
+				y1: y1Local,
+				x2: x2Local,
+				y2: y2Local,
+				theme: currentThemeLocal,
+				contrastMode: contrastModeLocal,
+				lowStep: lowStepLocal,
+				highStep: highStepLocal,
+				lightnessNudgers: lightnessNudgerValues,
+				hueNudgers: hueNudgerValues
+			};
+			updateBrowserUrl(state);
+			saveStateToStorage(state);
+		}, 500);
+	}
+	
+	function applyUrlState(urlState: UrlColorState) {
+		// Apply theme first if specified
+		if (urlState.theme) {
+			setTheme(urlState.theme);
+		}
+		
+		// Build state update object
+		const stateUpdate: Record<string, unknown> = {};
+		
+		if (urlState.baseColor) stateUpdate.baseColor = urlState.baseColor;
+		if (urlState.warmth !== undefined) stateUpdate.warmth = urlState.warmth;
+		if (urlState.chromaMultiplier !== undefined) stateUpdate.chromaMultiplier = urlState.chromaMultiplier;
+		if (urlState.numColors !== undefined) stateUpdate.numColors = urlState.numColors;
+		if (urlState.numPalettes !== undefined) stateUpdate.numPalettes = urlState.numPalettes;
+		if (urlState.x1 !== undefined) stateUpdate.x1 = urlState.x1;
+		if (urlState.y1 !== undefined) stateUpdate.y1 = urlState.y1;
+		if (urlState.x2 !== undefined) stateUpdate.x2 = urlState.x2;
+		if (urlState.y2 !== undefined) stateUpdate.y2 = urlState.y2;
+		if (urlState.contrastMode) stateUpdate.contrastMode = urlState.contrastMode;
+		if (urlState.lowStep !== undefined) stateUpdate.lowStep = urlState.lowStep;
+		if (urlState.highStep !== undefined) stateUpdate.highStep = urlState.highStep;
+		if (urlState.lightnessNudgers) stateUpdate.lightnessNudgers = urlState.lightnessNudgers;
+		if (urlState.hueNudgers) stateUpdate.hueNudgers = urlState.hueNudgers;
+		
+		if (Object.keys(stateUpdate).length > 0) {
+			updateColorState(stateUpdate);
+		}
 	}
 	
 	function generateColors() {

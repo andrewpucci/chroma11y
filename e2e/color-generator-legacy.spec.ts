@@ -383,6 +383,97 @@ test.describe('Color Generator - Legacy Algorithm Tests', () => {
 	});
 });
 
+test.describe('Local Storage Persistence', () => {
+	test('saves state to localStorage and restores on fresh load', async ({ page }) => {
+		await page.goto('/');
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+		
+		// Change base color to purple
+		await page.locator('#baseColor').fill('#800080');
+		await page.waitForTimeout(1000);
+		
+		// Verify localStorage was updated
+		const storedState = await page.evaluate(() => {
+			return localStorage.getItem('svelte-color-generator-state');
+		});
+		expect(storedState).toBeTruthy();
+		expect(storedState).toContain('800080');
+		
+		// Navigate to clean URL (simulating fresh visit)
+		await page.goto('/');
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+		
+		// Base color should be restored from localStorage
+		const baseColorValue = await page.locator('#baseColor').inputValue();
+		expect(baseColorValue.toLowerCase()).toBe('#800080');
+	});
+
+	test('remembers theme preference across sessions', async ({ page }) => {
+		await page.goto('/');
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+		
+		// Toggle to dark mode
+		await page.locator('.theme-toggle').click();
+		await page.waitForTimeout(1000);
+		
+		// Navigate to fresh URL
+		await page.goto('/');
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+		
+		// Should still be in dark mode
+		const themeToggle = await page.locator('.theme-toggle').textContent();
+		expect(themeToggle).toContain('Light Mode');
+	});
+});
+
+test.describe('URL State Persistence', () => {
+	test('persists state in URL and restores on navigation', async ({ page }) => {
+		await page.goto('/');
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+		
+		// Change base color to green
+		await page.locator('#baseColor').fill('#00ff00');
+		await page.waitForTimeout(1000);
+		
+		// URL should contain the color parameter
+		const url = page.url();
+		expect(url).toContain('c=00ff00');
+		
+		// Navigate to the URL directly
+		await page.goto(url);
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+		
+		// Base color input should have the green value
+		const baseColorValue = await page.locator('#baseColor').inputValue();
+		expect(baseColorValue.toLowerCase()).toBe('#00ff00');
+	});
+
+	test('shares configuration via URL', async ({ page }) => {
+		// Navigate with URL parameters
+		await page.goto('/?c=ff0000&w=5&t=dark');
+		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+		await page.waitForTimeout(1000);
+		
+		// Verify base color is red
+		const baseColorValue = await page.locator('#baseColor').inputValue();
+		expect(baseColorValue.toLowerCase()).toBe('#ff0000');
+		
+		// Verify warmth is 5
+		const warmthValue = await page.locator('#warmth').inputValue();
+		expect(warmthValue).toBe('5');
+		
+		// Verify dark mode is active
+		const themeToggle = await page.locator('.theme-toggle').textContent();
+		expect(themeToggle).toContain('Light Mode');
+	});
+});
+
 test.describe('Color Generator - Deterministic Snapshot Tests', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/');
@@ -530,8 +621,8 @@ test.describe('Color Generator - Deterministic Snapshot Tests', () => {
 			paletteColors.push(hex?.toLowerCase() || '');
 		}
 		
-		// Reload page and set same configuration
-		await page.reload();
+		// Navigate to clean URL (no state) and set same configuration
+		await page.goto('/');
 		await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
 		await page.waitForTimeout(1000);
 		
