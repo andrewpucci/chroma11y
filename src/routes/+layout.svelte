@@ -1,27 +1,21 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { currentTheme } from '$lib/stores';
 	import { browser } from '$app/environment';
+	import type { Snippet } from 'svelte';
 	
-	let theme: string = 'light';
-	
-	currentTheme.subscribe(value => {
-		theme = value;
-		if (browser) {
-			document.documentElement.setAttribute('data-theme', theme);
-		}
-	});
-	
-	onMount(() => {
-		if (browser) {
-			// Apply theme to document only in browser
-			document.documentElement.setAttribute('data-theme', theme);
-		}
-	});
-	
-	$: if (browser && theme) {
-		document.documentElement.setAttribute('data-theme', theme);
+	interface Props {
+		children: Snippet;
 	}
+	
+	let { children }: Props = $props();
+	
+	const theme = $derived($currentTheme);
+	
+	$effect(() => {
+		if (browser && theme) {
+			document.documentElement.setAttribute('data-theme', theme);
+		}
+	});
 </script>
 
 <svelte:head>
@@ -31,7 +25,7 @@
 
 <div class="app">
 	<main>
-		<slot />
+		{@render children()}
 	</main>
 </div>
 
