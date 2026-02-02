@@ -153,6 +153,26 @@
     min-width: 0;
   }
 
+  /* Touch-friendly on mobile */
+  @media (max-width: 768px) {
+    .nudger-input {
+      padding: 8px;
+      font-size: 14px;
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+
+    .nudger-item-aligned {
+      min-width: 70px;
+      height: auto;
+      padding: 6px;
+    }
+
+    .nudger-color-aligned {
+      height: 20px;
+    }
+  }
+
   .nudger-input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;

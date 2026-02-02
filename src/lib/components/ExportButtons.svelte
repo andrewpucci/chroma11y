@@ -69,6 +69,16 @@
     cursor: pointer;
     font-weight: 500;
     transition: all 0.2s ease;
+    min-height: 44px;
+  }
+
+  /* Touch-friendly on mobile */
+  @media (max-width: 768px) {
+    .export-button {
+      padding: 1rem;
+      min-height: 48px;
+      touch-action: manipulation;
+    }
   }
 
   .export-button:hover:not(:disabled) {

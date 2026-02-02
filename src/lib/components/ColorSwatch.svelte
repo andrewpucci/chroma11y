@@ -76,6 +76,36 @@
     gap: 2px;
   }
 
+  /* Touch-friendly tap targets on mobile (44x44px minimum) */
+  @media (max-width: 768px) {
+    .color-swatch {
+      min-width: 70px;
+      min-height: 60px;
+      padding: 8px;
+      touch-action: manipulation;
+    }
+  }
+
+  @media (max-width: 575px) {
+    .color-swatch {
+      min-width: 60px;
+      min-height: 50px;
+      padding: 6px;
+    }
+
+    .hex {
+      font-size: 0.6rem;
+    }
+
+    .label {
+      font-size: 0.45rem;
+    }
+
+    .contrast-info {
+      font-size: 0.45rem;
+    }
+  }
+
   .color-swatch:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);

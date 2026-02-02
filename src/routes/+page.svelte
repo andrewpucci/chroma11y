@@ -264,6 +264,47 @@
     container-type: inline-size;
   }
 
+  /* Mobile-first responsive layout */
+  @media (max-width: 768px) {
+    .container {
+      flex-direction: column;
+      height: auto;
+      min-height: 100vh;
+    }
+
+    .controls-column {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      overflow-y: visible;
+      max-height: none;
+    }
+
+    .palettes-column {
+      flex: 1;
+      min-height: 50vh;
+    }
+
+    .header h1 {
+      font-size: 1.75rem;
+    }
+
+    .header p {
+      font-size: 0.875rem;
+    }
+  }
+
+  /* Extra small devices (phones in portrait, less than 576px) */
+  @media (max-width: 575px) {
+    .header h1 {
+      font-size: 1.5rem;
+    }
+
+    .header p {
+      font-size: 0.8rem;
+    }
+  }
+
   /* Responsive chip sizing */
   .palettes-column {
     --chip-size: 15px;

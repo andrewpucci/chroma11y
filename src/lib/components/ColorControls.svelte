@@ -128,11 +128,31 @@
     background: var(--bg-primary);
     color: var(--text-primary);
     font-family: monospace;
+    min-height: 44px;
   }
 
   .control-group input[type='range'] {
     width: 100%;
     margin-top: 0.25rem;
+  }
+
+  /* Touch-friendly on mobile */
+  @media (max-width: 768px) {
+    .control-group input[type='color'] {
+      height: 48px;
+      touch-action: manipulation;
+    }
+
+    .control-group input[type='text'] {
+      padding: 0.75rem;
+      min-height: 48px;
+      font-size: 1rem;
+    }
+
+    .control-group input[type='range'] {
+      height: 44px;
+      touch-action: manipulation;
+    }
   }
 
   .control-group input:focus-visible,

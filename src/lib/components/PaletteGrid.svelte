@@ -100,9 +100,24 @@
     border-radius: 2px;
     background: var(--bg-primary);
     color: var(--text-primary);
-    font-size: 0.5rem;
+    font-size: 11px;
     font-family: monospace;
     text-align: center;
+  }
+
+  /* Touch-friendly on mobile */
+  @media (max-width: 768px) {
+    .hue-nudger-input {
+      width: 70px;
+      padding: 8px;
+      font-size: 14px;
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+
+    .hue-nudger label {
+      font-size: 0.7rem;
+    }
   }
 
   .hue-nudger-input:focus-visible {
