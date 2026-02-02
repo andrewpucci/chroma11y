@@ -29,8 +29,14 @@
   <div class="control-grid">
     <div class="control-group">
       <label for="baseColor">Base Color</label>
-      <input id="baseColor" type="color" bind:value={baseColor} />
-      <input type="text" bind:value={baseColor} placeholder="#1862E6" />
+      <input id="baseColor" type="color" bind:value={baseColor} aria-describedby="baseColorHex" />
+      <input
+        id="baseColorHex"
+        type="text"
+        bind:value={baseColor}
+        placeholder="#1862E6"
+        aria-label="Base color hex value"
+      />
     </div>
 
     <div class="control-group">
@@ -127,6 +133,12 @@
   .control-group input[type='range'] {
     width: 100%;
     margin-top: 0.25rem;
+  }
+
+  .control-group input:focus-visible,
+  .control-group select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .bezier-controls {

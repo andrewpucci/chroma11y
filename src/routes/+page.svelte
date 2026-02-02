@@ -196,11 +196,12 @@
   }
 </script>
 
-<div class="container">
+<a href="#main-content" class="skip-link">Skip to main content</a>
+<div class="container" role="application" aria-label="Color Generator">
   <!-- Left Column: Controls -->
   <div class="controls-column">
     <header class="header">
-      <h1>Svelte Color Generator</h1>
+      <h1 id="main-heading">Svelte Color Generator</h1>
       <p>Advanced color generation using OKLCH color space</p>
     </header>
 
@@ -224,7 +225,7 @@
   </div>
 
   <!-- Right Column: Palettes -->
-  <div class="palettes-column">
+  <div class="palettes-column" id="main-content" role="region" aria-labelledby="main-heading">
     <NeutralPalette bind:neutrals={neutralsLocal} bind:lightnessNudgerValues />
     <PaletteGrid palettes={palettesLocal} bind:hueNudgerValues />
   </div>

@@ -4,8 +4,14 @@
   const currentThemeValue = $derived($currentTheme);
 </script>
 
-<button class="theme-toggle" onclick={toggleTheme}>
-  {currentThemeValue === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+<button
+  class="theme-toggle"
+  onclick={toggleTheme}
+  aria-pressed={currentThemeValue === 'dark'}
+  aria-label={currentThemeValue === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+>
+  <span aria-hidden="true">{currentThemeValue === 'light' ? '🌙' : '☀️'}</span>
+  {currentThemeValue === 'light' ? 'Dark Mode' : 'Light Mode'}
 </button>
 
 <style>
@@ -25,5 +31,10 @@
   .theme-toggle:hover {
     background: var(--accent-hover);
     transform: translateY(-1px);
+  }
+
+  .theme-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 </style>

@@ -26,8 +26,10 @@
     <div class="nudger-grid-compact">
       {#each neutrals as color, index}
         <div class="nudger-item-aligned">
-          <div class="nudger-color-aligned" style="background-color: {color};"></div>
+          <div class="nudger-color-aligned" style="background-color: {color};" aria-hidden="true"></div>
+          <label for="lightness-nudger-{index}" class="visually-hidden">Lightness adjustment for step {index}</label>
           <input
+            id="lightness-nudger-{index}"
             type="number"
             min="-0.5"
             max="0.5"
@@ -46,7 +48,7 @@
               }
             }}
             class="nudger-input"
-            title="Lightness adjustment for step {index}"
+            aria-label="Lightness adjustment for step {index}"
           />
         </div>
       {/each}
@@ -149,5 +151,22 @@
     font-family: monospace;
     text-align: center;
     min-width: 0;
+  }
+
+  .nudger-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 </style>

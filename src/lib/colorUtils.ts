@@ -18,13 +18,19 @@ import {
 import easing from 'bezier-easing';
 import { transpose, mean } from 'mathjs';
 import type { Oklch } from 'culori';
+import { announce } from '$lib/announce';
 
 // ===== UTILITY FUNCTIONS =====
 
 export function copyToClipboard(text: string): void {
-  navigator.clipboard.writeText(text).then(() => {
-    console.log(`Copied ${text} to clipboard`);
-  });
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      announce(`Copied ${text} to clipboard`);
+    })
+    .catch(() => {
+      announce('Failed to copy to clipboard');
+    });
 }
 
 export function updateLightnessNudgerValue(

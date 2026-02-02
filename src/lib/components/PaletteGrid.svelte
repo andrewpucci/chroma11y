@@ -34,7 +34,7 @@
             value={hueNudgerValues[paletteIndex] || 0}
             oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
             class="hue-nudger-input"
-            title="Hue adjustment for palette {paletteIndex + 1} (-180 to 180 degrees)"
+            aria-label="Hue adjustment for {getPaletteName(palette)} palette, -180 to 180 degrees"
           />
         </div>
       </div>
@@ -103,6 +103,11 @@
     font-size: 0.5rem;
     font-family: monospace;
     text-align: center;
+  }
+
+  .hue-nudger-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
   }
 
   .color-grid {

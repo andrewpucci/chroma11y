@@ -1,5 +1,6 @@
 <script lang="ts">
   import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/exportUtils';
+  import { announce } from '$lib/announce';
 
   interface Props {
     neutrals?: string[];
@@ -10,14 +11,17 @@
 
   function exportJSON() {
     downloadDesignTokens(neutrals, palettes);
+    announce('Downloaded JSON design tokens');
   }
 
   function exportCSS() {
     downloadCSS(neutrals, palettes);
+    announce('Downloaded CSS variables');
   }
 
   function exportSCSS() {
     downloadSCSS(neutrals, palettes);
+    announce('Downloaded SCSS variables');
   }
 </script>
 
@@ -26,22 +30,25 @@
     class="export-button"
     onclick={exportJSON}
     disabled={neutrals.length === 0 && palettes.length === 0}
+    aria-label="Export colors as JSON design tokens"
   >
-    📄 Export JSON
+    <span aria-hidden="true">📄</span> Export JSON
   </button>
   <button
     class="export-button"
     onclick={exportCSS}
     disabled={neutrals.length === 0 && palettes.length === 0}
+    aria-label="Export colors as CSS custom properties"
   >
-    🎨 Export CSS
+    <span aria-hidden="true">🎨</span> Export CSS
   </button>
   <button
     class="export-button"
     onclick={exportSCSS}
     disabled={neutrals.length === 0 && palettes.length === 0}
+    aria-label="Export colors as SCSS variables"
   >
-    📝 Export SCSS
+    <span aria-hidden="true">📝</span> Export SCSS
   </button>
 </div>
 
@@ -73,5 +80,10 @@
   .export-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .export-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 </style>

@@ -44,6 +44,7 @@
   style="background-color: {color}; color: {textColor};"
   onclick={() => copyToClipboard(color)}
   title="Click to copy {color}"
+  aria-label="Color {color}{label ? `, step ${label}` : ''}. Click to copy to clipboard"
 >
   <span class="hex">{color}</span>
   {#if label}
@@ -78,6 +79,11 @@
   .color-swatch:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .color-swatch:focus-visible {
+    outline: 2px solid var(--accent, #0066cc);
+    outline-offset: 2px;
   }
 
   .hex {

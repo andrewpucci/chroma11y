@@ -92,12 +92,15 @@
             type="color"
             value={contrastColorsLocal.low}
             onchange={handleLowColorChange}
+            aria-describedby="contrast-low-hex"
           />
           <input
+            id="contrast-low-hex"
             type="text"
             value={contrastColorsLocal.low}
             onchange={handleLowColorChange}
             placeholder="#ffffff"
+            aria-label="Low contrast color hex value"
           />
         </div>
       </div>
@@ -110,12 +113,15 @@
             type="color"
             value={contrastColorsLocal.high}
             onchange={handleHighColorChange}
+            aria-describedby="contrast-high-hex"
           />
           <input
+            id="contrast-high-hex"
             type="text"
             value={contrastColorsLocal.high}
             onchange={handleHighColorChange}
             placeholder="#000000"
+            aria-label="High contrast color hex value"
           />
         </div>
       </div>
@@ -144,13 +150,13 @@
 
   <div class="contrast-preview">
     <h3>Current Contrast Colors</h3>
-    <div class="color-samples">
+    <div class="color-samples" role="group" aria-label="Current contrast color preview">
       <div class="color-sample">
-        <div class="swatch" style="background-color: {contrastColorsLocal.low};"></div>
+        <div class="swatch" style="background-color: {contrastColorsLocal.low};" aria-hidden="true"></div>
         <span class="label">Low: {contrastColorsLocal.low}</span>
       </div>
       <div class="color-sample">
-        <div class="swatch" style="background-color: {contrastColorsLocal.high};"></div>
+        <div class="swatch" style="background-color: {contrastColorsLocal.high};" aria-hidden="true"></div>
         <span class="label">High: {contrastColorsLocal.high}</span>
       </div>
     </div>
@@ -194,6 +200,12 @@
     border-radius: 4px;
     background: var(--bg-primary);
     color: var(--text-primary);
+  }
+
+  .control-group select:focus-visible,
+  .control-group input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .color-input-group {
