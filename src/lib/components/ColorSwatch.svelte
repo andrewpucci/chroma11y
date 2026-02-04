@@ -1,6 +1,6 @@
 <script lang="ts">
   import { copyToClipboard, getContrast, getPrintableContrast } from '$lib/colorUtils';
-  import { contrastColors, currentTheme } from '$lib/stores';
+  import { contrastColors } from '$lib/stores';
 
   interface Props {
     color: string;
@@ -11,18 +11,13 @@
   let { color, label = '', showContrast = true }: Props = $props();
 
   const contrastColorsLocal = $derived($contrastColors);
-  const currentThemeLocal = $derived($currentTheme);
 
   const lowContrastDisplay = $derived(getPrintableContrast(color, contrastColorsLocal.low));
   const highContrastDisplay = $derived(getPrintableContrast(color, contrastColorsLocal.high));
 
-  const textColor = $derived(calculateTextColor(color, contrastColorsLocal, currentThemeLocal));
+  const textColor = $derived(calculateTextColor(color, contrastColorsLocal));
 
-  function calculateTextColor(
-    bgColor: string,
-    contrast: { low: string; high: string },
-    theme: 'light' | 'dark'
-  ): string {
+  function calculateTextColor(bgColor: string, contrast: { low: string; high: string }): string {
     const minContrastRatio = 4.5;
     const lowRatio = getContrast(bgColor, contrast.low);
     const highRatio = getContrast(bgColor, contrast.high);

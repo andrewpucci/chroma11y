@@ -12,15 +12,35 @@
 
   function handleHueNudgerChange(paletteIndex: number, event: Event) {
     const target = event.target as HTMLInputElement;
-    const value = parseFloat(target.value) || 0;
-    updateHueNudger(paletteIndex, value);
+    const inputValue = target.value;
+    // Allow empty string or just "-" while typing
+    if (inputValue === '' || inputValue === '-') {
+      return;
+    }
+    const value = parseFloat(inputValue);
+    if (!isNaN(value) && isFinite(value)) {
+      // Clamp to valid range [-180, 180]
+      const clampedValue = Math.max(-180, Math.min(180, value));
+      updateHueNudger(paletteIndex, clampedValue);
+    }
+  }
+
+  function handleHueNudgerBlur(paletteIndex: number, event: Event) {
+    const target = event.target as HTMLInputElement;
+    const inputValue = target.value;
+    const value = parseFloat(inputValue);
+    if (isNaN(value) || !isFinite(value)) {
+      // Reset to 0 on blur if invalid
+      updateHueNudger(paletteIndex, 0);
+      target.value = '0';
+    }
   }
 </script>
 
 <section class="color-display">
   <h2>Generated Color Palettes</h2>
   {#if palettes.length > 0}
-    {#each palettes as palette, paletteIndex}
+    {#each palettes as palette, paletteIndex (paletteIndex)}
       <div class="palette-header">
         <h3>{getPaletteName(palette)}</h3>
         <div class="hue-nudger">
@@ -33,13 +53,14 @@
             step="1"
             value={hueNudgerValues[paletteIndex] || 0}
             oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
+            onblur={(e) => handleHueNudgerBlur(paletteIndex, e)}
             class="hue-nudger-input"
             aria-label="Hue adjustment for {getPaletteName(palette)} palette, -180 to 180 degrees"
           />
         </div>
       </div>
       <div class="color-grid compact">
-        {#each palette as color, index}
+        {#each palette as color, index (`${paletteIndex}-${index}`)}
           <ColorSwatch {color} label={String(index * 10)} showContrast={true} />
         {/each}
       </div>

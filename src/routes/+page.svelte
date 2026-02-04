@@ -24,8 +24,9 @@
   } from '$lib/stores';
   import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
   import { loadStateFromStorage, saveStateToStorage } from '$lib/storageUtils';
+  import { announce } from '$lib/announce';
 
-  import { generatePalettesLegacy } from '$lib/colorUtils';
+  import { generatePalettes } from '$lib/colorUtils';
   import type { ColorGenParams } from '$lib/colorUtils';
 
   import ColorControls from '$lib/components/ColorControls.svelte';
@@ -58,6 +59,8 @@
 
   let urlStateLoaded = $state(false);
   let urlUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
+  let colorGenTimeout: ReturnType<typeof setTimeout> | null = null;
+  let colorGenId = 0; // Track latest generation request
 
   // Load initial state from URL or localStorage
   onMount(() => {
@@ -100,9 +103,40 @@
     y2Local = storeY2;
   });
 
-  // Generate colors when parameters change
+  // Generate colors when parameters change (debounced to prevent race conditions)
   $effect(() => {
-    generateColors();
+    // Track all parameters that should trigger regeneration
+    // These reads establish reactive dependencies
+    const _deps = [
+      numColorsLocal,
+      numPalettesLocal,
+      baseColorLocal,
+      warmthLocal,
+      chromaMultiplierLocal,
+      x1Local,
+      y1Local,
+      x2Local,
+      y2Local,
+      currentThemeLocal,
+      lightnessNudgerValues,
+      hueNudgerValues
+    ];
+    void _deps;
+
+    // Debounce color generation to prevent race conditions during rapid changes
+    if (colorGenTimeout) clearTimeout(colorGenTimeout);
+    const currentGenId = ++colorGenId;
+
+    colorGenTimeout = setTimeout(() => {
+      // Only proceed if this is still the latest generation request
+      if (currentGenId === colorGenId) {
+        generateColors();
+      }
+    }, 16); // ~60fps debounce for smooth slider interactions
+
+    return () => {
+      if (colorGenTimeout) clearTimeout(colorGenTimeout);
+    };
   });
 
   // Update URL and localStorage when state changes (debounced)
@@ -129,10 +163,17 @@
     };
 
     if (urlUpdateTimeout) clearTimeout(urlUpdateTimeout);
-    urlUpdateTimeout = setTimeout(() => {
+    // Capture the timeout ID in a local variable for proper cleanup
+    const timeoutId = setTimeout(() => {
       updateBrowserUrl(state);
       saveStateToStorage(state);
     }, 500);
+    urlUpdateTimeout = timeoutId;
+
+    // Cleanup function uses the captured local variable
+    return () => {
+      clearTimeout(timeoutId);
+    };
   });
 
   function applyUrlState(urlState: UrlColorState) {
@@ -180,14 +221,17 @@
     };
 
     try {
-      const result = generatePalettesLegacy(params, true);
+      const result = generatePalettes(params, true);
+      // Atomic update to prevent race conditions
       updateColorState({
         neutrals: result.neutrals,
         palettes: result.palettes
       });
+      // Update contrast after neutrals are set
       updateContrastFromNeutrals();
     } catch (error) {
       console.error('Error generating colors:', error);
+      announce('Error generating colors. Please check your color settings and try again.');
       updateColorState({
         neutrals: [],
         palettes: []

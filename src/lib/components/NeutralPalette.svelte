@@ -17,17 +17,23 @@
   <h2>Neutral Palette <span class="palette-name">({neutralName})</span></h2>
   {#if neutrals.length > 0}
     <div class="color-grid compact">
-      {#each neutrals as color, index}
+      {#each neutrals as color, index (index)}
         <ColorSwatch {color} label="N{index}" showContrast={true} />
       {/each}
     </div>
 
     <h3>Lightness Nudgers</h3>
     <div class="nudger-grid-compact">
-      {#each neutrals as color, index}
+      {#each neutrals as color, index (index)}
         <div class="nudger-item-aligned">
-          <div class="nudger-color-aligned" style="background-color: {color};" aria-hidden="true"></div>
-          <label for="lightness-nudger-{index}" class="visually-hidden">Lightness adjustment for step {index}</label>
+          <div
+            class="nudger-color-aligned"
+            style="background-color: {color};"
+            aria-hidden="true"
+          ></div>
+          <label for="lightness-nudger-{index}" class="visually-hidden"
+            >Lightness adjustment for step {index}</label
+          >
           <input
             id="lightness-nudger-{index}"
             type="number"
@@ -37,14 +43,42 @@
             value={lightnessNudgerValues[index]}
             oninput={(e) => {
               if (e && e.target) {
-                const newValue = parseFloat((e.target as HTMLInputElement).value);
-                lightnessNudgerValues[index] = newValue;
-                updateLightnessNudgerValue(
-                  index,
-                  newValue,
-                  lightnessNudgerValues,
-                  updateLightnessNudger
-                );
+                const inputValue = (e.target as HTMLInputElement).value;
+                // Allow empty string or just "-" while typing (don't reset to 0)
+                if (inputValue === '' || inputValue === '-' || inputValue === '.') {
+                  return;
+                }
+                const newValue = parseFloat(inputValue);
+                // Validate before updating to prevent NaN propagation
+                if (!isNaN(newValue) && isFinite(newValue)) {
+                  // Clamp to valid range
+                  const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
+                  lightnessNudgerValues[index] = clampedValue;
+                  updateLightnessNudgerValue(
+                    index,
+                    clampedValue,
+                    lightnessNudgerValues,
+                    updateLightnessNudger
+                  );
+                }
+                // Don't reset on invalid - let the user continue typing
+              }
+            }}
+            onblur={(e) => {
+              // On blur, reset invalid values to 0
+              if (e && e.target) {
+                const inputValue = (e.target as HTMLInputElement).value;
+                const newValue = parseFloat(inputValue);
+                if (isNaN(newValue) || !isFinite(newValue)) {
+                  lightnessNudgerValues[index] = 0;
+                  updateLightnessNudgerValue(
+                    index,
+                    0,
+                    lightnessNudgerValues,
+                    updateLightnessNudger
+                  );
+                  (e.target as HTMLInputElement).value = '0';
+                }
               }
             }}
             class="nudger-input"

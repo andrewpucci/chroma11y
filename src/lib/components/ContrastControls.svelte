@@ -7,7 +7,7 @@
     updateColorState,
     updateContrastStep
   } from '$lib/stores';
-  import { getContrast } from '$lib/colorUtils';
+  import { getContrast, isValidHexColor } from '$lib/colorUtils';
 
   // Derived values from stores
   let contrastModeLocal = $derived($contrastMode);
@@ -27,26 +27,32 @@
     const target = event.target as HTMLInputElement;
     const newColor = target.value;
 
-    updateColorState({
-      contrast: {
-        ...contrastColorsLocal,
-        low: newColor
-      },
-      contrastMode: 'manual'
-    });
+    // Validate hex color format to prevent invalid colors
+    if (isValidHexColor(newColor)) {
+      updateColorState({
+        contrast: {
+          ...contrastColorsLocal,
+          low: newColor
+        },
+        contrastMode: 'manual'
+      });
+    }
   }
 
   function handleHighColorChange(event: Event) {
     const target = event.target as HTMLInputElement;
     const newColor = target.value;
 
-    updateColorState({
-      contrast: {
-        ...contrastColorsLocal,
-        high: newColor
-      },
-      contrastMode: 'manual'
-    });
+    // Validate hex color format to prevent invalid colors
+    if (isValidHexColor(newColor)) {
+      updateColorState({
+        contrast: {
+          ...contrastColorsLocal,
+          high: newColor
+        },
+        contrastMode: 'manual'
+      });
+    }
   }
 
   function handleLowStepChange(event: Event) {
@@ -131,7 +137,7 @@
       <div class="control-group">
         <label for="low-step">Low Step</label>
         <select id="low-step" value={lowStepLocal} onchange={handleLowStepChange}>
-          {#each generateStepOptions() as step}
+          {#each generateStepOptions() as step (step)}
             <option value={step}>{step * 10}</option>
           {/each}
         </select>
@@ -140,7 +146,7 @@
       <div class="control-group">
         <label for="high-step">High Step</label>
         <select id="high-step" value={highStepLocal} onchange={handleHighStepChange}>
-          {#each generateStepOptions() as step}
+          {#each generateStepOptions() as step (step)}
             <option value={step}>{step * 10}</option>
           {/each}
         </select>
@@ -152,11 +158,19 @@
     <h3>Current Contrast Colors</h3>
     <div class="color-samples" role="group" aria-label="Current contrast color preview">
       <div class="color-sample">
-        <div class="swatch" style="background-color: {contrastColorsLocal.low};" aria-hidden="true"></div>
+        <div
+          class="swatch"
+          style="background-color: {contrastColorsLocal.low};"
+          aria-hidden="true"
+        ></div>
         <span class="label">Low: {contrastColorsLocal.low}</span>
       </div>
       <div class="color-sample">
-        <div class="swatch" style="background-color: {contrastColorsLocal.high};" aria-hidden="true"></div>
+        <div
+          class="swatch"
+          style="background-color: {contrastColorsLocal.high};"
+          aria-hidden="true"
+        ></div>
         <span class="label">High: {contrastColorsLocal.high}</span>
       </div>
     </div>
