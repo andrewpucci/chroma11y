@@ -99,7 +99,7 @@ test.describe('UI Interactions', () => {
     });
 
     test('allows adjusting number of colors', async ({ page }) => {
-      const numColorsInput = page.locator('input[type="number"]').first();
+      const numColorsInput = page.locator('#numColors');
       await numColorsInput.fill('7');
       await page.waitForTimeout(500);
       await expect(numColorsInput).toHaveValue('7');

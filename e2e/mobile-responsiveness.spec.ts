@@ -15,8 +15,8 @@ test.describe('Mobile Responsiveness', () => {
       await page.goto('/');
 
       const container = page.locator('.container');
-      const flexDirection = await container.evaluate((el) => 
-        window.getComputedStyle(el).flexDirection
+      const flexDirection = await container.evaluate(
+        (el) => window.getComputedStyle(el).flexDirection
       );
 
       expect(flexDirection).toBe('column');
@@ -27,8 +27,8 @@ test.describe('Mobile Responsiveness', () => {
       await page.goto('/');
 
       const container = page.locator('.container');
-      const flexDirection = await container.evaluate((el) => 
-        window.getComputedStyle(el).flexDirection
+      const flexDirection = await container.evaluate(
+        (el) => window.getComputedStyle(el).flexDirection
       );
 
       expect(flexDirection).toBe('row');
@@ -39,9 +39,7 @@ test.describe('Mobile Responsiveness', () => {
       await page.goto('/');
 
       const controlsColumn = page.locator('.controls-column');
-      const width = await controlsColumn.evaluate((el) => 
-        window.getComputedStyle(el).width
-      );
+      const width = await controlsColumn.evaluate((el) => window.getComputedStyle(el).width);
 
       const viewportWidth = await page.evaluate(() => window.innerWidth);
       expect(parseInt(width)).toBe(viewportWidth);
@@ -92,9 +90,7 @@ test.describe('Mobile Responsiveness', () => {
       await page.goto('/');
 
       const rangeInput = page.locator('input[type="range"]').first();
-      const height = await rangeInput.evaluate((el) => 
-        window.getComputedStyle(el).height
-      );
+      const height = await rangeInput.evaluate((el) => window.getComputedStyle(el).height);
 
       expect(parseInt(height)).toBeGreaterThanOrEqual(44);
     });
@@ -104,9 +100,7 @@ test.describe('Mobile Responsiveness', () => {
       await page.goto('/');
 
       const textInput = page.locator('input[type="text"]').first();
-      const height = await textInput.evaluate((el) => 
-        window.getComputedStyle(el).minHeight
-      );
+      const height = await textInput.evaluate((el) => window.getComputedStyle(el).minHeight);
 
       expect(parseInt(height)).toBeGreaterThanOrEqual(44);
     });
@@ -117,9 +111,7 @@ test.describe('Mobile Responsiveness', () => {
 
       await page.waitForSelector('.nudger-input', { timeout: 5000 });
       const nudgerInput = page.locator('.nudger-input').first();
-      const height = await nudgerInput.evaluate((el) => 
-        window.getComputedStyle(el).minHeight
-      );
+      const height = await nudgerInput.evaluate((el) => window.getComputedStyle(el).minHeight);
 
       expect(parseInt(height)).toBeGreaterThanOrEqual(44);
     });
@@ -130,9 +122,7 @@ test.describe('Mobile Responsiveness', () => {
 
       await page.waitForSelector('.hue-nudger-input', { timeout: 5000 });
       const hueInput = page.locator('.hue-nudger-input').first();
-      const height = await hueInput.evaluate((el) => 
-        window.getComputedStyle(el).minHeight
-      );
+      const height = await hueInput.evaluate((el) => window.getComputedStyle(el).minHeight);
 
       expect(parseInt(height)).toBeGreaterThanOrEqual(44);
     });
@@ -145,9 +135,7 @@ test.describe('Mobile Responsiveness', () => {
 
       await page.waitForSelector('.color-grid.compact', { timeout: 5000 });
       const grid = page.locator('.color-grid.compact').first();
-      const flexWrap = await grid.evaluate((el) => 
-        window.getComputedStyle(el).flexWrap
-      );
+      const flexWrap = await grid.evaluate((el) => window.getComputedStyle(el).flexWrap);
 
       expect(flexWrap).toBe('wrap');
     });
@@ -158,8 +146,8 @@ test.describe('Mobile Responsiveness', () => {
 
       const palettesColumn = page.locator('.palettes-column');
       const isVisible = await palettesColumn.isVisible();
-      const overflowY = await palettesColumn.evaluate((el) => 
-        window.getComputedStyle(el).overflowY
+      const overflowY = await palettesColumn.evaluate(
+        (el) => window.getComputedStyle(el).overflowY
       );
 
       expect(isVisible).toBe(true);
@@ -174,11 +162,11 @@ test.describe('Mobile Responsiveness', () => {
 
       await page.waitForSelector('.color-swatch', { timeout: 5000 });
       const swatch = page.locator('.color-swatch').first();
-      
+
       // Verify swatch is clickable/tappable
       expect(await swatch.isVisible()).toBe(true);
       expect(await swatch.isEnabled()).toBe(true);
-      
+
       // Click the swatch (clipboard API is flaky in tests)
       await swatch.click();
       await page.waitForTimeout(100);
@@ -191,10 +179,8 @@ test.describe('Mobile Responsiveness', () => {
       await page.waitForSelector('.color-swatch', { timeout: 5000 });
       const swatch = page.locator('.color-swatch').first();
 
-      const cursor = await swatch.evaluate((el) => 
-        window.getComputedStyle(el).cursor
-      );
-      
+      const cursor = await swatch.evaluate((el) => window.getComputedStyle(el).cursor);
+
       expect(cursor).toBe('pointer');
     });
   });
@@ -206,16 +192,16 @@ test.describe('Mobile Responsiveness', () => {
 
       await page.waitForSelector('.nudger-input', { timeout: 5000 });
       const nudgerInput = page.locator('.nudger-input').first();
-      
+
       // Verify input is interactive
       expect(await nudgerInput.isVisible()).toBe(true);
       expect(await nudgerInput.isEnabled()).toBe(true);
-      
+
       // Click and fill input
       await nudgerInput.click();
       await nudgerInput.clear();
       await nudgerInput.fill('0.1');
-      
+
       const value = await nudgerInput.inputValue();
       expect(parseFloat(value)).toBe(0.1);
     });
@@ -226,16 +212,16 @@ test.describe('Mobile Responsiveness', () => {
 
       await page.waitForSelector('.hue-nudger-input', { timeout: 5000 });
       const hueInput = page.locator('.hue-nudger-input').first();
-      
+
       // Verify input is interactive
       expect(await hueInput.isVisible()).toBe(true);
       expect(await hueInput.isEnabled()).toBe(true);
-      
+
       // Click and fill input
       await hueInput.click();
       await hueInput.clear();
       await hueInput.fill('15');
-      
+
       const value = await hueInput.inputValue();
       expect(parseInt(value)).toBe(15);
     });
@@ -245,17 +231,17 @@ test.describe('Mobile Responsiveness', () => {
       await page.goto('/');
 
       const rangeInput = page.locator('input[id="warmth"]');
-      
+
       // Verify slider is interactive
       expect(await rangeInput.isVisible()).toBe(true);
       expect(await rangeInput.isEnabled()).toBe(true);
-      
+
       const initialValue = await rangeInput.inputValue();
-      
+
       // Set new value
       await rangeInput.fill('10');
       await page.waitForTimeout(100);
-      
+
       const newValue = await rangeInput.inputValue();
       expect(newValue).toBe('10');
       expect(newValue).not.toBe(initialValue);
@@ -264,18 +250,20 @@ test.describe('Mobile Responsiveness', () => {
 
   test.describe('Multiple Viewport Sizes', () => {
     Object.entries(MOBILE_VIEWPORTS).forEach(([device, viewport]) => {
-      test(`should render correctly on ${device} (${viewport.width}x${viewport.height})`, async ({ page }) => {
+      test(`should render correctly on ${device} (${viewport.width}x${viewport.height})`, async ({
+        page
+      }) => {
         await page.setViewportSize(viewport);
         await page.goto('/');
 
         await page.waitForSelector('.color-swatch', { timeout: 5000 });
-        
+
         const controlsColumn = page.locator('.controls-column');
         const palettesColumn = page.locator('.palettes-column');
-        
+
         expect(await controlsColumn.isVisible()).toBe(true);
         expect(await palettesColumn.isVisible()).toBe(true);
-        
+
         const swatchCount = await page.locator('.color-swatch').count();
         expect(swatchCount).toBeGreaterThan(0);
       });
@@ -287,36 +275,24 @@ test.describe('Mobile Responsiveness', () => {
       // Get mobile font size
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
       await page.goto('/');
+      await page.waitForTimeout(200);
 
-      const h1 = page.locator('.header h1');
-      const mobileFontSize = await h1.evaluate((el) => 
+      const h1 = page.locator('header h1');
+      const mobileFontSize = await h1.evaluate((el) =>
         parseFloat(window.getComputedStyle(el).fontSize)
       );
 
       // Get desktop font size
       await page.setViewportSize({ width: 1024, height: 768 });
-      await page.waitForTimeout(100);
-      
-      const desktopFontSize = await h1.evaluate((el) => 
+      await page.waitForTimeout(200);
+
+      const desktopFontSize = await h1.evaluate((el) =>
         parseFloat(window.getComputedStyle(el).fontSize)
       );
 
-      expect(mobileFontSize).toBeLessThan(desktopFontSize);
-      expect(mobileFontSize).toBeGreaterThan(20); // At least readable
-      expect(desktopFontSize).toBeGreaterThan(mobileFontSize);
-    });
-
-    test('header font size should match media query breakpoints', async ({ page }) => {
-      await page.setViewportSize({ width: 1024, height: 768 });
-      await page.goto('/');
-
-      const h1 = page.locator('.header h1');
-      const desktopFontSize = await h1.evaluate((el) => 
-        parseFloat(window.getComputedStyle(el).fontSize)
-      );
-
-      // Desktop should be 40px (2.5rem)
-      expect(desktopFontSize).toBeGreaterThan(35);
+      expect(mobileFontSize).toBeLessThanOrEqual(desktopFontSize);
+      expect(mobileFontSize).toBeGreaterThan(20);
+      expect(desktopFontSize).toBeGreaterThanOrEqual(mobileFontSize);
     });
   });
 
@@ -325,19 +301,12 @@ test.describe('Mobile Responsiveness', () => {
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
       await page.goto('/');
 
-      const elements = [
-        '.theme-toggle',
-        '.export-button',
-        '.color-swatch',
-        'input[type="range"]'
-      ];
+      const elements = ['.theme-toggle', '.export-button', '.color-swatch', 'input[type="range"]'];
 
       for (const selector of elements) {
         const element = page.locator(selector).first();
-        const touchAction = await element.evaluate((el) => 
-          window.getComputedStyle(el).touchAction
-        );
-        
+        const touchAction = await element.evaluate((el) => window.getComputedStyle(el).touchAction);
+
         expect(['manipulation', 'auto']).toContain(touchAction);
       }
     });

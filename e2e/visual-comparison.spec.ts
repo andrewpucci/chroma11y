@@ -1,17 +1,18 @@
 /**
- * Phase 7.1: Visual Comparison Tests
- * Compares Svelte implementation against expected values from validated algorithm
+ * Visual Comparison Tests
+ * Validates color generation against expected values from the algorithm
  *
- * Based on ALGORITHM_VALIDATION_REPORT.md:
- * - Algorithm validated at 100% match after test expected values were updated
- * - Neutral colors: 100% match
- * - Palette colors: 100% match with documented algorithm
+ * Tests:
+ * - Neutral colors match expected values
+ * - Deterministic color generation
+ * - Contrast calculations
+ * - Color naming (CIEDE2000)
  */
 
 import { test, expect } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
 
-// Test configuration matching ALGORITHM_VALIDATION_REPORT.md
+// Test configuration for validating color generation
 const TEST_CONFIG = {
   baseColor: '#1862e6',
   warmth: -7,
@@ -39,7 +40,7 @@ const EXPECTED_NEUTRALS = [
   '#000000'
 ];
 
-test.describe('Phase 7.1: Visual Comparison', () => {
+test.describe('Visual Comparison', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);
@@ -103,7 +104,9 @@ test.describe('Phase 7.1: Visual Comparison', () => {
       }
 
       const matchCount = results.filter((r) => r.match).length;
-      console.log(`\nMatch Rate: ${matchCount}/${results.length} (${Math.round((matchCount / results.length) * 100)}%)`);
+      console.log(
+        `\nMatch Rate: ${matchCount}/${results.length} (${Math.round((matchCount / results.length) * 100)}%)`
+      );
 
       // Assert high match rate (allowing for minor rounding differences)
       expect(matchCount).toBeGreaterThanOrEqual(9); // At least 82% match
@@ -223,8 +226,14 @@ test.describe('Phase 7.1: Visual Comparison', () => {
       await expect(highColorPicker).toBeVisible();
 
       // Set custom colors via text inputs - need to clear first, then type
-      const lowTextInput = page.locator('.manual-controls .color-input-group').first().locator('input[type="text"]');
-      const highTextInput = page.locator('.manual-controls .color-input-group').last().locator('input[type="text"]');
+      const lowTextInput = page
+        .locator('.manual-controls .color-input-group')
+        .first()
+        .locator('input[type="text"]');
+      const highTextInput = page
+        .locator('.manual-controls .color-input-group')
+        .last()
+        .locator('input[type="text"]');
 
       // Clear and fill low color
       await lowTextInput.click();
@@ -239,8 +248,16 @@ test.describe('Phase 7.1: Visual Comparison', () => {
       await page.waitForTimeout(500);
 
       // Verify colors were applied in the contrast preview
-      const lowLabel = await page.locator('.contrast-preview .color-sample').first().locator('.label').textContent();
-      const highLabel = await page.locator('.contrast-preview .color-sample').last().locator('.label').textContent();
+      const lowLabel = await page
+        .locator('.contrast-preview .color-sample')
+        .first()
+        .locator('.label')
+        .textContent();
+      const highLabel = await page
+        .locator('.contrast-preview .color-sample')
+        .last()
+        .locator('.label')
+        .textContent();
 
       // The low color should be red, high color should be blue
       expect(lowLabel?.toLowerCase()).toContain('#ff0000');
@@ -282,7 +299,16 @@ test.describe('Phase 7.1: Visual Comparison', () => {
       const name = ((await firstPaletteName.textContent()) || '').toLowerCase();
 
       // Should contain 'blue' or a blue-related color name
-      const blueNames = ['blue', 'navy', 'royal', 'azure', 'cobalt', 'indigo', 'ultramarine', 'mediumblue'];
+      const blueNames = [
+        'blue',
+        'navy',
+        'royal',
+        'azure',
+        'cobalt',
+        'indigo',
+        'ultramarine',
+        'mediumblue'
+      ];
       const hasBlueInName = blueNames.some((b) => name.includes(b));
 
       expect(hasBlueInName).toBe(true);
@@ -333,7 +359,9 @@ test.describe('Phase 7.1: Visual Comparison', () => {
   test.describe('Theme Comparison', () => {
     test('light mode starts with white neutrals', async ({ page }) => {
       // Ensure light mode by clicking preset if needed
-      const lightPreset = page.locator('button:has-text("Light"), .theme-preset:has-text("Light")').first();
+      const lightPreset = page
+        .locator('button:has-text("Light"), .theme-preset:has-text("Light")')
+        .first();
       if (await lightPreset.isVisible()) {
         await lightPreset.click();
         await page.waitForTimeout(300);
@@ -349,7 +377,9 @@ test.describe('Phase 7.1: Visual Comparison', () => {
 
     test('dark mode inverts neutral gradient', async ({ page }) => {
       // Switch to dark mode by clicking preset
-      const darkPreset = page.locator('button:has-text("Dark"), .theme-preset:has-text("Dark")').first();
+      const darkPreset = page
+        .locator('button:has-text("Dark"), .theme-preset:has-text("Dark")')
+        .first();
       if (await darkPreset.isVisible()) {
         await darkPreset.click();
         await page.waitForTimeout(500);
@@ -403,7 +433,9 @@ test.describe('Phase 7.1: Visual Comparison', () => {
 
     test('captures dark mode screenshot', async ({ page }) => {
       // Switch to dark mode by clicking preset
-      const darkPreset = page.locator('button:has-text("Dark"), .theme-preset:has-text("Dark")').first();
+      const darkPreset = page
+        .locator('button:has-text("Dark"), .theme-preset:has-text("Dark")')
+        .first();
       if (await darkPreset.isVisible()) {
         await darkPreset.click();
         await page.waitForTimeout(300);
