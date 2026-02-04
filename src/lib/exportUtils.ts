@@ -2,40 +2,10 @@
  * Export utilities for color palettes
  */
 
-/**
- * Interface for design token structure
- */
-interface DesignToken {
-  name: string;
-  description: string;
-  value: string;
-  type: string;
-}
+import { hexToRgb, getPaletteName } from './colorUtils';
 
-interface DesignTokens {
-  color: {
-    name: string;
-    _base: {
-      gray: Record<string, DesignToken>;
-      blue: Record<string, DesignToken>;
-      purple: Record<string, DesignToken>;
-      orchid: Record<string, DesignToken>;
-      pink: Record<string, DesignToken>;
-      red: Record<string, DesignToken>;
-      orange: Record<string, DesignToken>;
-      gold: Record<string, DesignToken>;
-      lime: Record<string, DesignToken>;
-      green: Record<string, DesignToken>;
-      turquoise: Record<string, DesignToken>;
-      skyblue: Record<string, DesignToken>;
-    };
-  };
-}
-
-/**
- * Palette names in order
- */
-const PALETTE_NAMES = [
+/** Default palette names used as fallbacks when color naming fails */
+const DEFAULT_PALETTE_NAMES = [
   'blue',
   'purple',
   'orchid',
@@ -50,58 +20,102 @@ const PALETTE_NAMES = [
 ];
 
 /**
- * Exports colors as design tokens JSON format
+ * Gets the name for a palette, using dynamic color detection with fallback
+ * @param palette - Array of hex colors in the palette
+ * @param index - Palette index for fallback naming
+ * @returns Palette name string
+ */
+function getPaletteNameForExport(palette: string[], index: number): string {
+  // Try to get dynamic name from color detection
+  const dynamicName = getPaletteName(palette);
+  if (dynamicName && dynamicName !== 'Unnamed') {
+    return dynamicName.toLowerCase();
+  }
+  // Fall back to default names or index-based naming
+  return DEFAULT_PALETTE_NAMES[index] || `palette-${index + 1}`;
+}
+
+/**
+ * Interface for design token value (can be string or object)
+ */
+interface DesignTokenValue {
+  colorSpace: string;
+  components: number[];
+  hex: string;
+}
+
+/**
+ * Interface for design token structure compliant with Design Tokens specification
+ * @see https://www.designtokens.org/tr/2025.10/
+ */
+interface DesignToken {
+  $type: string;
+  $value: string | DesignTokenValue;
+  $description?: string;
+}
+
+export interface DesignTokens {
+  [key: string]: DesignToken | DesignTokens;
+}
+
+/**
+ * @see https://www.designtokens.org/tr/2025.10/
+ * Exports colors as design tokens JSON format compliant with Design Tokens specification
  */
 export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): DesignTokens {
-  const exportedData: DesignTokens = {
-    color: {
-      name: 'color',
-      _base: {
-        gray: {},
-        blue: {},
-        purple: {},
-        orchid: {},
-        pink: {},
-        red: {},
-        orange: {},
-        gold: {},
-        lime: {},
-        green: {},
-        turquoise: {},
-        skyblue: {}
-      }
-    }
-  };
+  const tokens: DesignTokens = {};
 
   // Export neutral colors
+  const neutralTokens: DesignTokens = {};
   neutrals.forEach((color, index) => {
     const step = index * 10;
-    exportedData.color._base.gray[step] = {
-      name: `_base/gray/${step}`,
-      description: '',
-      value: color,
-      type: 'color'
-    };
+    const rgbObj = hexToRgb(color);
+    const rgb = rgbObj ? ([rgbObj.r, rgbObj.g, rgbObj.b] as [number, number, number]) : null;
+    if (rgb) {
+      neutralTokens[`${step}`] = {
+        $type: 'color',
+        $value: {
+          colorSpace: 'srgb',
+          components: rgb,
+          hex: color
+        },
+        $description: `Neutral color step ${step}`
+      };
+    }
   });
+
+  if (Object.keys(neutralTokens).length > 0) {
+    tokens.gray = neutralTokens;
+  }
 
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
-    const paletteName = PALETTE_NAMES[paletteIndex] || `palette-${paletteIndex + 1}`;
+    const paletteName = getPaletteNameForExport(palette, paletteIndex);
+    const paletteTokens: DesignTokens = {};
 
-    if (exportedData.color._base[paletteName as keyof typeof exportedData.color._base]) {
-      palette.forEach((color, index) => {
-        const step = index * 10;
-        exportedData.color._base[paletteName as keyof typeof exportedData.color._base][step] = {
-          name: `_base/${paletteName}/${step}`,
-          description: '',
-          value: color,
-          type: 'color'
+    palette.forEach((color, index) => {
+      const step = index * 10;
+      const rgbObj = hexToRgb(color);
+      const rgb = rgbObj ? ([rgbObj.r, rgbObj.g, rgbObj.b] as [number, number, number]) : null;
+      if (rgb) {
+        paletteTokens[`${step}`] = {
+          $type: 'color',
+          $value: {
+            colorSpace: 'srgb',
+            components: rgb,
+            hex: color
+          },
+          $description: `${paletteName.charAt(0).toUpperCase() + paletteName.slice(1)} color step ${step}`
         };
-      });
+      }
+    });
+
+    if (Object.keys(paletteTokens).length > 0) {
+      tokens[paletteName] = paletteTokens;
     }
   });
 
-  return exportedData;
+  return tokens;
 }
 
 /**
@@ -119,7 +133,7 @@ export function exportAsCSS(neutrals: string[], palettes: string[][]): string {
 
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
-    const paletteName = PALETTE_NAMES[paletteIndex] || `palette-${paletteIndex + 1}`;
+    const paletteName = getPaletteNameForExport(palette, paletteIndex);
     css += `\n  /* ${paletteName.charAt(0).toUpperCase() + paletteName.slice(1)} Palette */\n`;
 
     palette.forEach((color, index) => {
@@ -147,7 +161,7 @@ export function exportAsSCSS(neutrals: string[], palettes: string[][]): string {
 
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
-    const paletteName = PALETTE_NAMES[paletteIndex] || `palette-${paletteIndex + 1}`;
+    const paletteName = getPaletteNameForExport(palette, paletteIndex);
     scss += `\n// ${paletteName.charAt(0).toUpperCase() + paletteName.slice(1)} Palette\n`;
 
     palette.forEach((color, index) => {
@@ -161,19 +175,51 @@ export function exportAsSCSS(neutrals: string[], palettes: string[][]): string {
 
 /**
  * Downloads data as a file
+ * @throws Error if running in non-browser environment or if download fails
  */
 export function downloadFile(content: string, filename: string, mimeType: string = 'text/plain') {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
+  // Check for browser environment
+  if (typeof document === 'undefined' || typeof URL === 'undefined') {
+    throw new Error('downloadFile requires a browser environment');
+  }
 
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  let blob: Blob;
+  let url: string;
+  let link: HTMLAnchorElement | null = null;
 
-  URL.revokeObjectURL(url);
+  try {
+    blob = new Blob([content], { type: mimeType });
+  } catch (error) {
+    throw new Error(
+      `Failed to create blob: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+
+  try {
+    url = URL.createObjectURL(blob);
+  } catch (error) {
+    throw new Error(
+      `Failed to create object URL: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
+
+  try {
+    link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+  } catch (error) {
+    throw new Error(
+      `Failed to trigger download: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  } finally {
+    // Ensure link is removed even if click() throws
+    if (link && link.parentNode) {
+      document.body.removeChild(link);
+    }
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**

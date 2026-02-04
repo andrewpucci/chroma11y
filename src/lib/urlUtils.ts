@@ -78,29 +78,71 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   if (baseColor) state.baseColor = `#${baseColor}`;
 
   const warmth = searchParams.get('w');
-  if (warmth) state.warmth = parseFloat(warmth);
+  if (warmth) {
+    const parsed = parseFloat(warmth);
+    // Tighter bounds: warmth typically ranges from -20 to +20
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= -20 && parsed <= 20) {
+      state.warmth = parsed;
+    }
+  }
 
   const chromaMultiplier = searchParams.get('cm');
-  if (chromaMultiplier) state.chromaMultiplier = parseFloat(chromaMultiplier);
+  if (chromaMultiplier) {
+    const parsed = parseFloat(chromaMultiplier);
+    // Tighter bounds: chroma multiplier typically ranges from 0.1 to 2.0
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= 0.1 && parsed <= 2.0) {
+      state.chromaMultiplier = parsed;
+    }
+  }
 
   const numColors = searchParams.get('nc');
-  if (numColors) state.numColors = parseInt(numColors);
+  if (numColors) {
+    const parsed = parseInt(numColors);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed > 0 && parsed <= 100) {
+      state.numColors = parsed;
+    }
+  }
 
   const numPalettes = searchParams.get('np');
-  if (numPalettes) state.numPalettes = parseInt(numPalettes);
+  if (numPalettes) {
+    const parsed = parseInt(numPalettes);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed > 0 && parsed <= 100) {
+      state.numPalettes = parsed;
+    }
+  }
 
   // Bezier curve
   const x1 = searchParams.get('x1');
-  if (x1) state.x1 = parseFloat(x1);
+  if (x1) {
+    const parsed = parseFloat(x1);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= 0 && parsed <= 1) {
+      state.x1 = parsed;
+    }
+  }
 
   const y1 = searchParams.get('y1');
-  if (y1) state.y1 = parseFloat(y1);
+  if (y1) {
+    const parsed = parseFloat(y1);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= 0 && parsed <= 1) {
+      state.y1 = parsed;
+    }
+  }
 
   const x2 = searchParams.get('x2');
-  if (x2) state.x2 = parseFloat(x2);
+  if (x2) {
+    const parsed = parseFloat(x2);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= 0 && parsed <= 1) {
+      state.x2 = parsed;
+    }
+  }
 
   const y2 = searchParams.get('y2');
-  if (y2) state.y2 = parseFloat(y2);
+  if (y2) {
+    const parsed = parseFloat(y2);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= 0 && parsed <= 1) {
+      state.y2 = parsed;
+    }
+  }
 
   // Theme and contrast
   const theme = searchParams.get('t');
@@ -110,20 +152,30 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   if (contrastMode === 'manual' || contrastMode === 'auto') state.contrastMode = contrastMode;
 
   const lowStep = searchParams.get('ls');
-  if (lowStep) state.lowStep = parseInt(lowStep);
+  if (lowStep) {
+    const parsed = parseInt(lowStep);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= 0 && parsed <= 100) {
+      state.lowStep = parsed;
+    }
+  }
 
   const highStep = searchParams.get('hs');
-  if (highStep) state.highStep = parseInt(highStep);
+  if (highStep) {
+    const parsed = parseInt(highStep);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= 0 && parsed <= 100) {
+      state.highStep = parsed;
+    }
+  }
 
-  // Decode nudgers
+  // Decode nudgers with appropriate bounds
   const lightnessNudgers = searchParams.get('ln');
   if (lightnessNudgers) {
-    state.lightnessNudgers = parseNudgers(lightnessNudgers, 11);
+    state.lightnessNudgers = parseNudgers(lightnessNudgers, 11, -0.5, 0.5);
   }
 
   const hueNudgers = searchParams.get('hn');
   if (hueNudgers) {
-    state.hueNudgers = parseNudgers(hueNudgers, 11);
+    state.hueNudgers = parseNudgers(hueNudgers, 11, -180, 180);
   }
 
   return state;
@@ -131,14 +183,32 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
 
 /**
  * Parses nudger string format "0:0.1,5:-0.05" into array
+ * @param nudgerStr - The string to parse
+ * @param length - Expected array length
+ * @param minBound - Minimum valid value (inclusive)
+ * @param maxBound - Maximum valid value (inclusive)
  */
-function parseNudgers(nudgerStr: string, length: number): number[] {
+function parseNudgers(
+  nudgerStr: string,
+  length: number,
+  minBound: number,
+  maxBound: number
+): number[] {
   const result = new Array(length).fill(0);
   nudgerStr.split(',').forEach((pair) => {
     const [indexStr, valueStr] = pair.split(':');
     const index = parseInt(indexStr);
     const value = parseFloat(valueStr);
-    if (!isNaN(index) && !isNaN(value) && index >= 0 && index < length) {
+    // Validate index bounds and value range
+    if (
+      !isNaN(index) &&
+      !isNaN(value) &&
+      isFinite(value) &&
+      index >= 0 &&
+      index < length &&
+      value >= minBound &&
+      value <= maxBound
+    ) {
       result[index] = value;
     }
   });
