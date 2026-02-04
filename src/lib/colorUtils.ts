@@ -1,6 +1,5 @@
 /**
  * Color utility functions for OKLCH color generation
- * Ported from legacy colorUtils.js to match exact algorithm
  */
 
 import {
@@ -13,12 +12,66 @@ import {
   colorsNamed,
   differenceCiede2000,
   nearest,
-  parse
+  parse,
+  rgb
 } from 'culori';
 import easing from 'bezier-easing';
 import { transpose, mean } from 'mathjs';
 import type { Oklch } from 'culori';
 import { announce } from '$lib/announce';
+
+// ===== CONSTANTS =====
+
+/** Minimum WCAG AA contrast ratio for text */
+export const MIN_CONTRAST_RATIO = 4.5;
+
+/** Target contrast ratio for dark mode start color */
+export const DARK_MODE_TARGET_CONTRAST = 18;
+
+/** Maximum contrast ratio (white on black or vice versa) */
+export const MAX_CONTRAST_RATIO = 21;
+
+/** Warmth adjustment multipliers for RGB channels */
+export const WARMTH_MULTIPLIERS = {
+  R: 0.001,
+  G: 0.0001,
+  B: 0.001
+} as const;
+
+/** Lightness nudger bounds */
+export const LIGHTNESS_NUDGER_BOUNDS = {
+  MIN: -0.5,
+  MAX: 0.5
+} as const;
+
+/** Hue nudger bounds */
+export const HUE_NUDGER_BOUNDS = {
+  MIN: -180,
+  MAX: 180
+} as const;
+
+// ===== VALIDATION FUNCTIONS =====
+
+/** Regex pattern for validating hex colors - supports #RGB, #RRGGBB formats */
+export const HEX_COLOR_PATTERN = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+
+/**
+ * Validates if a string is a valid hex color (#RGB or #RRGGBB format)
+ * @param color - The color string to validate
+ * @returns true if valid hex color, false otherwise
+ */
+export function isValidHexColor(color: string): boolean {
+  return HEX_COLOR_PATTERN.test(color);
+}
+
+/**
+ * Validates if a string is a valid 6-digit hex color (#RRGGBB format only)
+ * @param color - The color string to validate
+ * @returns true if valid 6-digit hex color, false otherwise
+ */
+export function isValidHex6Color(color: string): boolean {
+  return /^#[0-9A-Fa-f]{6}$/.test(color);
+}
 
 // ===== UTILITY FUNCTIONS =====
 
@@ -86,13 +139,13 @@ export const nearestNamedColors = nearest(Object.keys(colorsNamed), differenceCi
  * @returns Hex color string for the dark mode starting color
  */
 function calculateDarkModeStartColor(targetColor: string = '#ffffff'): string {
-  const targetContrast = 18;
+  const targetContrast = DARK_MODE_TARGET_CONTRAST;
 
   // Binary search to find a color that gives ~18:1 contrast with white
   let minL = 0;
   let maxL = 0.5; // Expand search range
   let bestL = 0;
-  let bestContrast = 21;
+  let bestContrast = MAX_CONTRAST_RATIO;
 
   // Create a test color to find the right lightness
   for (let i = 0; i < 30; i++) {
@@ -107,9 +160,11 @@ function calculateDarkModeStartColor(targetColor: string = '#ffffff'): string {
     }
 
     if (contrast > targetContrast) {
-      minL = testL; // Too much contrast, need lighter color (higher L)
+      // Too much contrast, need lighter color (higher L)
+      minL = testL;
     } else {
-      maxL = testL; // Too little contrast, need darker color (lower L)
+      // Too little contrast, need darker color (lower L)
+      maxL = testL;
     }
   }
 
@@ -119,11 +174,28 @@ function calculateDarkModeStartColor(targetColor: string = '#ffffff'): string {
 
 // ===== CONTRAST FUNCTIONS =====
 
+/** Acceptable color input types for formatColor */
+type ColorInput =
+  | string
+  | { mode: string; l?: number; c?: number; h?: number; r?: number; g?: number; b?: number }
+  | null
+  | undefined;
+
 /**
  * Formats a color object to a hex string
+ * @param color - A color string, OKLCH/RGB object, or null/undefined
+ * @returns Hex color string or empty string if invalid
  */
-export function formatColor(color: unknown): string {
-  return formatHex(color as Parameters<typeof formatHex>[0]) || '';
+export function formatColor(color: ColorInput): string {
+  if (color === null || color === undefined) {
+    return '';
+  }
+  try {
+    const result = formatHex(color as Parameters<typeof formatHex>[0]);
+    return result || '';
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -143,11 +215,10 @@ export function getPrintableContrast(color1: string, color2: string): number {
   return Math.trunc(100 * getContrast(color1, color2)) / 100;
 }
 
-// ===== NEUTRAL GENERATION (LEGACY ALGORITHM) =====
+// ===== NEUTRAL GENERATION =====
 
 /**
  * Generates base neutral colors WITHOUT nudgers applied
- * This matches the legacy generateNeutrals function exactly
  */
 export function generateBaseNeutrals(params: ColorGenParams): Oklch[] {
   // Determine the starting and ending colors for neutral generation
@@ -165,10 +236,10 @@ export function generateBaseNeutrals(params: ColorGenParams): Oklch[] {
   const baseNeutrals: Oklch[] = initialSamples.map((color) => {
     const result = { ...color };
 
-    // Apply warmth adjustment to ALL colors (legacy behavior)
-    result.r = (result.r || 0) + params.warmth * 0.001;
-    result.g = (result.g || 0) - params.warmth * 0.0001;
-    result.b = (result.b || 0) - params.warmth * 0.001;
+    // Apply warmth adjustment to ALL colors
+    result.r = (result.r || 0) + params.warmth * WARMTH_MULTIPLIERS.R;
+    result.g = (result.g || 0) - params.warmth * WARMTH_MULTIPLIERS.G;
+    result.b = (result.b || 0) - params.warmth * WARMTH_MULTIPLIERS.B;
 
     // Convert to OKLCH
     const oklchColor = oklch(result);
@@ -200,21 +271,26 @@ export function generateNeutralPalette(
   });
 
   // Convert to hex strings
-  return neutralsWithNudgers.map((color) => {
+  return neutralsWithNudgers.map((color, index) => {
     try {
       const clampedColor = clampChroma(color, 'oklch');
-      return formatHex(clampedColor) || '#000000';
-    } catch {
+      const hex = formatHex(clampedColor);
+      if (!hex) {
+        console.warn(`Failed to format neutral color at index ${index}, using fallback`);
+        return '#000000';
+      }
+      return hex;
+    } catch (error) {
+      console.error(`Error converting neutral color at index ${index}:`, error);
       return '#000000';
     }
   });
 }
 
-// ===== PALETTE GENERATION (LEGACY ALGORITHM) =====
+// ===== PALETTE GENERATION =====
 
 /**
  * Generates a single color palette based on base neutrals and a hue-shifted base color
- * This matches the legacy generatePalette function exactly
  */
 function generatePalette(
   baseNeutrals: Oklch[],
@@ -239,7 +315,7 @@ function generatePalette(
 
 /**
  * Applies lightness nudgers to neutrals and palettes after all other calculations
- * This is the FINAL step in the legacy algorithm
+ * This is the FINAL step in the algorithm
  */
 function applyLightnessNudgers(
   neutrals: Oklch[],
@@ -297,10 +373,10 @@ function normalizeChromaValuesInternal(palettes: Oklch[][]): number[] {
 }
 
 /**
- * Generates multiple color palettes using the LEGACY algorithm
+ * Generates multiple color palettes
  * Returns both OKLCH objects (for internal use) and hex strings (for display)
  */
-export function generatePalettesLegacy(
+export function generatePalettes(
   params: ColorGenParams,
   shouldNormalizeChroma: boolean = true
 ): { neutrals: string[]; palettes: string[][]; normalizedChromaValues: number[] } {
@@ -368,10 +444,10 @@ export function generatePalettesLegacy(
 
 /**
  * Generates multiple color palettes (simplified interface)
- * Wrapper around generatePalettesLegacy for backward compatibility
+ * Wrapper around generatePalettes for ease of use
  */
 export function generateMultiplePalettes(params: PaletteGenParams): string[][] {
-  const result = generatePalettesLegacy(params as ColorGenParams, true);
+  const result = generatePalettes(params as ColorGenParams, true);
   return result.palettes;
 }
 
@@ -379,7 +455,7 @@ export function generateMultiplePalettes(params: PaletteGenParams): string[][] {
  * Normalizes chroma values across palettes for consistent appearance
  * Public interface for external use - kept for backward compatibility
  */
-export function normalizeChromaValues(palettes: string[][], _chromaMultiplier: number): void {
+export function normalizeChromaValues(palettes: string[][]): void {
   // Convert hex to OKLCH
   const oklchPalettes: Oklch[][] = palettes.map((palette) =>
     palette.map((color) => oklch(color) as Oklch)
@@ -409,14 +485,18 @@ export function normalizeChromaValues(palettes: string[][], _chromaMultiplier: n
  * Converts hex color to RGB object
  */
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-      }
-    : null;
+  const normalizedHex = hex.startsWith('#') ? hex : `#${hex}`;
+  const parsed = parse(normalizedHex);
+  if (!parsed) return null;
+
+  const srgb = rgb(parsed);
+  if (srgb.r == null || srgb.g == null || srgb.b == null) return null;
+
+  return {
+    r: srgb.r,
+    g: srgb.g,
+    b: srgb.b
+  };
 }
 
 /**
@@ -427,7 +507,6 @@ export function getLuminance(hex: string): number {
   if (!rgb) return 0;
 
   const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {
-    val = val / 255;
     return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
   });
 
@@ -439,7 +518,8 @@ export function getLuminance(hex: string): number {
  */
 export function getContrastColor(backgroundColor: string): string {
   const luminance = getLuminance(backgroundColor);
-  return luminance > 0.5 ? '#000000' : '#ffffff';
+  const threshold = 0.5;
+  return luminance > threshold ? '#000000' : '#ffffff';
 }
 
 /**
@@ -453,6 +533,13 @@ export function getPaletteName(palette: string[]): string {
   try {
     const middleIndex = Math.round(palette.length * 0.6);
     const middleColor = palette[Math.min(middleIndex, palette.length - 1)];
+
+    // Validate that we have a valid hex color
+    if (!middleColor || typeof middleColor !== 'string' || !middleColor.match(/^#[0-9a-f]{6}$/i)) {
+      console.warn('Invalid color in palette for naming:', middleColor);
+      return 'Unnamed';
+    }
+
     const colorNames = nearestNamedColors(middleColor);
     // nearest() returns an array, get the first (closest) match
     const colorName = Array.isArray(colorNames) ? colorNames[0] : colorNames;
@@ -464,10 +551,10 @@ export function getPaletteName(palette: string[]): string {
 }
 
 /**
- * Legacy function for backward compatibility - generates a single palette
+ * Function for backward compatibility - generates a single palette
  */
 export function generateColorPalette(params: PaletteGenParams): string[] {
-  const result = generatePalettesLegacy(
+  const result = generatePalettes(
     {
       ...params,
       numPalettes: 1,

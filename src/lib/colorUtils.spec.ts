@@ -7,7 +7,7 @@ import {
   getContrast,
   getPrintableContrast,
   getPaletteName,
-  generatePalettesLegacy,
+  generatePalettes,
   type ColorGenParams
 } from './colorUtils';
 
@@ -75,7 +75,7 @@ describe('colorUtils', () => {
     });
   });
 
-  describe('generatePalettesLegacy', () => {
+  describe('generatePalettes', () => {
     const baseParams: ColorGenParams = {
       numColors: 11,
       numPalettes: 1,
@@ -92,18 +92,18 @@ describe('colorUtils', () => {
     };
 
     it('generates correct number of neutral colors', () => {
-      const result = generatePalettesLegacy(baseParams, true);
+      const result = generatePalettes(baseParams, true);
       expect(result.neutrals).toHaveLength(11);
     });
 
     it('generates correct number of palettes', () => {
       const params = { ...baseParams, numPalettes: 5 };
-      const result = generatePalettesLegacy(params, true);
+      const result = generatePalettes(params, true);
       expect(result.palettes).toHaveLength(5);
     });
 
     it('generates valid hex colors', () => {
-      const result = generatePalettesLegacy(baseParams, true);
+      const result = generatePalettes(baseParams, true);
       const hexRegex = /^#[0-9a-f]{6}$/i;
 
       result.neutrals.forEach((color) => {
@@ -118,7 +118,7 @@ describe('colorUtils', () => {
     });
 
     it('light theme neutrals start with white and end with black', () => {
-      const result = generatePalettesLegacy(baseParams, true);
+      const result = generatePalettes(baseParams, true);
       expect(result.neutrals[0].toLowerCase()).toBe('#ffffff');
       expect(result.neutrals[10].toLowerCase()).toBe('#000000');
     });
@@ -126,19 +126,19 @@ describe('colorUtils', () => {
     it('dark theme neutrals are reversed from light theme', () => {
       const lightParams = { ...baseParams, currentTheme: 'light' as const };
       const darkParams = { ...baseParams, currentTheme: 'dark' as const };
-      const lightResult = generatePalettesLegacy(lightParams, true);
-      const darkResult = generatePalettesLegacy(darkParams, true);
+      const lightResult = generatePalettes(lightParams, true);
+      const darkResult = generatePalettes(darkParams, true);
       // Dark theme first color should be darker than light theme first color
       expect(darkResult.neutrals[0]).not.toBe(lightResult.neutrals[0]);
     });
 
     it('applies lightness nudgers to neutrals', () => {
-      const withoutNudger = generatePalettesLegacy(baseParams, true);
+      const withoutNudger = generatePalettes(baseParams, true);
 
       const nudgers = new Array(11).fill(0);
       nudgers[5] = 0.1;
       const params = { ...baseParams, lightnessNudgers: nudgers };
-      const withNudger = generatePalettesLegacy(params, true);
+      const withNudger = generatePalettes(params, true);
 
       // Middle neutral should be different
       expect(withNudger.neutrals[5]).not.toBe(withoutNudger.neutrals[5]);
@@ -149,10 +149,10 @@ describe('colorUtils', () => {
 
     it('applies hue nudgers to palettes', () => {
       const params1 = { ...baseParams, numPalettes: 1, hueNudgers: [0] };
-      const result1 = generatePalettesLegacy(params1, true);
+      const result1 = generatePalettes(params1, true);
 
       const params2 = { ...baseParams, numPalettes: 1, hueNudgers: [60] };
-      const result2 = generatePalettesLegacy(params2, true);
+      const result2 = generatePalettes(params2, true);
 
       // Palette colors should be different with different hue nudger
       expect(result2.palettes[0][5]).not.toBe(result1.palettes[0][5]);
@@ -162,16 +162,16 @@ describe('colorUtils', () => {
       const coolParams = { ...baseParams, warmth: -20 };
       const warmParams = { ...baseParams, warmth: 20 };
 
-      const coolResult = generatePalettesLegacy(coolParams, true);
-      const warmResult = generatePalettesLegacy(warmParams, true);
+      const coolResult = generatePalettes(coolParams, true);
+      const warmResult = generatePalettes(warmParams, true);
 
       // Mid-tone neutrals should differ with different warmth
       expect(coolResult.neutrals[5]).not.toBe(warmResult.neutrals[5]);
     });
 
     it('produces deterministic output for same inputs', () => {
-      const result1 = generatePalettesLegacy(baseParams, true);
-      const result2 = generatePalettesLegacy(baseParams, true);
+      const result1 = generatePalettes(baseParams, true);
+      const result2 = generatePalettes(baseParams, true);
 
       expect(result1.neutrals).toEqual(result2.neutrals);
       expect(result1.palettes).toEqual(result2.palettes);
