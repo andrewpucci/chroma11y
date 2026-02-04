@@ -1,7 +1,19 @@
 {
   "name": "svelte-colorgenerator",
-  "private": true,
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "description": "A modern, accessible color palette generator with OKLCH color space, WCAG contrast calculations, and multiple export formats",
+  "keywords": [
+    "color",
+    "palette",
+    "generator",
+    "accessibility",
+    "oklch",
+    "svelte",
+    "design-tokens",
+    "wcag",
+    "contrast"
+  ],
+  "license": "GPL-3.0",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -12,6 +24,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint .",
+    "lint:fix": "prettier --write . && eslint . --fix",
     "test:unit": "vitest",
     "test": "npm run test:unit -- --run && npm run test:e2e",
     "test:e2e": "playwright test"
