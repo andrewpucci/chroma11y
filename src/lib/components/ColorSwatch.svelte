@@ -22,7 +22,12 @@
     const lowRatio = getContrast(bgColor, contrast.low);
     const highRatio = getContrast(bgColor, contrast.high);
 
-    // Prefer low contrast color if it meets threshold, otherwise use high
+    // If both meet threshold, use the one with better (higher) contrast
+    if (lowRatio >= minContrastRatio && highRatio >= minContrastRatio) {
+      return highRatio > lowRatio ? contrast.high : contrast.low;
+    }
+
+    // Only one meets threshold, use that one
     if (lowRatio >= minContrastRatio) {
       return contrast.low;
     } else if (highRatio >= minContrastRatio) {

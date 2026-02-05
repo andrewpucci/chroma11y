@@ -105,23 +105,20 @@
 
   // Generate colors when parameters change (debounced to prevent race conditions)
   $effect(() => {
-    // Track all parameters that should trigger regeneration
-    // These reads establish reactive dependencies
-    const _deps = [
-      numColorsLocal,
-      numPalettesLocal,
-      baseColorLocal,
-      warmthLocal,
-      chromaMultiplierLocal,
-      x1Local,
-      y1Local,
-      x2Local,
-      y2Local,
-      currentThemeLocal,
-      lightnessNudgerValues,
-      hueNudgerValues
-    ];
-    void _deps;
+    // Access all parameters directly to establish reactive dependencies
+    const _numColors = numColorsLocal;
+    const _numPalettes = numPalettesLocal;
+    const _baseColor = baseColorLocal;
+    const _warmth = warmthLocal;
+    const _chroma = chromaMultiplierLocal;
+    const _x1 = x1Local;
+    const _y1 = y1Local;
+    const _x2 = x2Local;
+    const _y2 = y2Local;
+    const _theme = currentThemeLocal;
+    const _lightnessNudgers = lightnessNudgerValues;
+    const _hueNudgers = hueNudgerValues;
+    void _numColors, _numPalettes, _baseColor, _warmth, _chroma, _x1, _y1, _x2, _y2, _theme, _lightnessNudgers, _hueNudgers;
 
     // Debounce color generation to prevent race conditions during rapid changes
     if (colorGenTimeout) clearTimeout(colorGenTimeout);
@@ -129,13 +126,16 @@
 
     colorGenTimeout = setTimeout(() => {
       // Only proceed if this is still the latest generation request
-      if (currentGenId === colorGenId) {
+      if (currentGenId === colorGenId && urlStateLoaded) {
         generateColors();
       }
     }, 16); // ~60fps debounce for smooth slider interactions
 
     return () => {
-      if (colorGenTimeout) clearTimeout(colorGenTimeout);
+      if (colorGenTimeout) {
+        clearTimeout(colorGenTimeout);
+        colorGenTimeout = null;
+      }
     };
   });
 
@@ -162,17 +162,23 @@
       hueNudgers: hueNudgerValues
     };
 
-    if (urlUpdateTimeout) clearTimeout(urlUpdateTimeout);
-    // Capture the timeout ID in a local variable for proper cleanup
-    const timeoutId = setTimeout(() => {
+    // Clear any existing timeout before setting new one
+    if (urlUpdateTimeout) {
+      clearTimeout(urlUpdateTimeout);
+    }
+
+    // Create new timeout and capture ID for cleanup
+    urlUpdateTimeout = setTimeout(() => {
       updateBrowserUrl(state);
       saveStateToStorage(state);
     }, 500);
-    urlUpdateTimeout = timeoutId;
 
-    // Cleanup function uses the captured local variable
+    // Cleanup function clears the module-level timeout
     return () => {
-      clearTimeout(timeoutId);
+      if (urlUpdateTimeout) {
+        clearTimeout(urlUpdateTimeout);
+        urlUpdateTimeout = null;
+      }
     };
   });
 

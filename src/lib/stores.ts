@@ -225,9 +225,14 @@ export const updateContrastFromNeutrals = () => {
       return currentState;
     }
 
-    const lowColor = currentState.neutrals[currentState.lowStep] || currentState.neutrals[0];
+    // Clamp step indices to valid bounds
+    const maxIndex = currentState.neutrals.length - 1;
+    const clampedLowStep = Math.max(0, Math.min(currentState.lowStep, maxIndex));
+    const clampedHighStep = Math.max(0, Math.min(currentState.highStep, maxIndex));
+
+    const lowColor = currentState.neutrals[clampedLowStep] || currentState.neutrals[0];
     const highColor =
-      currentState.neutrals[currentState.highStep] ||
+      currentState.neutrals[clampedHighStep] ||
       currentState.neutrals[currentState.neutrals.length - 1];
 
     return {
@@ -245,17 +250,25 @@ export const updateContrastFromNeutrals = () => {
  */
 export const updateContrastStep = (stepType: 'low' | 'high', step: number) => {
   colorStore.update((currentState) => {
+    // Validate step is within valid bounds
+    const maxIndex = Math.max(0, currentState.neutrals.length - 1);
+    const clampedStep = Math.max(0, Math.min(step, maxIndex));
+
     const newState = {
       ...currentState,
       contrastMode: 'auto' as const,
-      [stepType === 'low' ? 'lowStep' : 'highStep']: step
+      [stepType === 'low' ? 'lowStep' : 'highStep']: clampedStep
     };
 
     // Immediately derive contrast colors from neutrals
     if (newState.neutrals.length > 0) {
-      const lowColor = newState.neutrals[newState.lowStep] || newState.neutrals[0];
+      const clampedLowStep = Math.max(0, Math.min(newState.lowStep, maxIndex));
+      const clampedHighStep = Math.max(0, Math.min(newState.highStep, maxIndex));
+
+      const lowColor = newState.neutrals[clampedLowStep] || newState.neutrals[0];
       const highColor =
-        newState.neutrals[newState.highStep] || newState.neutrals[newState.neutrals.length - 1];
+        newState.neutrals[clampedHighStep] ||
+        newState.neutrals[newState.neutrals.length - 1];
       if (lowColor && highColor) {
         newState.contrast = { low: lowColor, high: highColor };
       }

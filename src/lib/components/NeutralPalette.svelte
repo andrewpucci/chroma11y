@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { updateLightnessNudgerValue, getPaletteName } from '$lib/colorUtils';
+  import { getPaletteName } from '$lib/colorUtils';
   import { updateLightnessNudger } from '$lib/stores';
   import ColorSwatch from './ColorSwatch.svelte';
 
@@ -54,12 +54,7 @@
                   // Clamp to valid range
                   const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
                   lightnessNudgerValues[index] = clampedValue;
-                  updateLightnessNudgerValue(
-                    index,
-                    clampedValue,
-                    lightnessNudgerValues,
-                    updateLightnessNudger
-                  );
+                  updateLightnessNudger(index, clampedValue);
                 }
                 // Don't reset on invalid - let the user continue typing
               }
@@ -71,12 +66,7 @@
                 const newValue = parseFloat(inputValue);
                 if (isNaN(newValue) || !isFinite(newValue)) {
                   lightnessNudgerValues[index] = 0;
-                  updateLightnessNudgerValue(
-                    index,
-                    0,
-                    lightnessNudgerValues,
-                    updateLightnessNudger
-                  );
+                  updateLightnessNudger(index, 0);
                   (e.target as HTMLInputElement).value = '0';
                 }
               }

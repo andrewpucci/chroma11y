@@ -86,16 +86,6 @@ export function copyToClipboard(text: string): void {
     });
 }
 
-export function updateLightnessNudgerValue(
-  index: number,
-  value: number,
-  values: number[],
-  updateFn: (index: number, value: number) => void
-): void {
-  values[index] = value;
-  updateFn(index, value);
-}
-
 // ===== INTERFACES =====
 
 /**
@@ -227,25 +217,36 @@ export function generateBaseNeutrals(params: ColorGenParams): Oklch[] {
 
   const endColor = params.currentTheme === 'dark' ? '#ffffff' : '#000000'; // Light mode ends with black (step 10 = darkest)
 
-  // Create initial color samples using bezier easing
+  // Create bezier easing function
+  const bezierEasingFn = easing(params.x1, params.y1, params.x2, params.y2);
+
+  // Create initial color samples using bezier easing with correct culori interpolate syntax
   const initialSamples = samples(params.numColors).map(
-    interpolate([startColor, easing(params.x1, params.y1, params.x2, params.y2), endColor])
+    interpolate([startColor, endColor], { easing: bezierEasingFn })
   );
 
   // Process each sample to create neutral colors
-  const baseNeutrals: Oklch[] = initialSamples.map((color) => {
-    const result = { ...color };
+  const baseNeutrals: Oklch[] = initialSamples.map((oklchColor) => {
+    // Convert OKLCH to RGB to apply warmth adjustment
+    const srgbColor = rgb(oklchColor);
+    if (!srgbColor || srgbColor.r == null || srgbColor.g == null || srgbColor.b == null) {
+      // Fallback: return the original OKLCH color if conversion fails
+      return clampChroma(oklchColor, 'oklch') as Oklch;
+    }
 
-    // Apply warmth adjustment to ALL colors
-    result.r = (result.r || 0) + params.warmth * WARMTH_MULTIPLIERS.R;
-    result.g = (result.g || 0) - params.warmth * WARMTH_MULTIPLIERS.G;
-    result.b = (result.b || 0) - params.warmth * WARMTH_MULTIPLIERS.B;
+    // Apply warmth adjustment to RGB channels
+    const adjustedRgb = {
+      mode: 'rgb' as const,
+      r: Math.max(0, Math.min(1, srgbColor.r + params.warmth * WARMTH_MULTIPLIERS.R)),
+      g: Math.max(0, Math.min(1, srgbColor.g - params.warmth * WARMTH_MULTIPLIERS.G)),
+      b: Math.max(0, Math.min(1, srgbColor.b - params.warmth * WARMTH_MULTIPLIERS.B))
+    };
 
-    // Convert to OKLCH
-    const oklchColor = oklch(result);
+    // Convert back to OKLCH
+    const result = oklch(adjustedRgb);
 
     // Ensure the color is within the OKLCH gamut
-    return clampChroma(oklchColor, 'oklch') as Oklch;
+    return clampChroma(result || oklchColor, 'oklch') as Oklch;
   });
 
   return baseNeutrals;
@@ -537,6 +538,11 @@ export function getPaletteName(palette: string[]): string {
     // Validate that we have a valid hex color
     if (!middleColor || typeof middleColor !== 'string' || !middleColor.match(/^#[0-9a-f]{6}$/i)) {
       console.warn('Invalid color in palette for naming:', middleColor);
+      return 'Unnamed';
+    }
+
+    // Defensive: ensure nearestNamedColors is available and colorsNamed has entries
+    if (!nearestNamedColors || Object.keys(colorsNamed).length === 0) {
       return 'Unnamed';
     }
 
