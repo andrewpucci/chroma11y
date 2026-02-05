@@ -118,7 +118,18 @@
     const _theme = currentThemeLocal;
     const _lightnessNudgers = lightnessNudgerValues;
     const _hueNudgers = hueNudgerValues;
-    void _numColors, _numPalettes, _baseColor, _warmth, _chroma, _x1, _y1, _x2, _y2, _theme, _lightnessNudgers, _hueNudgers;
+    void _numColors;
+    void _numPalettes;
+    void _baseColor;
+    void _warmth;
+    void _chroma;
+    void _x1;
+    void _y1;
+    void _x2;
+    void _y2;
+    void _theme;
+    void _lightnessNudgers;
+    void _hueNudgers;
 
     // Debounce color generation to prevent race conditions during rapid changes
     if (colorGenTimeout) clearTimeout(colorGenTimeout);
@@ -333,6 +344,7 @@
     .palettes-column {
       flex: 1;
       min-height: 50vh;
+      overflow-y: auto;
     }
 
     .header h1 {

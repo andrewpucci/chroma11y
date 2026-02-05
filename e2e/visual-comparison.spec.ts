@@ -25,18 +25,19 @@ const TEST_CONFIG = {
   hueNudgers: { 4: -5 }
 };
 
-// Expected neutral colors from validated algorithm (100% match)
+// Expected neutral colors from pure OKLCH algorithm output
+// Note: With warmth=-7 (cool), neutrals have a slight blue tint
 const EXPECTED_NEUTRALS = [
   '#ffffff',
-  '#f1f3f5',
-  '#d5d7d9',
-  '#b6b8b9',
-  '#97999b',
-  '#797b7c',
-  '#5e6062',
-  '#454748',
-  '#2c2e30',
-  '#151718',
+  '#edeff2',
+  '#c9cccf',
+  '#a2a5a8',
+  '#7e8083',
+  '#5c5e60',
+  '#404244',
+  '#26282a',
+  '#101214',
+  '#020203',
   '#000000'
 ];
 

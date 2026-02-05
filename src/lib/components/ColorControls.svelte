@@ -155,8 +155,7 @@
     }
   }
 
-  .control-group input:focus-visible,
-  .control-group select:focus-visible {
+  .control-group input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }

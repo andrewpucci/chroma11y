@@ -267,8 +267,7 @@ export const updateContrastStep = (stepType: 'low' | 'high', step: number) => {
 
       const lowColor = newState.neutrals[clampedLowStep] || newState.neutrals[0];
       const highColor =
-        newState.neutrals[clampedHighStep] ||
-        newState.neutrals[newState.neutrals.length - 1];
+        newState.neutrals[clampedHighStep] || newState.neutrals[newState.neutrals.length - 1];
       if (lowColor && highColor) {
         newState.contrast = { low: lowColor, high: highColor };
       }

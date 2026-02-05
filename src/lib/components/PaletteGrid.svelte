@@ -11,9 +11,7 @@
   let { palettes = [], hueNudgerValues = $bindable([]) }: Props = $props();
 
   // Cache palette names to avoid repeated calculations during render
-  const paletteNames = $derived(
-    palettes.map((palette) => getPaletteName(palette))
-  );
+  const paletteNames = $derived(palettes.map((palette) => getPaletteName(palette)));
 
   function handleHueNudgerChange(paletteIndex: number, event: Event) {
     const target = event.target as HTMLInputElement;
@@ -60,7 +58,9 @@
             oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
             onblur={(e) => handleHueNudgerBlur(paletteIndex, e)}
             class="hue-nudger-input"
-            aria-label="Hue adjustment for {paletteNames[paletteIndex]} palette, -180 to 180 degrees"
+            aria-label="Hue adjustment for {paletteNames[
+              paletteIndex
+            ]} palette, -180 to 180 degrees"
           />
         </div>
       </div>

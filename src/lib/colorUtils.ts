@@ -31,11 +31,16 @@ export const DARK_MODE_TARGET_CONTRAST = 18;
 /** Maximum contrast ratio (white on black or vice versa) */
 export const MAX_CONTRAST_RATIO = 21;
 
-/** Warmth adjustment multipliers for RGB channels */
-export const WARMTH_MULTIPLIERS = {
-  R: 0.001,
-  G: 0.0001,
-  B: 0.001
+/** Warmth adjustment constants for OKLCH */
+export const WARMTH_CONFIG = {
+  /** Hue for warm colors (orange/yellow) */
+  WARM_HUE: 60,
+  /** Hue for cool colors (blue) */
+  COOL_HUE: 250,
+  /** Maximum chroma to add for warmth effect */
+  MAX_CHROMA: 0.03,
+  /** Warmth multiplier (scales warmth input to chroma) */
+  CHROMA_SCALE: 0.0006
 } as const;
 
 /** Lightness nudger bounds */
@@ -212,41 +217,52 @@ export function getPrintableContrast(color1: string, color2: string): number {
  */
 export function generateBaseNeutrals(params: ColorGenParams): Oklch[] {
   // Determine the starting and ending colors for neutral generation
-  const startColor =
+  const startColorHex =
     params.currentTheme === 'dark' ? calculateDarkModeStartColor('#ffffff') : '#ffffff'; // Light mode starts with white (step 0 = lightest)
 
-  const endColor = params.currentTheme === 'dark' ? '#ffffff' : '#000000'; // Light mode ends with black (step 10 = darkest)
+  const endColorHex = params.currentTheme === 'dark' ? '#ffffff' : '#000000'; // Light mode ends with black (step 10 = darkest)
+
+  // Convert hex strings to OKLCH color objects for interpolation
+  const startColor = oklch(startColorHex);
+  const endColor = oklch(endColorHex);
+
+  // Ensure colors are valid before interpolation
+  if (!startColor || !endColor) {
+    throw new Error('Failed to parse start or end color for neutral palette');
+  }
 
   // Create bezier easing function
   const bezierEasingFn = easing(params.x1, params.y1, params.x2, params.y2);
 
-  // Create initial color samples using bezier easing with correct culori interpolate syntax
-  const initialSamples = samples(params.numColors).map(
-    interpolate([startColor, endColor], { easing: bezierEasingFn })
-  );
+  // Create initial color samples using bezier easing with manual index mapping
+  const interpolator = interpolate([startColor, endColor], 'oklch');
+  const initialSamples = samples(params.numColors).map((t) => {
+    // Map the linear sample t to a bezier-eased t
+    const easedT = bezierEasingFn(t);
+    return interpolator(easedT);
+  });
 
-  // Process each sample to create neutral colors
+  // Process each sample to create neutral colors with warmth applied directly in OKLCH
   const baseNeutrals: Oklch[] = initialSamples.map((oklchColor) => {
-    // Convert OKLCH to RGB to apply warmth adjustment
-    const srgbColor = rgb(oklchColor);
-    if (!srgbColor || srgbColor.r == null || srgbColor.g == null || srgbColor.b == null) {
-      // Fallback: return the original OKLCH color if conversion fails
-      return clampChroma(oklchColor, 'oklch') as Oklch;
-    }
+    // Apply warmth adjustment directly in OKLCH color space
+    // Warmth > 0 = warm (orange/yellow hue), Warmth < 0 = cool (blue hue)
+    // Scale by chromaMultiplier so user can control warmth saturation
+    const baseWarmthChroma = Math.abs(params.warmth) * WARMTH_CONFIG.CHROMA_SCALE;
+    const scaledChroma = baseWarmthChroma * params.chromaMultiplier;
+    const clampedChroma = Math.min(scaledChroma, WARMTH_CONFIG.MAX_CHROMA);
 
-    // Apply warmth adjustment to RGB channels
-    const adjustedRgb = {
-      mode: 'rgb' as const,
-      r: Math.max(0, Math.min(1, srgbColor.r + params.warmth * WARMTH_MULTIPLIERS.R)),
-      g: Math.max(0, Math.min(1, srgbColor.g - params.warmth * WARMTH_MULTIPLIERS.G)),
-      b: Math.max(0, Math.min(1, srgbColor.b - params.warmth * WARMTH_MULTIPLIERS.B))
+    // Determine hue based on warmth direction
+    const warmthHue = params.warmth >= 0 ? WARMTH_CONFIG.WARM_HUE : WARMTH_CONFIG.COOL_HUE;
+
+    const adjustedColor: Oklch = {
+      mode: 'oklch' as const,
+      l: oklchColor.l,
+      c: clampedChroma,
+      h: warmthHue
     };
 
-    // Convert back to OKLCH
-    const result = oklch(adjustedRgb);
-
     // Ensure the color is within the OKLCH gamut
-    return clampChroma(result || oklchColor, 'oklch') as Oklch;
+    return clampChroma(adjustedColor, 'oklch') as Oklch;
   });
 
   return baseNeutrals;

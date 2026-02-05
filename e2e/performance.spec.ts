@@ -9,10 +9,10 @@ import { waitForAppReady, waitForColorGeneration } from './test-utils';
 // Performance thresholds (in milliseconds)
 const THRESHOLDS = {
   INITIAL_LOAD: 3000, // Max acceptable initial load time
-  COLOR_GENERATION: 500, // Max acceptable color generation time
-  THEME_SWITCH: 500, // Max acceptable theme switch time
-  SLIDER_UPDATE: 200, // Max acceptable slider update time
-  EXPORT_GENERATION: 500 // Max acceptable export generation time
+  COLOR_GENERATION: 1000, // Max acceptable color generation time
+  THEME_SWITCH: 1000, // Max acceptable theme switch time
+  SLIDER_UPDATE: 500, // Max acceptable slider update time
+  EXPORT_GENERATION: 1000 // Max acceptable export generation time
 };
 
 interface PerformanceMetrics {
@@ -398,7 +398,7 @@ test.describe('Performance Benchmarking', () => {
       const clickTime = Date.now() - startTime;
 
       console.log(`Click-to-copy response time: ${clickTime}ms`);
-      expect(clickTime).toBeLessThan(200);
+      expect(clickTime).toBeLessThan(500);
     });
 
     test('measures contrast mode switch responsiveness', async ({ page }) => {

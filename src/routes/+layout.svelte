@@ -1,7 +1,3 @@
-<script module lang="ts">
-  export const prerender = true;
-</script>
-
 <script lang="ts">
   import { currentTheme } from '$lib/stores';
   import { browser } from '$app/environment';

@@ -144,13 +144,15 @@ test.describe('Mobile Responsiveness', () => {
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
       await page.goto('/');
 
+      // Wait for swatches to render first
+      await page.waitForSelector('.color-swatch', { timeout: 5000 });
+
       const palettesColumn = page.locator('.palettes-column');
-      const isVisible = await palettesColumn.isVisible();
+      await expect(palettesColumn).toBeVisible();
       const overflowY = await palettesColumn.evaluate(
         (el) => window.getComputedStyle(el).overflowY
       );
 
-      expect(isVisible).toBe(true);
       expect(overflowY).toBe('auto');
     });
   });
@@ -230,21 +232,20 @@ test.describe('Mobile Responsiveness', () => {
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
       await page.goto('/');
 
+      await page.waitForSelector('.color-swatch', { timeout: 5000 });
+
       const rangeInput = page.locator('input[id="warmth"]');
 
       // Verify slider is interactive
-      expect(await rangeInput.isVisible()).toBe(true);
-      expect(await rangeInput.isEnabled()).toBe(true);
+      await expect(rangeInput).toBeVisible();
+      await expect(rangeInput).toBeEnabled();
 
-      const initialValue = await rangeInput.inputValue();
-
-      // Set new value
-      await rangeInput.fill('10');
+      // Set a specific value and verify it was applied
+      await rangeInput.fill('25');
       await page.waitForTimeout(100);
 
       const newValue = await rangeInput.inputValue();
-      expect(newValue).toBe('10');
-      expect(newValue).not.toBe(initialValue);
+      expect(newValue).toBe('25');
     });
   });
 

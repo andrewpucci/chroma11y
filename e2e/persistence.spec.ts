@@ -65,7 +65,9 @@ test.describe('URL State Persistence', () => {
   test('persists state in URL and restores on navigation', async ({ page }) => {
     // Change base color to green
     await page.locator('#baseColor').fill('#00ff00');
-    await page.waitForTimeout(1000);
+
+    // Wait for URL to update (debounced)
+    await page.waitForFunction(() => window.location.href.includes('c=00ff00'), { timeout: 5000 });
 
     // URL should contain the color parameter
     const url = page.url();
