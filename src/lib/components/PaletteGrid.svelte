@@ -40,14 +40,19 @@
   }
 </script>
 
-<section class="color-display">
-  <h2>Generated Color Palettes</h2>
+<section class="card" data-testid="generated-palettes">
+  <div class="card-header">
+    <div class="card-title">Generated Palettes</div>
+    <div class="card-subtitle">Click any swatch to copy the hex value</div>
+  </div>
+
+  <div class="card-body color-display">
   {#if palettes.length > 0}
     {#each palettes as palette, paletteIndex (paletteIndex)}
       <div class="palette-header">
-        <h3>{paletteNames[paletteIndex]}</h3>
+        <h3 class="palette-title">{paletteNames[paletteIndex]}</h3>
         <div class="hue-nudger">
-          <label for="hue-nudger-{paletteIndex}">Hue:</label>
+          <label class="label" for="hue-nudger-{paletteIndex}">Hue</label>
           <input
             id="hue-nudger-{paletteIndex}"
             type="number"
@@ -57,14 +62,14 @@
             value={hueNudgerValues[paletteIndex] || 0}
             oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
             onblur={(e) => handleHueNudgerBlur(paletteIndex, e)}
-            class="hue-nudger-input"
+            class="input mono hue-nudger-input"
             aria-label="Hue adjustment for {paletteNames[
               paletteIndex
             ]} palette, -180 to 180 degrees"
           />
         </div>
       </div>
-      <div class="color-grid compact">
+      <div class="swatches">
         {#each palette as color, index (`${paletteIndex}-${index}`)}
           <ColorSwatch {color} label={String(index * 10)} showContrast={true} />
         {/each}
@@ -73,98 +78,54 @@
   {:else}
     <p class="no-colors">No color palettes generated yet. Adjust the controls above.</p>
   {/if}
+  </div>
 </section>
 
 <style>
   .color-display {
-    padding: 0.1rem;
-    background: var(--bg-secondary);
-    border-radius: 2px;
-    border: 1px solid var(--border);
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  .color-display h2 {
-    margin: 0 0 0.1rem 0;
-    color: var(--text-primary);
-    font-size: 0.7rem;
+    display: grid;
+    gap: 1rem;
   }
 
   .palette-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    margin: 0.1rem 0 0.05rem 0;
+    gap: 0.75rem;
   }
 
-  .color-display h3 {
+  .palette-title {
     margin: 0;
     color: var(--text-primary);
-    font-size: 0.6rem;
+    font-size: 1rem;
+    font-weight: 700;
     text-transform: capitalize;
   }
 
   .hue-nudger {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-  }
-
-  .hue-nudger label {
-    font-size: 0.5rem;
-    color: var(--text-secondary);
+    gap: 0.5rem;
   }
 
   .hue-nudger-input {
-    width: 50px;
-    padding: 2px 4px;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 11px;
-    font-family: monospace;
+    width: 96px;
     text-align: center;
   }
 
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
     .hue-nudger-input {
-      width: 70px;
-      padding: 8px;
-      font-size: 14px;
+      width: 110px;
       min-height: 44px;
       touch-action: manipulation;
     }
-
-    .hue-nudger label {
-      font-size: 0.7rem;
-    }
   }
 
-  .hue-nudger-input:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
-  }
-
-  .color-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 0.5rem;
-  }
-
-  .color-grid.compact {
+  .swatches {
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
-    justify-content: flex-start;
-    align-items: flex-start;
-    flex: 1;
-    overflow-y: auto;
+    gap: 0.5rem;
   }
 
   .no-colors {

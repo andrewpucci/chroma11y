@@ -78,11 +78,9 @@
 </script>
 
 <section class="contrast-controls">
-  <h2>Contrast Controls</h2>
-
-  <div class="control-group">
-    <label for="contrast-mode">Contrast Mode</label>
-    <select id="contrast-mode" value={contrastModeLocal} onchange={handleModeChange}>
+  <div class="field">
+    <label class="label" for="contrast-mode">Contrast Mode</label>
+    <select class="select" id="contrast-mode" value={contrastModeLocal} onchange={handleModeChange}>
       <option value="auto">Auto</option>
       <option value="manual">Manual</option>
     </select>
@@ -90,8 +88,8 @@
 
   {#if contrastModeLocal === 'manual'}
     <div class="manual-controls">
-      <div class="control-group">
-        <label for="contrast-low">Low Contrast Color</label>
+      <div class="field">
+        <label class="label" for="contrast-low">Low Contrast Color</label>
         <div class="color-input-group">
           <input
             id="contrast-low"
@@ -103,6 +101,7 @@
           <input
             id="contrast-low-hex"
             type="text"
+            class="input mono"
             value={contrastColorsLocal.low}
             onchange={handleLowColorChange}
             placeholder="#ffffff"
@@ -111,8 +110,8 @@
         </div>
       </div>
 
-      <div class="control-group">
-        <label for="contrast-high">High Contrast Color</label>
+      <div class="field">
+        <label class="label" for="contrast-high">High Contrast Color</label>
         <div class="color-input-group">
           <input
             id="contrast-high"
@@ -124,6 +123,7 @@
           <input
             id="contrast-high-hex"
             type="text"
+            class="input mono"
             value={contrastColorsLocal.high}
             onchange={handleHighColorChange}
             placeholder="#000000"
@@ -134,18 +134,18 @@
     </div>
   {:else}
     <div class="auto-controls">
-      <div class="control-group">
-        <label for="low-step">Low Step</label>
-        <select id="low-step" value={lowStepLocal} onchange={handleLowStepChange}>
+      <div class="field">
+        <label class="label" for="low-step">Low Step</label>
+        <select class="select" id="low-step" value={lowStepLocal} onchange={handleLowStepChange}>
           {#each generateStepOptions() as step (step)}
             <option value={step}>{step * 10}</option>
           {/each}
         </select>
       </div>
 
-      <div class="control-group">
-        <label for="high-step">High Step</label>
-        <select id="high-step" value={highStepLocal} onchange={handleHighStepChange}>
+      <div class="field">
+        <label class="label" for="high-step">High Step</label>
+        <select class="select" id="high-step" value={highStepLocal} onchange={handleHighStepChange}>
           {#each generateStepOptions() as step (step)}
             <option value={step}>{step * 10}</option>
           {/each}
@@ -182,60 +182,24 @@
 
 <style>
   .contrast-controls {
-    padding: 1rem;
-    background: var(--bg-secondary);
-    border-radius: 6px;
-    border: 1px solid var(--border);
-  }
-
-  .contrast-controls h2 {
-    margin: 0 0 1rem 0;
-    color: var(--text-primary);
-  }
-
-  .control-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .control-group label {
-    font-weight: 500;
-    color: var(--text-primary);
-    font-size: 0.9rem;
-  }
-
-  .control-group select,
-  .control-group input[type='color'],
-  .control-group input[type='text'] {
-    padding: 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-  }
-
-  .control-group select:focus-visible,
-  .control-group input:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+    display: grid;
+    gap: 0.9rem;
   }
 
   .color-input-group {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
   }
 
   .color-input-group input[type='color'] {
     width: 60px;
     height: 40px;
     cursor: pointer;
-  }
-
-  .color-input-group input[type='text'] {
-    flex: 1;
-    font-family: monospace;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
   }
 
   .contrast-preview {
@@ -247,7 +211,8 @@
   .contrast-preview h3 {
     margin: 0 0 0.5rem 0;
     color: var(--text-primary);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    font-weight: 650;
   }
 
   .color-samples {
@@ -270,13 +235,13 @@
   }
 
   .label {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
-    font-family: monospace;
+    font-family: var(--text-mono);
   }
 
   .contrast-ratio {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
     font-weight: 500;
   }

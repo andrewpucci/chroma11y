@@ -25,60 +25,64 @@
 </script>
 
 <section class="generator-controls">
-  <h2>Color Generation Controls</h2>
   <div class="control-grid">
-    <div class="control-group">
-      <label for="baseColor">Base Color</label>
-      <input id="baseColor" type="color" bind:value={baseColor} aria-describedby="baseColorHex" />
-      <input
-        id="baseColorHex"
-        type="text"
-        bind:value={baseColor}
-        placeholder="#1862E6"
-        aria-label="Base color hex value"
-      />
+    <div class="field base-color">
+      <label class="label" for="baseColor">Base Color</label>
+      <div class="base-color-row">
+        <input id="baseColor" type="color" bind:value={baseColor} aria-describedby="baseColorHex" />
+        <input
+          id="baseColorHex"
+          class="input mono"
+          type="text"
+          bind:value={baseColor}
+          placeholder="#1862E6"
+          aria-label="Base color hex value"
+        />
+      </div>
     </div>
 
-    <div class="control-group">
-      <label for="warmth">Warmth ({warmth})</label>
+    <div class="field">
+      <label class="label" for="warmth">Warmth ({warmth})</label>
       <input id="warmth" type="range" min="-50" max="50" bind:value={warmth} />
     </div>
 
-    <div class="control-group">
-      <label for="chroma">Chroma Multiplier ({chromaMultiplier.toFixed(2)})</label>
+    <div class="field">
+      <label class="label" for="chroma">Chroma Multiplier ({chromaMultiplier.toFixed(2)})</label>
       <input id="chroma" type="range" min="0.1" max="2" step="0.01" bind:value={chromaMultiplier} />
     </div>
 
-    <div class="control-group">
-      <label for="numColors">Number of Colors ({numColors})</label>
+    <div class="field">
+      <label class="label" for="numColors">Number of Colors ({numColors})</label>
       <input id="numColors" type="range" min="2" max="20" bind:value={numColors} />
     </div>
 
-    <div class="control-group">
-      <label for="numPalettes">Number of Palettes ({numPalettes})</label>
+    <div class="field">
+      <label class="label" for="numPalettes">Number of Palettes ({numPalettes})</label>
       <input id="numPalettes" type="range" min="1" max="11" bind:value={numPalettes} />
     </div>
   </div>
 
-  <h3>Bezier Curve Controls</h3>
+  <div class="divider"></div>
+
+  <div class="bezier-title">Bezier Curve</div>
   <div class="bezier-controls">
-    <div class="control-group">
-      <label for="x1">x1 ({x1.toFixed(2)})</label>
+    <div class="field">
+      <label class="label" for="x1">x1 ({x1.toFixed(2)})</label>
       <input id="x1" type="range" min="0" max="1" step="0.01" bind:value={x1} />
     </div>
 
-    <div class="control-group">
-      <label for="y1">y1 ({y1.toFixed(2)})</label>
+    <div class="field">
+      <label class="label" for="y1">y1 ({y1.toFixed(2)})</label>
       <input id="y1" type="range" min="0" max="1" step="0.01" bind:value={y1} />
     </div>
 
-    <div class="control-group">
-      <label for="x2">x2 ({x2.toFixed(2)})</label>
+    <div class="field">
+      <label class="label" for="x2">x2 ({x2.toFixed(2)})</label>
       <input id="x2" type="range" min="0" max="1" step="0.01" bind:value={x2} />
     </div>
 
-    <div class="control-group">
-      <label for="y2">y2 ({y2.toFixed(2)})</label>
+    <div class="field">
+      <label class="label" for="y2">y2 ({y2.toFixed(2)})</label>
       <input id="y2" type="range" min="0" max="1" step="0.01" bind:value={y2} />
     </div>
   </div>
@@ -86,93 +90,61 @@
 
 <style>
   .generator-controls {
-    padding: 1rem;
-    background: var(--bg-secondary);
-    border-radius: 6px;
-    border: 1px solid var(--border);
+    display: grid;
+    gap: 0.9rem;
   }
 
   .control-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 0.9rem;
   }
 
-  .control-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .control-group label {
-    font-weight: 500;
-    color: var(--text-primary);
-    font-size: 0.9rem;
-  }
-
-  .control-group input[type='color'] {
-    width: 100%;
-    height: 40px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--bg-primary);
-    cursor: pointer;
-  }
-
-  .control-group input[type='text'] {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: monospace;
-    min-height: 44px;
-  }
-
-  .control-group input[type='range'] {
+  input[type='range'] {
     width: 100%;
     margin-top: 0.25rem;
   }
 
+  .base-color-row {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 0.6rem;
+    align-items: center;
+  }
+
+  .base-color-row input[type='color'] {
+    width: 56px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .divider {
+    height: 1px;
+    background: color-mix(in oklab, var(--border) 60%, transparent);
+    margin: 0.25rem 0;
+  }
+
+  .bezier-title {
+    font-size: 0.95rem;
+    font-weight: 650;
+    color: var(--text-primary);
+  }
+
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
-    .control-group input[type='color'] {
-      height: 48px;
-      touch-action: manipulation;
-    }
-
-    .control-group input[type='text'] {
-      padding: 0.75rem;
-      min-height: 48px;
-      font-size: 1rem;
-    }
-
-    .control-group input[type='range'] {
+    input[type='range'] {
       height: 44px;
       touch-action: manipulation;
     }
   }
 
-  .control-group input:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
   .bezier-controls {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-
-  .generator-controls h2 {
-    margin: 0 0 1rem 0;
-    color: var(--text-primary);
-  }
-
-  .generator-controls h3 {
-    margin: 1rem 0 0.5rem 0;
-    color: var(--text-primary);
+    gap: 0.9rem;
   }
 </style>

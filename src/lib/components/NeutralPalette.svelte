@@ -13,17 +13,22 @@
   const neutralName = $derived(neutrals.length > 0 ? getPaletteName(neutrals) : 'Neutral');
 </script>
 
-<section class="color-display">
-  <h2>Neutral Palette <span class="palette-name">({neutralName})</span></h2>
-  {#if neutrals.length > 0}
-    <div class="color-grid compact">
-      {#each neutrals as color, index (index)}
-        <ColorSwatch {color} label="N{index}" showContrast={true} />
-      {/each}
-    </div>
+<section class="card" data-testid="neutral-palette">
+  <div class="card-header">
+    <div class="card-title">Neutral Palette</div>
+    <div class="card-subtitle">{neutralName}</div>
+  </div>
 
-    <h3>Lightness Nudgers</h3>
-    <div class="nudger-grid-compact">
+  <div class="card-body">
+    {#if neutrals.length > 0}
+      <div class="swatches">
+        {#each neutrals as color, index (index)}
+          <ColorSwatch {color} label="N{index}" showContrast={true} />
+        {/each}
+      </div>
+
+      <div class="nudgers-title">Lightness Nudgers</div>
+      <div class="nudger-grid-compact">
       {#each neutrals as color, index (index)}
         <div class="nudger-item-aligned">
           <div
@@ -77,54 +82,24 @@
         </div>
       {/each}
     </div>
-  {:else}
-    <p class="no-colors">No neutral colors generated yet. Adjust the controls above.</p>
-  {/if}
+    {:else}
+      <p class="no-colors">No neutral colors generated yet. Adjust the controls above.</p>
+    {/if}
+  </div>
 </section>
 
 <style>
-  .color-display {
-    padding: 0.1rem;
-    background: var(--bg-secondary);
-    border-radius: 2px;
-    border: 1px solid var(--border);
-    flex: 0 0 auto;
+  .swatches {
     display: flex;
-    flex-direction: column;
-  }
-
-  .color-display h2 {
-    margin: 0 0 0.1rem 0;
-    color: var(--text-primary);
-    font-size: 0.7rem;
-  }
-
-  .palette-name {
-    font-weight: normal;
-    color: var(--text-secondary);
-    text-transform: capitalize;
-  }
-
-  .color-display h3 {
-    margin: 0.1rem 0 0.05rem 0;
-    color: var(--text-primary);
-    font-size: 0.6rem;
-  }
-
-  .color-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    flex-wrap: wrap;
     gap: 0.5rem;
   }
 
-  .color-grid.compact {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px;
-    justify-content: flex-start;
-    align-items: flex-start;
-    flex: 0 0 auto;
-    overflow-y: auto;
+  .nudgers-title {
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    font-weight: 650;
+    color: var(--text-primary);
   }
 
   .no-colors {
@@ -137,42 +112,44 @@
   .nudger-grid-compact {
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
-    padding: 6px;
-    background: var(--bg-tertiary);
-    border-radius: 2px;
-    border: 1px solid var(--border);
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: color-mix(in oklab, var(--bg-tertiary) 82%, transparent);
+    border-radius: var(--radius-md);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
   }
 
   .nudger-item-aligned {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
-    padding: 4px;
-    min-width: 60px;
+    gap: 0.4rem;
+    padding: 0.5rem;
+    min-width: 92px;
     width: fit-content;
-    height: 60px;
+    height: auto;
+    border-radius: 12px;
+    background: color-mix(in oklab, var(--bg-primary) 70%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
   }
 
   .nudger-color-aligned {
     flex: 1;
     width: 100%;
-    height: 16px;
-    border-radius: 2px;
-    border: 1px solid var(--border);
-    margin-bottom: 2px;
+    height: 18px;
+    border-radius: 10px;
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
   }
 
   .nudger-input {
     flex: 1;
-    padding: 3px;
+    padding: 0.45rem 0.5rem;
     border: 1px solid var(--border);
-    border-radius: 2px;
+    border-radius: 10px;
     background: var(--bg-primary);
     color: var(--text-primary);
-    font-size: 11px;
-    font-family: monospace;
+    font-size: 0.85rem;
+    font-family: var(--text-mono);
     text-align: center;
     min-width: 0;
   }
@@ -180,20 +157,19 @@
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
     .nudger-input {
-      padding: 8px;
-      font-size: 14px;
+      padding: 0.65rem 0.6rem;
+      font-size: 1rem;
       min-height: 44px;
       touch-action: manipulation;
     }
 
     .nudger-item-aligned {
-      min-width: 70px;
-      height: auto;
-      padding: 6px;
+      min-width: 120px;
+      padding: 0.65rem;
     }
 
     .nudger-color-aligned {
-      height: 20px;
+      height: 22px;
     }
   }
 

@@ -46,91 +46,146 @@
   title="Click to copy {color}"
   aria-label="Color {color}{label ? `, step ${label}` : ''}. Click to copy to clipboard"
 >
-  <span class="hex">{color}</span>
-  {#if label}
-    <span class="label">{label}</span>
-  {/if}
-  {#if showContrast}
-    <div class="contrast-info">
-      <span class="low" title="Contrast with low reference">{lowContrastDisplay}</span>
-      <span class="high" title="Contrast with high reference">{highContrastDisplay}</span>
+  <div class="overlay" aria-hidden="true"></div>
+  <div class="content">
+    <div class="top">
+      <span class="hex">{color}</span>
+      {#if label}
+        <span class="step">{label}</span>
+      {/if}
     </div>
-  {/if}
+    {#if showContrast}
+      <div class="contrast-info" aria-hidden="true">
+        <span class="low" title="Contrast with low reference">{lowContrastDisplay}</span>
+        <span class="high" title="Contrast with high reference">{highContrastDisplay}</span>
+      </div>
+    {/if}
+  </div>
 </button>
 
 <style>
   .color-swatch {
+    position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    border: 1px solid var(--border);
-    border-radius: 3px;
+    align-items: stretch;
+    justify-content: flex-end;
+    padding: 0;
+    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 60px;
-    min-height: 50px;
-    font-family: monospace;
-    text-align: center;
-    gap: 2px;
+    transition:
+      transform 140ms ease,
+      box-shadow 140ms ease,
+      border-color 140ms ease;
+    width: var(--swatch-width, 96px);
+    flex: 0 0 var(--swatch-width, 96px);
+    min-height: 64px;
+    text-align: left;
+    overflow: hidden;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      color-mix(in oklab, black 34%, transparent),
+      transparent 60%
+    );
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+    padding: 0.45rem 0.5rem;
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
   }
 
   /* Touch-friendly tap targets on mobile (44x44px minimum) */
   @media (max-width: 768px) {
     .color-swatch {
-      min-width: 70px;
-      min-height: 60px;
-      padding: 8px;
+      width: var(--swatch-width-md, 96px);
+      flex-basis: var(--swatch-width-md, 96px);
+      min-height: 72px;
       touch-action: manipulation;
     }
   }
 
   @media (max-width: 575px) {
     .color-swatch {
-      min-width: 60px;
-      min-height: 50px;
-      padding: 6px;
+      width: var(--swatch-width-sm, 92px);
+      flex-basis: var(--swatch-width-sm, 92px);
+      min-height: 64px;
     }
 
     .hex {
-      font-size: 0.6rem;
+      font-size: 0.72rem;
     }
 
-    .label {
-      font-size: 0.45rem;
+    .step {
+      font-size: 0.7rem;
     }
 
     .contrast-info {
-      font-size: 0.45rem;
+      font-size: 0.72rem;
     }
   }
 
   .color-swatch:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-md);
+    border-color: color-mix(in oklab, var(--border) 40%, var(--accent));
+  }
+
+  .color-swatch:active {
+    transform: translateY(-1px);
   }
 
   .color-swatch:focus-visible {
-    outline: 2px solid var(--accent, #0066cc);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: var(--ring);
   }
 
   .hex {
-    font-size: 0.65rem;
-    font-weight: 500;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    font-family: var(--text-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
-  .label {
-    font-size: 0.5rem;
-    opacity: 0.8;
+  .step {
+    font-size: 0.74rem;
+    opacity: 0.9;
+    font-weight: 650;
+    font-family: var(--text-mono);
+    flex: 0 0 auto;
   }
 
   .contrast-info {
     display: flex;
     gap: 4px;
-    font-size: 0.5rem;
-    opacity: 0.9;
+    font-size: 0.72rem;
+    opacity: 0.92;
+    font-family: var(--text-mono);
+    white-space: nowrap;
   }
 
   .contrast-info .low {
