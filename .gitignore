@@ -4,12 +4,12 @@ e2e/screenshots
 node_modules
 
 # Output
-.output
-.vercel
-.netlify
-.wrangler
 /.svelte-kit
 /build
+
+# Generated favicons
+/static/favicon.ico
+/static/apple-touch-icon.png
 
 # OS
 .DS_Store
