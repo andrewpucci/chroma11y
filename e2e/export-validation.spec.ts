@@ -107,9 +107,7 @@ test.describe('Export Format Validation', () => {
       // e.g., --color-gray-0, --color-gray-10, --color-blue-50
 
       // Verify palette structure exists
-      const neutralSwatches = page
-        .getByTestId('neutral-palette')
-        .locator('.color-swatch');
+      const neutralSwatches = page.getByTestId('neutral-palette').locator('.color-swatch');
       await expect(neutralSwatches).toHaveCount(11);
 
       // The expected CSS format when exported:
@@ -352,11 +350,7 @@ test.describe('Export Format Validation', () => {
 
       // Get the current neutral middle color
       const neutralMid = (
-        await page
-          .getByTestId('neutral-palette')
-          .locator('.hex')
-          .nth(5)
-          .textContent()
+        await page.getByTestId('neutral-palette').locator('.hex').nth(5).textContent()
       )
         ?.toLowerCase()
         .trim();

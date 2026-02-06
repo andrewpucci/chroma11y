@@ -53,8 +53,18 @@
 
 <style>
   :global(html) {
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      'Helvetica Neue',
+      Arial,
+      'Apple Color Emoji',
+      'Segoe UI Emoji',
+      sans-serif;
     line-height: 1.5;
     color-scheme: light dark;
     text-rendering: optimizeLegibility;
@@ -72,8 +82,9 @@
     --ring: 0 0 0 4px color-mix(in oklab, var(--accent) 25%, transparent);
     --container-max: 1400px;
     --control-width: 440px;
-    --text-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-      'Courier New', monospace;
+    --text-mono:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+      monospace;
   }
 
   /* Global focus styles for accessibility */

@@ -47,37 +47,37 @@
   </div>
 
   <div class="card-body color-display">
-  {#if palettes.length > 0}
-    {#each palettes as palette, paletteIndex (paletteIndex)}
-      <div class="palette-header">
-        <h3 class="palette-title">{paletteNames[paletteIndex]}</h3>
-        <div class="hue-nudger">
-          <label class="label" for="hue-nudger-{paletteIndex}">Hue</label>
-          <input
-            id="hue-nudger-{paletteIndex}"
-            type="number"
-            min="-180"
-            max="180"
-            step="1"
-            value={hueNudgerValues[paletteIndex] || 0}
-            oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
-            onblur={(e) => handleHueNudgerBlur(paletteIndex, e)}
-            class="input mono hue-nudger-input"
-            aria-label="Hue adjustment for {paletteNames[
-              paletteIndex
-            ]} palette, -180 to 180 degrees"
-          />
+    {#if palettes.length > 0}
+      {#each palettes as palette, paletteIndex (paletteIndex)}
+        <div class="palette-header">
+          <h3 class="palette-title">{paletteNames[paletteIndex]}</h3>
+          <div class="hue-nudger">
+            <label class="label" for="hue-nudger-{paletteIndex}">Hue</label>
+            <input
+              id="hue-nudger-{paletteIndex}"
+              type="number"
+              min="-180"
+              max="180"
+              step="1"
+              value={hueNudgerValues[paletteIndex] || 0}
+              oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
+              onblur={(e) => handleHueNudgerBlur(paletteIndex, e)}
+              class="input mono hue-nudger-input"
+              aria-label="Hue adjustment for {paletteNames[
+                paletteIndex
+              ]} palette, -180 to 180 degrees"
+            />
+          </div>
         </div>
-      </div>
-      <div class="swatches">
-        {#each palette as color, index (`${paletteIndex}-${index}`)}
-          <ColorSwatch {color} label={String(index * 10)} showContrast={true} />
-        {/each}
-      </div>
-    {/each}
-  {:else}
-    <p class="no-colors">No color palettes generated yet. Adjust the controls above.</p>
-  {/if}
+        <div class="swatches">
+          {#each palette as color, index (`${paletteIndex}-${index}`)}
+            <ColorSwatch {color} label={String(index * 10)} showContrast={true} />
+          {/each}
+        </div>
+      {/each}
+    {:else}
+      <p class="no-colors">No color palettes generated yet. Adjust the controls above.</p>
+    {/if}
   </div>
 </section>
 

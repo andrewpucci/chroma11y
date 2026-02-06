@@ -20,8 +20,12 @@ describe('ExportButtons', () => {
   it('disables export actions when there are no colors', () => {
     render(ExportButtons, { props: { neutrals: [], palettes: [] } });
 
-    expect(screen.getByRole('button', { name: /export colors as json design tokens/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /export colors as css custom properties/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /export colors as json design tokens/i })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /export colors as css custom properties/i })
+    ).toBeDisabled();
     expect(screen.getByRole('button', { name: /export colors as scss variables/i })).toBeDisabled();
   });
 
@@ -37,7 +41,9 @@ describe('ExportButtons', () => {
     expect(downloadDesignTokens).toHaveBeenCalledWith(neutrals, palettes);
     expect(announce).toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: /export colors as css custom properties/i }));
+    await user.click(
+      screen.getByRole('button', { name: /export colors as css custom properties/i })
+    );
     expect(downloadCSS).toHaveBeenCalledWith(neutrals, palettes);
 
     await user.click(screen.getByRole('button', { name: /export colors as scss variables/i }));

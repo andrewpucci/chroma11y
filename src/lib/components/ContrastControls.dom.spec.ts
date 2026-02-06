@@ -3,7 +3,13 @@ import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import ContrastControls from '$lib/components/ContrastControls.svelte';
-import { contrastColors, contrastMode, lowStep, resetColorState, updateColorState } from '$lib/stores';
+import {
+  contrastColors,
+  contrastMode,
+  lowStep,
+  resetColorState,
+  updateColorState
+} from '$lib/stores';
 
 describe('ContrastControls', () => {
   beforeEach(() => {
@@ -49,7 +55,9 @@ describe('ContrastControls', () => {
   it('does not update store when given an invalid manual hex value', async () => {
     render(ContrastControls);
 
-    await fireEvent.change(screen.getByLabelText(/contrast mode/i), { target: { value: 'manual' } });
+    await fireEvent.change(screen.getByLabelText(/contrast mode/i), {
+      target: { value: 'manual' }
+    });
 
     const before = get(contrastColors).low;
     const lowHex = screen.getByLabelText(/low contrast color hex value/i);

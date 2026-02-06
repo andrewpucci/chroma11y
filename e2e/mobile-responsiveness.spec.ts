@@ -64,7 +64,8 @@ test.describe('Mobile Responsiveness', () => {
       expect(layoutBox).toBeTruthy();
       expect(sidebarBox).toBeTruthy();
 
-      const availableWidth = layoutBox!.width - layoutPadding.paddingLeft - layoutPadding.paddingRight;
+      const availableWidth =
+        layoutBox!.width - layoutPadding.paddingLeft - layoutPadding.paddingRight;
 
       expect(sidebarBox!.width).toBeGreaterThanOrEqual(availableWidth - 2);
       expect(sidebarBox!.width).toBeLessThanOrEqual(availableWidth + 2);
@@ -103,10 +104,7 @@ test.describe('Mobile Responsiveness', () => {
       await page.goto('/');
 
       await page.waitForSelector('.swatches', { timeout: 5000 });
-      const swatches = page
-        .getByTestId('neutral-palette')
-        .locator('.swatches')
-        .first();
+      const swatches = page.getByTestId('neutral-palette').locator('.swatches').first();
       const flexWrap = await swatches.evaluate((el) => window.getComputedStyle(el).flexWrap);
 
       expect(flexWrap).toBe('wrap');

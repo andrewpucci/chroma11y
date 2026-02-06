@@ -13,7 +13,9 @@ test.describe('Algorithm Validation', () => {
     await page.waitForTimeout(500);
   });
 
-  test('changing one lightness nudger affects only its corresponding neutral swatch', async ({ page }) => {
+  test('changing one lightness nudger affects only its corresponding neutral swatch', async ({
+    page
+  }) => {
     const neutralSection = page.getByTestId('neutral-palette');
     const hexElements = neutralSection.locator('.hex');
 

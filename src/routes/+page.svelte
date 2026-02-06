@@ -337,7 +337,8 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background: radial-gradient(
+    background:
+      radial-gradient(
         1200px 600px at 0% 0%,
         color-mix(in oklab, var(--accent) 14%, transparent),
         transparent

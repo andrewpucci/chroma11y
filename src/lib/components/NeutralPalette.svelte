@@ -29,59 +29,59 @@
 
       <div class="nudgers-title">Lightness Nudgers</div>
       <div class="nudger-grid-compact">
-      {#each neutrals as color, index (index)}
-        <div class="nudger-item-aligned">
-          <div
-            class="nudger-color-aligned"
-            style="background-color: {color};"
-            aria-hidden="true"
-          ></div>
-          <label for="lightness-nudger-{index}" class="visually-hidden"
-            >Lightness adjustment for step {index}</label
-          >
-          <input
-            id="lightness-nudger-{index}"
-            type="number"
-            min="-0.5"
-            max="0.5"
-            step="0.01"
-            value={lightnessNudgerValues[index]}
-            oninput={(e) => {
-              if (e && e.target) {
-                const inputValue = (e.target as HTMLInputElement).value;
-                // Allow empty string or just "-" while typing (don't reset to 0)
-                if (inputValue === '' || inputValue === '-' || inputValue === '.') {
-                  return;
+        {#each neutrals as color, index (index)}
+          <div class="nudger-item-aligned">
+            <div
+              class="nudger-color-aligned"
+              style="background-color: {color};"
+              aria-hidden="true"
+            ></div>
+            <label for="lightness-nudger-{index}" class="visually-hidden"
+              >Lightness adjustment for step {index}</label
+            >
+            <input
+              id="lightness-nudger-{index}"
+              type="number"
+              min="-0.5"
+              max="0.5"
+              step="0.01"
+              value={lightnessNudgerValues[index]}
+              oninput={(e) => {
+                if (e && e.target) {
+                  const inputValue = (e.target as HTMLInputElement).value;
+                  // Allow empty string or just "-" while typing (don't reset to 0)
+                  if (inputValue === '' || inputValue === '-' || inputValue === '.') {
+                    return;
+                  }
+                  const newValue = parseFloat(inputValue);
+                  // Validate before updating to prevent NaN propagation
+                  if (!isNaN(newValue) && isFinite(newValue)) {
+                    // Clamp to valid range
+                    const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
+                    lightnessNudgerValues[index] = clampedValue;
+                    updateLightnessNudger(index, clampedValue);
+                  }
+                  // Don't reset on invalid - let the user continue typing
                 }
-                const newValue = parseFloat(inputValue);
-                // Validate before updating to prevent NaN propagation
-                if (!isNaN(newValue) && isFinite(newValue)) {
-                  // Clamp to valid range
-                  const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
-                  lightnessNudgerValues[index] = clampedValue;
-                  updateLightnessNudger(index, clampedValue);
+              }}
+              onblur={(e) => {
+                // On blur, reset invalid values to 0
+                if (e && e.target) {
+                  const inputValue = (e.target as HTMLInputElement).value;
+                  const newValue = parseFloat(inputValue);
+                  if (isNaN(newValue) || !isFinite(newValue)) {
+                    lightnessNudgerValues[index] = 0;
+                    updateLightnessNudger(index, 0);
+                    (e.target as HTMLInputElement).value = '0';
+                  }
                 }
-                // Don't reset on invalid - let the user continue typing
-              }
-            }}
-            onblur={(e) => {
-              // On blur, reset invalid values to 0
-              if (e && e.target) {
-                const inputValue = (e.target as HTMLInputElement).value;
-                const newValue = parseFloat(inputValue);
-                if (isNaN(newValue) || !isFinite(newValue)) {
-                  lightnessNudgerValues[index] = 0;
-                  updateLightnessNudger(index, 0);
-                  (e.target as HTMLInputElement).value = '0';
-                }
-              }
-            }}
-            class="nudger-input"
-            aria-label="Lightness adjustment for step {index}"
-          />
-        </div>
-      {/each}
-    </div>
+              }}
+              class="nudger-input"
+              aria-label="Lightness adjustment for step {index}"
+            />
+          </div>
+        {/each}
+      </div>
     {:else}
       <p class="no-colors">No neutral colors generated yet. Adjust the controls above.</p>
     {/if}
