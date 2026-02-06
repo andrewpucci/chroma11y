@@ -258,159 +258,184 @@
 </script>
 
 <a href="#main-content" class="skip-link">Skip to main content</a>
-<div class="container" role="application" aria-label="Color Generator">
-  <!-- Left Column: Controls -->
-  <div class="controls-column">
-    <header class="header">
-      <h1 id="main-heading">Svelte Color Generator</h1>
-      <p>Advanced color generation using OKLCH color space</p>
-    </header>
+<div class="app-shell" role="application" aria-label="Color Generator">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <h1 id="main-heading">Svelte Color Generator</h1>
+        <p class="tagline">Advanced color generation using OKLCH color space</p>
+      </div>
 
-    <section class="controls">
-      <ThemeToggle />
-      <ExportButtons neutrals={neutralsLocal} palettes={palettesLocal} />
-      <ContrastControls />
-    </section>
+      <div class="topbar-actions">
+        <ThemeToggle />
+      </div>
+    </div>
+  </header>
 
-    <ColorControls
-      bind:baseColor={baseColorLocal}
-      bind:warmth={warmthLocal}
-      bind:chromaMultiplier={chromaMultiplierLocal}
-      bind:numColors={numColorsLocal}
-      bind:numPalettes={numPalettesLocal}
-      bind:x1={x1Local}
-      bind:y1={y1Local}
-      bind:x2={x2Local}
-      bind:y2={y2Local}
-    />
-  </div>
+  <div class="layout" data-testid="app-layout">
+    <aside class="sidebar" aria-label="Controls" data-testid="app-sidebar">
+      <div class="sidebar-inner">
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title">Generation</div>
+            <div class="card-subtitle">Tune the palette curve and appearance</div>
+          </div>
+          <div class="card-body">
+            <ColorControls
+              bind:baseColor={baseColorLocal}
+              bind:warmth={warmthLocal}
+              bind:chromaMultiplier={chromaMultiplierLocal}
+              bind:numColors={numColorsLocal}
+              bind:numPalettes={numPalettesLocal}
+              bind:x1={x1Local}
+              bind:y1={y1Local}
+              bind:x2={x2Local}
+              bind:y2={y2Local}
+            />
+          </div>
+        </section>
 
-  <!-- Right Column: Palettes -->
-  <div class="palettes-column" id="main-content" role="region" aria-labelledby="main-heading">
-    <NeutralPalette bind:neutrals={neutralsLocal} bind:lightnessNudgerValues />
-    <PaletteGrid palettes={palettesLocal} bind:hueNudgerValues />
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title">Contrast</div>
+            <div class="card-subtitle">Set references for WCAG contrast ratios</div>
+          </div>
+          <div class="card-body">
+            <ContrastControls />
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div class="card-title">Export</div>
+            <div class="card-subtitle">Download tokens in common formats</div>
+          </div>
+          <div class="card-body">
+            <ExportButtons neutrals={neutralsLocal} palettes={palettesLocal} />
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <main
+      class="content"
+      id="main-content"
+      role="region"
+      aria-labelledby="main-heading"
+      data-testid="app-content"
+    >
+      <div class="content-inner">
+        <NeutralPalette bind:neutrals={neutralsLocal} bind:lightnessNudgerValues />
+        <PaletteGrid palettes={palettesLocal} bind:hueNudgerValues />
+      </div>
+    </main>
   </div>
 </div>
 
 <style>
-  .container {
-    height: 100vh;
-    padding: 0;
-    box-sizing: border-box;
-    overflow: hidden;
-    display: flex;
-    flex-direction: row;
-  }
-
-  .controls-column {
-    width: 420px;
-    flex-shrink: 0;
+  .app-shell {
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
+    background: radial-gradient(
+        1200px 600px at 0% 0%,
+        color-mix(in oklab, var(--accent) 14%, transparent),
+        transparent
+      ),
+      var(--bg-primary);
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in oklab, var(--bg-primary) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+
+  .topbar-inner {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 1rem var(--column-padding);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 1rem;
-    padding: var(--column-padding);
-    background: var(--bg-primary);
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
   }
 
-  .palettes-column {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    min-height: 0;
-    overflow-y: auto;
-    padding: var(--column-padding);
-    container-type: inline-size;
+  .brand {
+    display: grid;
+    gap: 0.25rem;
   }
 
-  /* Mobile-first responsive layout */
-  @media (max-width: 768px) {
-    .container {
-      flex-direction: column;
-      height: auto;
-      min-height: 100vh;
-    }
-
-    .controls-column {
-      width: 100%;
-      border-right: none;
-      border-bottom: 1px solid var(--border);
-      overflow-y: visible;
-      max-height: none;
-    }
-
-    .palettes-column {
-      flex: 1;
-      min-height: 50vh;
-      overflow-y: auto;
-    }
-
-    .header h1 {
-      font-size: 1.75rem;
-    }
-
-    .header p {
-      font-size: 0.875rem;
-    }
+  .brand h1 {
+    font-size: 1.35rem;
+    font-weight: 750;
+    letter-spacing: -0.03em;
   }
 
-  /* Extra small devices (phones in portrait, less than 576px) */
-  @media (max-width: 575px) {
-    .header h1 {
-      font-size: 1.5rem;
-    }
-
-    .header p {
-      font-size: 0.8rem;
-    }
-  }
-
-  /* Responsive chip sizing */
-  .palettes-column {
-    --chip-size: 15px;
-    --show-names: 0;
-  }
-
-  /* When space is tight, hide names and make chips smaller */
-  @container (max-height: 800px) {
-    .palettes-column {
-      --chip-size: 12px;
-      --show-names: 0;
-    }
-  }
-
-  @container (max-height: 600px) {
-    .palettes-column {
-      --chip-size: 10px;
-      --show-names: 0;
-    }
-  }
-
-  .header {
-    text-align: center;
-    margin-bottom: 1rem;
-  }
-
-  .header h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .header p {
+  .tagline {
+    font-size: 0.9rem;
     color: var(--text-secondary);
-    font-size: 1rem;
   }
 
-  .controls {
-    display: flex;
-    flex-direction: column;
+  .layout {
+    flex: 1;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: var(--control-width) 1fr;
     gap: 1rem;
+    padding: 1rem var(--column-padding) 1.25rem var(--column-padding);
+    min-height: 0;
+  }
+
+  .sidebar {
+    min-height: 0;
+  }
+
+  .sidebar-inner {
+    position: sticky;
+    top: 86px;
+    display: grid;
+    gap: 0.9rem;
+    max-height: calc(100vh - 110px);
+    overflow: auto;
+    padding-right: 2px;
+  }
+
+  .content {
+    min-height: 0;
+  }
+
+  .content-inner {
+    display: grid;
+    gap: 1rem;
+    min-height: 0;
+  }
+
+  @media (max-width: 980px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar-inner {
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .topbar-inner {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .brand h1 {
+      font-size: 1.2rem;
+    }
   }
 </style>
