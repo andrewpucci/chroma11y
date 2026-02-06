@@ -14,6 +14,24 @@ export default defineConfig({
       {
         extends: './vite.config.ts',
 
+        resolve: {
+          conditions: ['browser']
+        },
+
+        test: {
+          name: 'dom',
+
+          environment: 'jsdom',
+          setupFiles: ['./src/vitest.setup.ts'],
+
+          include: ['src/**/*.dom.{test,spec}.{js,ts}'],
+          exclude: ['src/lib/server/**']
+        }
+      },
+
+      {
+        extends: './vite.config.ts',
+
         test: {
           name: 'client',
 
@@ -35,7 +53,7 @@ export default defineConfig({
           name: 'server',
           environment: 'node',
           include: ['src/**/*.{test,spec}.{js,ts}'],
-          exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+          exclude: ['src/**/*.svelte.{test,spec}.{js,ts}', 'src/**/*.dom.{test,spec}.{js,ts}']
         }
       }
     ]
