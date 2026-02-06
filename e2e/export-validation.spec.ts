@@ -23,27 +23,15 @@ test.describe('Export Format Validation', () => {
 
   test.describe('JSON Design Tokens Structure', () => {
     test('JSON export has correct top-level structure', async ({ page }) => {
-      // Get the export function result by evaluating in page context
-      const jsonStructure = await page.evaluate(() => {
-        // Access the exported colors from the page
-        const neutrals = Array.from(document.querySelectorAll('.color-display'))
-          .at(0)
-          ?.querySelectorAll('.hex');
-        const neutralColors = Array.from(neutrals || []).map(
-          (el) => el.textContent?.toLowerCase() || ''
-        );
+      const neutralHexes = page.getByTestId('neutral-palette').locator('.hex');
 
-        // Build expected structure
-        return {
-          hasNeutrals: neutralColors.length === 11,
-          firstNeutral: neutralColors[0],
-          lastNeutral: neutralColors[10]
-        };
-      });
+      await expect(neutralHexes).toHaveCount(11);
 
-      expect(jsonStructure.hasNeutrals).toBe(true);
-      expect(jsonStructure.firstNeutral).toMatch(/^#[0-9a-f]{6}$/);
-      expect(jsonStructure.lastNeutral).toMatch(/^#[0-9a-f]{6}$/);
+      const firstNeutral = (await neutralHexes.first().textContent())?.toLowerCase() || '';
+      const lastNeutral = (await neutralHexes.last().textContent())?.toLowerCase() || '';
+
+      expect(firstNeutral).toMatch(/^#[0-9a-f]{6}$/);
+      expect(lastNeutral).toMatch(/^#[0-9a-f]{6}$/);
     });
 
     test('JSON export follows design tokens format', async ({ page }) => {
@@ -81,13 +69,13 @@ test.describe('Export Format Validation', () => {
 
     test('each palette step is indexed 0-100 by 10s', async ({ page }) => {
       // Verify step naming convention: 0, 10, 20, ..., 100
-      const stepCount = await page.evaluate(() => {
-        const firstPalette = document.querySelector('.color-grid');
-        const swatches = firstPalette?.querySelectorAll('.color-swatch');
-        return swatches?.length || 0;
-      });
+      const firstPaletteSwatches = page
+        .getByTestId('generated-palettes')
+        .locator('.swatches')
+        .first()
+        .locator('.color-swatch');
 
-      expect(stepCount).toBe(11); // Steps: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
+      await expect(firstPaletteSwatches).toHaveCount(11);
     });
 
     test('design token values have correct format', async ({ page }) => {
@@ -119,13 +107,10 @@ test.describe('Export Format Validation', () => {
       // e.g., --color-gray-0, --color-gray-10, --color-blue-50
 
       // Verify palette structure exists
-      const structureValid = await page.evaluate(() => {
-        const neutralSection = document.querySelector('.color-display');
-        const neutralSwatches = neutralSection?.querySelectorAll('.color-swatch');
-        return neutralSwatches?.length === 11;
-      });
-
-      expect(structureValid).toBe(true);
+      const neutralSwatches = page
+        .getByTestId('neutral-palette')
+        .locator('.color-swatch');
+      await expect(neutralSwatches).toHaveCount(11);
 
       // The expected CSS format when exported:
       // :root {
@@ -142,14 +127,11 @@ test.describe('Export Format Validation', () => {
     test('CSS export includes comments for sections', async ({ page }) => {
       // Verify the UI shows proper palette organization
       // that would translate to commented sections in CSS
-      const sectionCount = await page.evaluate(() => {
-        // Neutral section + 11 palette sections = 12 total display areas
-        const displayAreas = document.querySelectorAll('.color-display');
-        return displayAreas.length;
-      });
+      const neutralSection = page.getByTestId('neutral-palette');
+      const generatedSection = page.getByTestId('generated-palettes');
 
-      // Should have at least neutral + palettes sections
-      expect(sectionCount).toBeGreaterThanOrEqual(2);
+      await expect(neutralSection).toBeVisible();
+      await expect(generatedSection).toBeVisible();
     });
   });
 
@@ -314,11 +296,11 @@ test.describe('Export Format Validation', () => {
 
     test('exported colors match displayed colors', async ({ page }) => {
       // Get displayed neutral colors
-      const displayedNeutrals = await page.evaluate(() => {
-        const neutralSection = document.querySelector('.color-display');
-        const hexElements = neutralSection?.querySelectorAll('.hex');
-        return Array.from(hexElements || []).map((el) => el.textContent?.toLowerCase() || '');
-      });
+      const displayedNeutrals = await page
+        .getByTestId('neutral-palette')
+        .locator('.hex')
+        .allTextContents();
+      const displayedNeutralsNormalized = displayedNeutrals.map((hex) => hex.toLowerCase().trim());
 
       // Download and verify JSON matches
       const downloadPromise = page.waitForEvent('download');
@@ -335,7 +317,7 @@ test.describe('Export Format Validation', () => {
         for (let i = 0; i < 11; i++) {
           const step = i * 10;
           const exportedColor = parsed.gray[step].$value.hex.toLowerCase();
-          expect(exportedColor).toBe(displayedNeutrals[i]);
+          expect(exportedColor).toBe(displayedNeutralsNormalized[i]);
         }
       }
     });
@@ -369,11 +351,15 @@ test.describe('Export Format Validation', () => {
       await page.waitForTimeout(300);
 
       // Get the current neutral middle color
-      const neutralMid = await page.evaluate(() => {
-        const neutralSection = document.querySelector('.color-display');
-        const hexElements = neutralSection?.querySelectorAll('.hex');
-        return hexElements?.[5]?.textContent?.toLowerCase() || '';
-      });
+      const neutralMid = (
+        await page
+          .getByTestId('neutral-palette')
+          .locator('.hex')
+          .nth(5)
+          .textContent()
+      )
+        ?.toLowerCase()
+        .trim();
 
       // Download and verify the warmth is applied
       const downloadPromise = page.waitForEvent('download');

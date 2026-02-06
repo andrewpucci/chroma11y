@@ -34,6 +34,11 @@ function recordMetric(name: string, duration: number, threshold: number): void {
 }
 
 test.describe('Performance Benchmarking', () => {
+  test.skip(
+    process.env.RUN_PERF_E2E !== '1',
+    'Performance benchmarks are opt-in; run with RUN_PERF_E2E=1'
+  );
+
   test.describe('Initial Load Performance', () => {
     test('measures time to first meaningful paint', async ({ page }) => {
       const startTime = Date.now();
@@ -207,7 +212,7 @@ test.describe('Performance Benchmarking', () => {
       await page.goto('/');
       await waitForAppReady(page);
 
-      const themeToggle = page.locator('.theme-toggle');
+      const themeToggle = page.getByRole('button', { name: /Switch to (dark|light) mode/ });
 
       const startTime = Date.now();
       await themeToggle.click();
@@ -226,7 +231,7 @@ test.describe('Performance Benchmarking', () => {
       await page.goto('/');
       await waitForAppReady(page);
 
-      const themeToggle = page.locator('.theme-toggle');
+      const themeToggle = page.getByRole('button', { name: /Switch to (dark|light) mode/ });
 
       // Switch to dark first
       await themeToggle.click();
@@ -334,7 +339,7 @@ test.describe('Performance Benchmarking', () => {
       const initialSwatchCount = await page.locator('.color-swatch').count();
 
       // Change a lightness nudger
-      const nudgerInput = page.locator('.color-display input[type="number"]').first();
+      const nudgerInput = page.locator('.nudger-input').first();
       await nudgerInput.fill('0.05');
       await waitForColorGeneration(page);
 
@@ -514,7 +519,7 @@ test.describe('Performance Benchmarking', () => {
 
       // Theme switch
       const themeStart = Date.now();
-      await page.locator('.theme-toggle').click();
+      await page.getByRole('button', { name: /Switch to (dark|light) mode/ }).click();
       await waitForColorGeneration(page);
       results['Theme Switch'] = Date.now() - themeStart;
 

@@ -40,7 +40,7 @@ test.describe('Local Storage Persistence', () => {
 
   test('remembers theme preference across sessions', async ({ page }) => {
     // Toggle to dark mode
-    await page.locator('.theme-toggle').click();
+    await page.getByRole('button', { name: /Switch to (dark|light) mode/ }).click();
     await page.waitForTimeout(1000);
 
     // Navigate to fresh URL
@@ -49,7 +49,9 @@ test.describe('Local Storage Persistence', () => {
     await page.waitForTimeout(500);
 
     // Should still be in dark mode
-    await expect(page.locator('.theme-toggle')).toContainText('Light Mode');
+    await expect(page.getByRole('button', { name: /Switch to (dark|light) mode/ })).toContainText(
+      'Light Mode'
+    );
   });
 });
 
@@ -97,7 +99,9 @@ test.describe('URL State Persistence', () => {
     await expect(page.locator('#warmth')).toHaveValue('5');
 
     // Verify dark mode is active
-    await expect(page.locator('.theme-toggle')).toContainText('Light Mode');
+    await expect(page.getByRole('button', { name: /Switch to (dark|light) mode/ })).toContainText(
+      'Light Mode'
+    );
   });
 
   test('URL state takes precedence over localStorage', async ({ page }) => {

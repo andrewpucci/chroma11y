@@ -7,7 +7,7 @@ import type { AxeResults } from 'axe-core';
 export async function waitForAppReady(page: Page): Promise<void> {
   await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
   await expect(page.locator('#baseColor')).toBeVisible();
-  await expect(page.locator('.color-display').first()).toBeVisible();
+  await expect(page.locator('.color-swatch').first()).toBeVisible();
 }
 
 /**
@@ -68,7 +68,7 @@ export async function getSwatchColor(page: Page, index: number = 0): Promise<str
  * Toggle theme and wait for transition
  */
 export async function toggleTheme(page: Page): Promise<void> {
-  const themeToggle = page.locator('.theme-toggle');
+  const themeToggle = page.getByRole('button', { name: /Switch to (dark|light) mode/ });
   await themeToggle.click();
   await page.waitForTimeout(1000); // Wait for theme transition
 }
