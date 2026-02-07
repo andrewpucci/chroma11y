@@ -14,22 +14,36 @@ const VALID_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <rect width="32" height="32" fill="#f8f9fa" rx="2"/>
 </svg>`;
 
-const ICO_SIZES = [16, 32, 48];
+const ICO_SIZE = 32;
 const APPLE_TOUCH_SIZE = 180;
+const MANIFEST_SIZES = [192, 512];
+
+function verifyPngSignature(buffer: Buffer | Uint8Array) {
+  // Verify PNG file signature (Magic Bytes): 137 80 78 71 13 10 26 10
+  // 137 (0x89) is the high-bit byte, followed by "PNG" in ASCII
+  expect(buffer[0]).toBe(137);
+  expect(buffer.subarray(1, 4).toString()).toBe('PNG');
+}
 
 async function generateFaviconsFromSvg(svgContent: string, outputDir: string) {
-  const pngBuffers = ICO_SIZES.map((size) => {
-    const resvg = new Resvg(svgContent, { fitTo: { mode: 'width', value: size } });
-    return resvg.render().asPng();
-  });
+  // Generate 32x32 PNG for ICO
+  const icoPng = new Resvg(svgContent, { fitTo: { mode: 'width', value: ICO_SIZE } }).render().asPng();
 
-  const ico = await pngToIco(pngBuffers);
+  // Create ICO file
+  const ico = await pngToIco([icoPng]);
   await writeFile(resolve(outputDir, 'favicon.ico'), ico);
 
+  // Generate apple-touch-icon (180x180)
   const appleResvg = new Resvg(svgContent, { fitTo: { mode: 'width', value: APPLE_TOUCH_SIZE } });
   await writeFile(resolve(outputDir, 'apple-touch-icon.png'), appleResvg.render().asPng());
 
-  return { ico, pngBuffers };
+  // Generate Android/Manifest icons (192, 512)
+  for (const size of MANIFEST_SIZES) {
+    const resvg = new Resvg(svgContent, { fitTo: { mode: 'width', value: size } });
+    await writeFile(resolve(outputDir, `icon-${size}.png`), resvg.render().asPng());
+  }
+
+  return { ico, icoPng };
 }
 
 describe('generate-favicons', () => {
@@ -47,10 +61,21 @@ describe('generate-favicons', () => {
   });
 
   describe('SVG to PNG conversion', () => {
-    it('should render SVG to PNG at specified sizes', () => {
-      expect.assertions(ICO_SIZES.length * 2);
+    it('should render SVG to PNG at 32px for ICO', () => {
+      expect.assertions(2);
 
-      for (const size of ICO_SIZES) {
+      const resvg = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: ICO_SIZE } });
+      const rendered = resvg.render();
+      const png = rendered.asPng();
+
+      expect(png).toBeInstanceOf(Uint8Array);
+      expect(png.length).toBeGreaterThan(0);
+    });
+
+    it('should render SVG to PNG at manifest sizes (192, 512)', () => {
+      expect.assertions(MANIFEST_SIZES.length * 2);
+
+      for (const size of MANIFEST_SIZES) {
         const resvg = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: size } });
         const rendered = resvg.render();
         const png = rendered.asPng();
@@ -73,15 +98,11 @@ describe('generate-favicons', () => {
   });
 
   describe('ICO generation', () => {
-    it('should bundle multiple PNGs into ICO format', async () => {
+    it('should create ICO from single 32px PNG', async () => {
       expect.assertions(2);
 
-      const pngBuffers = ICO_SIZES.map((size) => {
-        const resvg = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: size } });
-        return resvg.render().asPng();
-      });
-
-      const ico = await pngToIco(pngBuffers);
+      const icoPng = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: ICO_SIZE } }).render().asPng();
+      const ico = await pngToIco([icoPng]);
 
       expect(ico).toBeInstanceOf(Buffer);
       expect(ico.length).toBeGreaterThan(0);
@@ -90,12 +111,8 @@ describe('generate-favicons', () => {
     it('should create valid ICO with correct header', async () => {
       expect.assertions(3);
 
-      const pngBuffers = ICO_SIZES.map((size) => {
-        const resvg = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: size } });
-        return resvg.render().asPng();
-      });
-
-      const ico = await pngToIco(pngBuffers);
+      const icoPng = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: ICO_SIZE } }).render().asPng();
+      const ico = await pngToIco([icoPng]);
 
       // ICO header: first 2 bytes are reserved (0), next 2 bytes are type (1 for ICO)
       expect(ico[0]).toBe(0);
@@ -127,9 +144,28 @@ describe('generate-favicons', () => {
       await generateFaviconsFromSvg(VALID_SVG, TEST_DIR);
 
       const pngData = await readFile(resolve(TEST_DIR, 'apple-touch-icon.png'));
-      // PNG magic bytes: 137 80 78 71 13 10 26 10
-      expect(pngData[0]).toBe(137);
-      expect(pngData.subarray(1, 4).toString()).toBe('PNG');
+      verifyPngSignature(pngData);
+    });
+
+    it('should write manifest icons to output directory', async () => {
+      expect.assertions(MANIFEST_SIZES.length);
+
+      await generateFaviconsFromSvg(VALID_SVG, TEST_DIR);
+
+      for (const size of MANIFEST_SIZES) {
+        expect(existsSync(resolve(TEST_DIR, `icon-${size}.png`))).toBe(true);
+      }
+    });
+
+    it('should create valid PNG files for manifest icons', async () => {
+      expect.assertions(MANIFEST_SIZES.length * 2);
+
+      await generateFaviconsFromSvg(VALID_SVG, TEST_DIR);
+
+      for (const size of MANIFEST_SIZES) {
+        const pngData = await readFile(resolve(TEST_DIR, `icon-${size}.png`));
+        verifyPngSignature(pngData);
+      }
     });
   });
 
@@ -152,14 +188,19 @@ describe('generate-favicons', () => {
   });
 
   describe('configuration', () => {
-    it('should use correct ICO sizes (16, 32, 48)', () => {
+    it('should use 32px for ICO (single size best practice)', () => {
       expect.assertions(1);
-      expect(ICO_SIZES).toEqual([16, 32, 48]);
+      expect(ICO_SIZE).toBe(32);
     });
 
     it('should use 180px for apple-touch-icon', () => {
       expect.assertions(1);
       expect(APPLE_TOUCH_SIZE).toBe(180);
+    });
+
+    it('should use correct manifest sizes (192, 512)', () => {
+      expect.assertions(1);
+      expect(MANIFEST_SIZES).toEqual([192, 512]);
     });
   });
 });

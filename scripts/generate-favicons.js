@@ -8,27 +8,32 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATIC_DIR = resolve(__dirname, '..', 'static');
 const SVG_PATH = resolve(STATIC_DIR, 'favicon.svg');
 
-const ICO_SIZES = [16, 32, 48];
+// Best practice: single 32x32 for legacy browsers
+const ICO_SIZE = 32;
 const APPLE_TOUCH_SIZE = 180;
+const MANIFEST_SIZES = [192, 512];
 
 export async function generateFavicons() {
   const svg = await readFile(SVG_PATH, 'utf8');
 
-  // Generate PNGs for ICO (16, 32, 48)
-  const pngBuffers = ICO_SIZES.map((size) => {
-    const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: size } });
-    return resvg.render().asPng();
-  });
-
-  // Bundle into ICO
-  const ico = await pngToIco(pngBuffers);
+  // Generate 32x32 PNG for ICO
+  const icoPng = new Resvg(svg, { fitTo: { mode: 'width', value: ICO_SIZE } }).render().asPng();
+  
+  // Create ICO file
+  const ico = await pngToIco([icoPng]);
   await writeFile(resolve(STATIC_DIR, 'favicon.ico'), ico);
 
   // Generate apple-touch-icon (180x180)
   const appleResvg = new Resvg(svg, { fitTo: { mode: 'width', value: APPLE_TOUCH_SIZE } });
   await writeFile(resolve(STATIC_DIR, 'apple-touch-icon.png'), appleResvg.render().asPng());
 
-  console.log('Generated favicon.ico and apple-touch-icon.png');
+  // Generate Android/Manifest icons (192, 512)
+  for (const size of MANIFEST_SIZES) {
+    const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: size } });
+    await writeFile(resolve(STATIC_DIR, `icon-${size}.png`), resvg.render().asPng());
+  }
+
+  console.log('Generated favicon.ico, apple-touch-icon.png, and manifest icons');
 }
 
 // Run directly

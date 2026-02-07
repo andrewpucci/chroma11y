@@ -10,6 +10,7 @@ node_modules
 # Generated favicons
 /static/favicon.ico
 /static/apple-touch-icon.png
+/static/icon-*.png
 
 # OS
 .DS_Store
