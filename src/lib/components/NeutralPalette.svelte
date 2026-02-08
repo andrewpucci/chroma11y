@@ -92,7 +92,7 @@
   .swatches {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: var(--swatch-gap, 0.5rem);
   }
 
   .nudgers-title {

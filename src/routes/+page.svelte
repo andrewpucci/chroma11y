@@ -61,6 +61,35 @@
   let urlUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
   let colorGenTimeout: ReturnType<typeof setTimeout> | null = null;
   let colorGenId = 0; // Track latest generation request
+  let layoutEl: HTMLElement | undefined = $state();
+  let topbarInnerEl: HTMLElement | undefined = $state();
+  let isDraggingSlider = $state(false);
+
+  function freezeLayout() {
+    isDraggingSlider = true;
+    if (layoutEl) {
+      const width = layoutEl.offsetWidth + 'px';
+      layoutEl.style.minWidth = width;
+      layoutEl.style.maxWidth = width;
+    }
+    if (topbarInnerEl) {
+      const width = topbarInnerEl.offsetWidth + 'px';
+      topbarInnerEl.style.minWidth = width;
+      topbarInnerEl.style.maxWidth = width;
+    }
+  }
+
+  function unfreezeLayout() {
+    isDraggingSlider = false;
+    if (layoutEl) {
+      layoutEl.style.minWidth = '';
+      layoutEl.style.maxWidth = '';
+    }
+    if (topbarInnerEl) {
+      topbarInnerEl.style.minWidth = '';
+      topbarInnerEl.style.maxWidth = '';
+    }
+  }
 
   // Load initial state from URL or localStorage
   onMount(() => {
@@ -118,6 +147,7 @@
     const _theme = currentThemeLocal;
     const _lightnessNudgers = lightnessNudgerValues;
     const _hueNudgers = hueNudgerValues;
+    const _isDragging = isDraggingSlider;
     void _numColors;
     void _numPalettes;
     void _baseColor;
@@ -131,13 +161,15 @@
     void _lightnessNudgers;
     void _hueNudgers;
 
+    // Skip generation while dragging to prevent layout reflow
+    if (_isDragging || !urlStateLoaded) return;
+
     // Debounce color generation to prevent race conditions during rapid changes
     if (colorGenTimeout) clearTimeout(colorGenTimeout);
     const currentGenId = ++colorGenId;
 
     colorGenTimeout = setTimeout(() => {
-      // Only proceed if this is still the latest generation request
-      if (currentGenId === colorGenId && urlStateLoaded) {
+      if (currentGenId === colorGenId) {
         generateColors();
       }
     }, 16); // ~60fps debounce for smooth slider interactions
@@ -258,9 +290,9 @@
 </script>
 
 <a href="#main-content" class="skip-link">Skip to main content</a>
-<div class="app-shell" role="application" aria-label="Color Generator">
+<div class="app-shell" role="application" aria-label="Color Generator" style="--num-colors: {numColorsLocal};">
   <header class="topbar">
-    <div class="topbar-inner">
+    <div class="topbar-inner" bind:this={topbarInnerEl}>
       <div class="brand">
         <h1 id="main-heading">Svelte Color Generator</h1>
         <p class="tagline">Advanced color generation using OKLCH color space</p>
@@ -272,7 +304,7 @@
     </div>
   </header>
 
-  <div class="layout" data-testid="app-layout">
+  <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
     <aside class="sidebar" aria-label="Controls" data-testid="app-sidebar">
       <div class="sidebar-inner">
         <section class="card">
@@ -291,6 +323,8 @@
               bind:y1={y1Local}
               bind:x2={x2Local}
               bind:y2={y2Local}
+              onRangeDragStart={freezeLayout}
+              onRangeDragEnd={unfreezeLayout}
             />
           </div>
         </section>
@@ -334,6 +368,16 @@
 
 <style>
   .app-shell {
+    --content-width: calc(
+      var(--control-width) + var(--layout-gap) +
+      (var(--num-colors) * var(--swatch-width)) +
+      ((var(--num-colors) - 1) * var(--swatch-gap)) +
+      (var(--card-padding) * 2) +
+      (var(--card-border-width) * 2) +
+      (var(--column-padding) * 2)
+    );
+    --container-max: min(var(--content-width), min(var(--container-vw), var(--container-max-limit)));
+
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -388,8 +432,8 @@
     width: 100%;
     display: grid;
     grid-template-columns: var(--control-width) 1fr;
-    gap: 1rem;
-    padding: 1rem var(--column-padding) 1.25rem var(--column-padding);
+    gap: var(--layout-gap);
+    padding: var(--layout-gap) var(--column-padding) 1.25rem var(--column-padding);
     min-height: 0;
   }
 
@@ -402,9 +446,14 @@
     top: 86px;
     display: grid;
     gap: 0.9rem;
-    max-height: calc(100vh - 110px);
-    overflow: auto;
-    padding-right: 2px;
+  }
+
+  @media (max-height: 900px) {
+    .sidebar-inner {
+      max-height: calc(100vh - 110px);
+      overflow: auto;
+      padding-right: 2px;
+    }
   }
 
   .content {

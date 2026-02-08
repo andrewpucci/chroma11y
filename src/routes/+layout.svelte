@@ -80,8 +80,14 @@
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.12);
     --ring: 0 0 0 4px color-mix(in oklab, var(--accent) 25%, transparent);
-    --container-max: 1400px;
+    --swatch-width: 96px;
+    --swatch-gap: 0.5rem;
+    --layout-gap: 1rem;
     --control-width: 440px;
+    --card-padding: 1rem;
+    --card-border-width: 1px;
+    --container-max-limit: 2400px;
+    --container-vw: 92vw;
     --text-mono:
       ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
       monospace;
@@ -199,7 +205,7 @@
   }
 
   :global(.card-body) {
-    padding: 1rem;
+    padding: var(--card-padding);
   }
 
   :global(.btn) {

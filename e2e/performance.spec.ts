@@ -164,10 +164,15 @@ test.describe('Performance Benchmarking', () => {
       await page.goto('/');
       await waitForAppReady(page);
 
-      const x1Slider = page.locator('#x1');
+      const p1 = page.locator('.bezier-editor circle[role="slider"]').first();
+      await p1.focus();
+      await expect(page.locator(':focus')).toHaveAttribute('role', 'slider');
 
       const startTime = Date.now();
-      await x1Slider.fill('0.5');
+      // Move the control point several steps to trigger a meaningful bezier change
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press('Shift+ArrowRight');
+      }
       await waitForColorGeneration(page);
       const updateTime = Date.now() - startTime;
 
