@@ -61,8 +61,8 @@ describe('BezierEditor', () => {
     it('renders axis labels', () => {
       render(BezierEditor);
 
-      expect(screen.getByText('Time')).toBeInTheDocument();
-      expect(screen.getByText('Progression')).toBeInTheDocument();
+      expect(screen.getByText('Step')).toBeInTheDocument();
+      expect(screen.getByText('Lightness')).toBeInTheDocument();
     });
   });
 

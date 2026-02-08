@@ -39,8 +39,8 @@ test.describe('Bezier Editor', () => {
 
     test('shows axis labels', async ({ page }) => {
       const svg = page.locator('.bezier-editor svg');
-      await expect(svg.locator('text:has-text("Time")')).toBeVisible();
-      await expect(svg.locator('text:has-text("Progression")')).toBeVisible();
+      await expect(svg.locator('text:has-text("Step")')).toBeVisible();
+      await expect(svg.locator('text:has-text("Lightness")')).toBeVisible();
     });
   });
 

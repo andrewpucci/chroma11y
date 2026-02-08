@@ -46,9 +46,7 @@
   const a1y = toSvgY(1);
 
   // Bezier curve path
-  let curvePath = $derived(
-    `M ${a0x},${a0y} C ${p1x},${p1y} ${p2x},${p2y} ${a1x},${a1y}`
-  );
+  let curvePath = $derived(`M ${a0x},${a0y} C ${p1x},${p1y} ${p2x},${p2y} ${a1x},${a1y}`);
 
   // Grid lines at 0.25 intervals
   const gridSteps = [0.25, 0.5, 0.75];
@@ -74,8 +72,13 @@
   function onPointerDown(point: 'p1' | 'p2', e: PointerEvent) {
     activePoint = point;
     const el = e.currentTarget as Element;
-    if ('setPointerCapture' in el && typeof (el as unknown as { setPointerCapture?: unknown }).setPointerCapture === 'function') {
-      (el as unknown as { setPointerCapture: (pointerId: number) => void }).setPointerCapture(e.pointerId);
+    if (
+      'setPointerCapture' in el &&
+      typeof (el as unknown as { setPointerCapture?: unknown }).setPointerCapture === 'function'
+    ) {
+      (el as unknown as { setPointerCapture: (pointerId: number) => void }).setPointerCapture(
+        e.pointerId
+      );
       capturedPointerId = e.pointerId;
       capturedElement = el;
     } else {
@@ -101,15 +104,16 @@
     }
   }
 
-  function onPointerUp(e: PointerEvent) {
+  function onPointerUp() {
     if (capturedElement && capturedPointerId !== null) {
       if (
         'releasePointerCapture' in capturedElement &&
-        typeof (capturedElement as unknown as { releasePointerCapture?: unknown }).releasePointerCapture === 'function'
+        typeof (capturedElement as unknown as { releasePointerCapture?: unknown })
+          .releasePointerCapture === 'function'
       ) {
-        (capturedElement as unknown as { releasePointerCapture: (pointerId: number) => void }).releasePointerCapture(
-          capturedPointerId
-        );
+        (
+          capturedElement as unknown as { releasePointerCapture: (pointerId: number) => void }
+        ).releasePointerCapture(capturedPointerId);
       }
     }
     activePoint = null;
@@ -166,20 +170,8 @@
 
     <!-- Grid lines -->
     {#each gridSteps as t (t)}
-      <line
-        x1={toSvgX(t)}
-        y1={pad}
-        x2={toSvgX(t)}
-        y2={pad + size}
-        class="grid-line"
-      />
-      <line
-        x1={pad}
-        y1={toSvgY(t)}
-        x2={pad + size}
-        y2={toSvgY(t)}
-        class="grid-line"
-      />
+      <line x1={toSvgX(t)} y1={pad} x2={toSvgX(t)} y2={pad + size} class="grid-line" />
+      <line x1={pad} y1={toSvgY(t)} x2={pad + size} y2={toSvgY(t)} class="grid-line" />
     {/each}
 
     <!-- Diagonal reference (linear easing) -->
@@ -238,7 +230,12 @@
 
     <!-- Axis labels -->
     <text x={pad + size / 2} y={total - 4} class="axis-label x-label">Step</text>
-    <text x={4} y={pad + size / 2} class="axis-label y-label" transform="rotate(-90, 4, {pad + size / 2})">Lightness</text>
+    <text
+      x={4}
+      y={pad + size / 2}
+      class="axis-label y-label"
+      transform="rotate(-90, 4, {pad + size / 2})">Lightness</text
+    >
   </svg>
 
   <div class="readout">

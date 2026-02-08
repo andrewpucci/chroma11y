@@ -7,7 +7,7 @@
     updateColorState,
     updateContrastStep
   } from '$lib/stores';
-  import { getContrast, isValidHexColor } from '$lib/colorUtils';
+  import { isValidHexColor } from '$lib/colorUtils';
 
   // Derived values from stores
   let contrastModeLocal = $derived($contrastMode);
@@ -154,30 +154,29 @@
     </div>
   {/if}
 
-  <div class="contrast-preview">
-    <h3>Current Contrast Colors</h3>
-    <div class="color-samples" role="group" aria-label="Current contrast color preview">
-      <div class="color-sample">
-        <div
-          class="swatch"
-          style="background-color: {contrastColorsLocal.low};"
-          aria-hidden="true"
-        ></div>
-        <span class="label">Low: {contrastColorsLocal.low}</span>
-      </div>
-      <div class="color-sample">
-        <div
-          class="swatch"
-          style="background-color: {contrastColorsLocal.high};"
-          aria-hidden="true"
-        ></div>
-        <span class="label">High: {contrastColorsLocal.high}</span>
+  {#if contrastModeLocal === 'auto'}
+    <div class="contrast-preview">
+      <h3>Current Contrast Colors</h3>
+      <div class="color-samples" role="group" aria-label="Current contrast color preview">
+        <div class="color-sample">
+          <div
+            class="swatch"
+            style="background-color: {contrastColorsLocal.low};"
+            aria-hidden="true"
+          ></div>
+          <span class="label">Low: {contrastColorsLocal.low}</span>
+        </div>
+        <div class="color-sample">
+          <div
+            class="swatch"
+            style="background-color: {contrastColorsLocal.high};"
+            aria-hidden="true"
+          ></div>
+          <span class="label">High: {contrastColorsLocal.high}</span>
+        </div>
       </div>
     </div>
-    <div class="contrast-ratio">
-      Contrast Ratio: {getContrast(contrastColorsLocal.low, contrastColorsLocal.high).toFixed(2)}:1
-    </div>
-  </div>
+  {/if}
 </section>
 
 <style>
@@ -238,12 +237,6 @@
     font-size: 0.85rem;
     color: var(--text-secondary);
     font-family: var(--text-mono);
-  }
-
-  .contrast-ratio {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    font-weight: 500;
   }
 
   .manual-controls,

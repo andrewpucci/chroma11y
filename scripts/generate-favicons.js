@@ -18,7 +18,7 @@ export async function generateFavicons() {
 
   // Generate 32x32 PNG for ICO
   const icoPng = new Resvg(svg, { fitTo: { mode: 'width', value: ICO_SIZE } }).render().asPng();
-  
+
   // Create ICO file
   const ico = await pngToIco([icoPng]);
   await writeFile(resolve(STATIC_DIR, 'favicon.ico'), ico);

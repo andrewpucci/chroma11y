@@ -27,7 +27,9 @@ function verifyPngSignature(buffer: Buffer | Uint8Array) {
 
 async function generateFaviconsFromSvg(svgContent: string, outputDir: string) {
   // Generate 32x32 PNG for ICO
-  const icoPng = new Resvg(svgContent, { fitTo: { mode: 'width', value: ICO_SIZE } }).render().asPng();
+  const icoPng = new Resvg(svgContent, { fitTo: { mode: 'width', value: ICO_SIZE } })
+    .render()
+    .asPng();
 
   // Create ICO file
   const ico = await pngToIco([icoPng]);
@@ -101,7 +103,9 @@ describe('generate-favicons', () => {
     it('should create ICO from single 32px PNG', async () => {
       expect.assertions(2);
 
-      const icoPng = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: ICO_SIZE } }).render().asPng();
+      const icoPng = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: ICO_SIZE } })
+        .render()
+        .asPng();
       const ico = await pngToIco([icoPng]);
 
       expect(ico).toBeInstanceOf(Buffer);
@@ -111,7 +115,9 @@ describe('generate-favicons', () => {
     it('should create valid ICO with correct header', async () => {
       expect.assertions(3);
 
-      const icoPng = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: ICO_SIZE } }).render().asPng();
+      const icoPng = new Resvg(VALID_SVG, { fitTo: { mode: 'width', value: ICO_SIZE } })
+        .render()
+        .asPng();
       const ico = await pngToIco([icoPng]);
 
       // ICO header: first 2 bytes are reserved (0), next 2 bytes are type (1 for ICO)

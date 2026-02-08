@@ -290,7 +290,12 @@
 </script>
 
 <a href="#main-content" class="skip-link">Skip to main content</a>
-<div class="app-shell" role="application" aria-label="Color Generator" style="--num-colors: {numColorsLocal};">
+<div
+  class="app-shell"
+  role="application"
+  aria-label="Color Generator"
+  style="--num-colors: {numColorsLocal};"
+>
   <header class="topbar">
     <div class="topbar-inner" bind:this={topbarInnerEl}>
       <div class="brand">
@@ -310,7 +315,7 @@
         <section class="card">
           <div class="card-header">
             <div class="card-title">Generation</div>
-            <div class="card-subtitle">Tune the palette curve and appearance</div>
+            <div class="card-subtitle">Control how colors are distributed across the palette</div>
           </div>
           <div class="card-body">
             <ColorControls
@@ -332,7 +337,7 @@
         <section class="card">
           <div class="card-header">
             <div class="card-title">Contrast</div>
-            <div class="card-subtitle">Set references for WCAG contrast ratios</div>
+            <div class="card-subtitle">Configure contrast reference points</div>
           </div>
           <div class="card-body">
             <ContrastControls />
@@ -369,14 +374,14 @@
 <style>
   .app-shell {
     --content-width: calc(
-      var(--control-width) + var(--layout-gap) +
-      (var(--num-colors) * var(--swatch-width)) +
-      ((var(--num-colors) - 1) * var(--swatch-gap)) +
-      (var(--card-padding) * 2) +
-      (var(--card-border-width) * 2) +
-      (var(--column-padding) * 2)
+      var(--control-width) + var(--layout-gap) + (var(--num-colors) * var(--swatch-width)) +
+        ((var(--num-colors) - 1) * var(--swatch-gap)) + (var(--card-padding) * 2) +
+        (var(--card-border-width) * 2) + (var(--column-padding) * 2)
     );
-    --container-max: min(var(--content-width), min(var(--container-vw), var(--container-max-limit)));
+    --container-max: min(
+      var(--content-width),
+      min(var(--container-vw), var(--container-max-limit))
+    );
 
     min-height: 100vh;
     display: flex;

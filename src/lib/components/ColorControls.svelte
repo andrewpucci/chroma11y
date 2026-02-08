@@ -32,7 +32,6 @@
 
   let isDraggingCounts = $state(false);
   let activePointerId: number | null = $state(null);
-  let activeInput: HTMLInputElement | null = null;
   let hasWindowListeners = $state(false);
 
   function cleanupWindowListeners() {
@@ -41,13 +40,11 @@
     window.removeEventListener('pointercancel', handlePointerCancel);
     hasWindowListeners = false;
     activePointerId = null;
-    activeInput = null;
   }
 
   function handlePointerDown(e: PointerEvent) {
     isDraggingCounts = true;
     activePointerId = e.pointerId;
-    activeInput = e.currentTarget as HTMLInputElement;
     onRangeDragStart?.();
     if (!hasWindowListeners) {
       hasWindowListeners = true;
@@ -228,5 +225,4 @@
       touch-action: manipulation;
     }
   }
-
 </style>
