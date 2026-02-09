@@ -30,11 +30,13 @@
   import type { ColorGenParams } from '$lib/colorUtils';
 
   import ColorControls from '$lib/components/ColorControls.svelte';
-  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import ExportButtons from '$lib/components/ExportButtons.svelte';
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
   import PaletteGrid from '$lib/components/PaletteGrid.svelte';
   import ContrastControls from '$lib/components/ContrastControls.svelte';
+  import Card from '$lib/components/Card.svelte';
+  import AppHeader from '$lib/components/AppHeader.svelte';
+  import Sidebar from '$lib/components/Sidebar.svelte';
 
   // Derived values from stores (auto-subscribed)
   let neutralsLocal = $derived($neutrals);
@@ -296,68 +298,34 @@
   aria-label="Chroma11y"
   style="--num-colors: {numColorsLocal};"
 >
-  <header class="topbar">
-    <div class="topbar-inner" bind:this={topbarInnerEl}>
-      <div class="brand">
-        <img src="/logo.svg" alt="" class="brand-logo" width="40" height="40" />
-        <div class="brand-text">
-          <h1 id="main-heading">Chroma11y</h1>
-          <p class="tagline">Accessible color palettes, powered by OKLCH</p>
-        </div>
-      </div>
-
-      <div class="topbar-actions">
-        <ThemeToggle />
-      </div>
-    </div>
-  </header>
+  <AppHeader bind:bindInner={topbarInnerEl} />
 
   <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
-    <aside class="sidebar" aria-label="Controls" data-testid="app-sidebar">
-      <div class="sidebar-inner">
-        <section class="card">
-          <div class="card-header">
-            <div class="card-title">Generation</div>
-            <div class="card-subtitle">Control how colors are distributed across the palette</div>
-          </div>
-          <div class="card-body">
-            <ColorControls
-              bind:baseColor={baseColorLocal}
-              bind:warmth={warmthLocal}
-              bind:chromaMultiplier={chromaMultiplierLocal}
-              bind:numColors={numColorsLocal}
-              bind:numPalettes={numPalettesLocal}
-              bind:x1={x1Local}
-              bind:y1={y1Local}
-              bind:x2={x2Local}
-              bind:y2={y2Local}
-              onRangeDragStart={freezeLayout}
-              onRangeDragEnd={unfreezeLayout}
-            />
-          </div>
-        </section>
+    <Sidebar>
+      <Card title="Generation" subtitle="Control how colors are distributed across the palette">
+        <ColorControls
+          bind:baseColor={baseColorLocal}
+          bind:warmth={warmthLocal}
+          bind:chromaMultiplier={chromaMultiplierLocal}
+          bind:numColors={numColorsLocal}
+          bind:numPalettes={numPalettesLocal}
+          bind:x1={x1Local}
+          bind:y1={y1Local}
+          bind:x2={x2Local}
+          bind:y2={y2Local}
+          onRangeDragStart={freezeLayout}
+          onRangeDragEnd={unfreezeLayout}
+        />
+      </Card>
 
-        <section class="card">
-          <div class="card-header">
-            <div class="card-title">Contrast</div>
-            <div class="card-subtitle">Configure contrast reference points</div>
-          </div>
-          <div class="card-body">
-            <ContrastControls />
-          </div>
-        </section>
+      <Card title="Contrast" subtitle="Configure contrast reference points">
+        <ContrastControls />
+      </Card>
 
-        <section class="card">
-          <div class="card-header">
-            <div class="card-title">Export</div>
-            <div class="card-subtitle">Download tokens in common formats</div>
-          </div>
-          <div class="card-body">
-            <ExportButtons neutrals={neutralsLocal} palettes={palettesLocal} />
-          </div>
-        </section>
-      </div>
-    </aside>
+      <Card title="Export" subtitle="Download tokens in common formats">
+        <ExportButtons neutrals={neutralsLocal} palettes={palettesLocal} />
+      </Card>
+    </Sidebar>
 
     <main
       class="content"
@@ -398,51 +366,6 @@
       var(--bg-primary);
   }
 
-  .topbar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: color-mix(in oklab, var(--bg-primary) 88%, transparent);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
-  }
-
-  .topbar-inner {
-    max-width: var(--container-max);
-    margin: 0 auto;
-    padding: 1rem var(--column-padding);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .brand-logo {
-    flex-shrink: 0;
-  }
-
-  .brand-text {
-    display: grid;
-    gap: 0.25rem;
-  }
-
-  .brand h1 {
-    font-size: 1.35rem;
-    font-weight: 750;
-    letter-spacing: -0.03em;
-  }
-
-  .tagline {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-  }
-
   .layout {
     flex: 1;
     max-width: var(--container-max);
@@ -453,25 +376,6 @@
     gap: var(--layout-gap);
     padding: var(--layout-gap) var(--column-padding) 1.25rem var(--column-padding);
     min-height: 0;
-  }
-
-  .sidebar {
-    min-height: 0;
-  }
-
-  .sidebar-inner {
-    position: sticky;
-    top: 86px;
-    display: grid;
-    gap: 0.9rem;
-  }
-
-  @media (max-height: 900px) {
-    .sidebar-inner {
-      max-height: calc(100vh - 110px);
-      overflow: auto;
-      padding-right: 2px;
-    }
   }
 
   .content {
@@ -487,23 +391,6 @@
   @media (max-width: 980px) {
     .layout {
       grid-template-columns: 1fr;
-    }
-
-    .sidebar-inner {
-      position: static;
-      max-height: none;
-      overflow: visible;
-    }
-  }
-
-  @media (max-width: 520px) {
-    .topbar-inner {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .brand h1 {
-      font-size: 1.2rem;
     }
   }
 </style>
