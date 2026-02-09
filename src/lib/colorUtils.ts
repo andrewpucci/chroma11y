@@ -512,30 +512,121 @@ export function getContrastColor(backgroundColor: string): string {
 /**
  * Gets a name for the palette based on its middle color
  * @param palette - The palette to name
+ * @param lowStepIndex - The index of the color to use as the contrast reference
  * @returns The name of the nearest named color
  */
-export function getPaletteName(palette: string[]): string {
+export function getPaletteName(palette: string[], lowStepIndex: number | string = 0): string {
   if (!palette?.length) return 'Unnamed';
 
   try {
-    const middleIndex = Math.round(palette.length * 0.6);
-    const middleColor = palette[Math.min(middleIndex, palette.length - 1)];
+    let referenceColorRaw =
+      typeof lowStepIndex === 'string'
+        ? lowStepIndex
+        : palette[Math.max(0, Math.min(palette.length - 1, lowStepIndex))] ?? palette[0];
+
+    if (typeof lowStepIndex === 'number' && (!referenceColorRaw || !isValidHexColor(referenceColorRaw))) {
+      referenceColorRaw = palette[0];
+    }
 
     // Validate that we have a valid hex color
-    if (!middleColor || typeof middleColor !== 'string' || !middleColor.match(/^#[0-9a-f]{6}$/i)) {
-      console.warn('Invalid color in palette for naming:', middleColor);
+    if (!referenceColorRaw || typeof referenceColorRaw !== 'string' || !isValidHexColor(referenceColorRaw)) {
+      console.warn('Invalid color in palette for naming:', referenceColorRaw);
       return 'Unnamed';
     }
+
+    const normalizeHexColor = (value: string): string | null => {
+      try {
+        const parsed = parse(value);
+        return parsed ? formatHex(parsed) : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const lowContrastColor = normalizeHexColor(referenceColorRaw) ?? referenceColorRaw;
+
+    const getOklchChroma = (hex: string): number | null => {
+      try {
+        const color = oklch(hex);
+        const chroma = color?.c;
+        return typeof chroma === 'number' && isFinite(chroma) ? chroma : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const targetContrast = 4.5;
+
+    const normalizedPalette = palette
+      .filter((value): value is string => typeof value === 'string' && isValidHexColor(value))
+      .map((c) => normalizeHexColor(c) ?? c);
+
+    const candidates = normalizedPalette.filter((c) => c !== lowContrastColor);
+    const nonExtremeCandidates = candidates.filter((c) => c !== '#ffffff' && c !== '#000000');
+    const basePool = nonExtremeCandidates.length > 0 ? nonExtremeCandidates : candidates;
+
+    const chromaticCandidates = basePool.filter((c) => {
+      const chroma = getOklchChroma(c);
+      return chroma !== null && chroma > 0.02;
+    });
+
+    const selectionPool = chromaticCandidates.length > 0 ? chromaticCandidates : basePool;
+
+    const bestMatch = selectionPool
+      .reduce<
+        | {
+            color: string;
+            distance: number;
+          }
+        | null
+      >((best, candidate) => {
+        const contrast = getContrast(lowContrastColor, candidate);
+        const distance = Math.abs(contrast - targetContrast);
+
+        if (!best || distance < best.distance) {
+          return { color: candidate, distance };
+        }
+        return best;
+      }, null);
+
+    const colorToName = bestMatch?.color ?? lowContrastColor;
 
     // Defensive: ensure nearestNamedColors is available and colorsNamed has entries
     if (!nearestNamedColors || Object.keys(colorsNamed).length === 0) {
       return 'Unnamed';
     }
 
-    const colorNames = nearestNamedColors(middleColor);
-    // nearest() returns an array, get the first (closest) match
-    const colorName = Array.isArray(colorNames) ? colorNames[0] : colorNames;
-    return (typeof colorName === 'string' ? colorName : 'Unnamed') || 'Unnamed';
+    const getNearestName = (hex: string): string => {
+      const colorNames = nearestNamedColors(hex);
+      const colorName = Array.isArray(colorNames) ? colorNames[0] : colorNames;
+      return (typeof colorName === 'string' ? colorName : 'Unnamed') || 'Unnamed';
+    };
+
+    const isExtremeName = (name: string): boolean => {
+      const normalized = name.trim().toLowerCase();
+      return normalized === 'white' || normalized === 'black';
+    };
+
+    let chosenName = getNearestName(colorToName);
+
+    if (isExtremeName(chosenName) && selectionPool.length > 0) {
+      const altCandidate = selectionPool
+        .map((candidate) => ({
+          candidate,
+          distance: Math.abs(getContrast(lowContrastColor, candidate) - targetContrast)
+        }))
+        .sort((a, b) => a.distance - b.distance)
+        .find(({ candidate }) => {
+          const altName = getNearestName(candidate);
+          return altName !== 'Unnamed' && !isExtremeName(altName);
+        });
+
+      if (altCandidate) {
+        chosenName = getNearestName(altCandidate.candidate);
+      }
+    }
+
+    return chosenName;
   } catch (error) {
     console.error('Error getting palette name:', error);
     return 'Unnamed';

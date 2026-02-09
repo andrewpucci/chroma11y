@@ -47,12 +47,10 @@
 >
   <div class="overlay" aria-hidden="true"></div>
   <div class="content">
-    <div class="top">
-      <span class="hex">{color}</span>
-      {#if label}
-        <span class="step">{label}</span>
-      {/if}
-    </div>
+    {#if label}
+      <span class="step">{label}</span>
+    {/if}
+    <span class="hex">{color}</span>
     <div class="contrast-info" aria-hidden="true">
       <span class="low" title="Contrast with low reference">{lowContrastDisplay}</span>
       <span class="high" title="Contrast with high reference">{highContrastDisplay}</span>
@@ -100,14 +98,6 @@
     padding: 0.45rem 0.5rem;
     display: grid;
     gap: 0.25rem;
-    min-width: 0;
-  }
-
-  .top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
     min-width: 0;
   }
 
@@ -183,6 +173,7 @@
     opacity: 0.92;
     font-family: var(--text-mono);
     white-space: nowrap;
+    justify-content: space-between;
   }
 
   .contrast-info .low {

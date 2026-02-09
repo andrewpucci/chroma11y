@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getPaletteName } from '$lib/colorUtils';
-  import { updateHueNudger } from '$lib/stores';
+  import { contrastColors, updateHueNudger } from '$lib/stores';
   import ColorSwatch from './ColorSwatch.svelte';
 
   interface Props {
@@ -11,7 +11,7 @@
   let { palettes = [], hueNudgerValues = $bindable([]) }: Props = $props();
 
   // Cache palette names to avoid repeated calculations during render
-  const paletteNames = $derived(palettes.map((palette) => getPaletteName(palette)));
+  const paletteNames = $derived(palettes.map((palette) => getPaletteName(palette, $contrastColors.low)));
 
   function handleHueNudgerChange(paletteIndex: number, event: Event) {
     const target = event.target as HTMLInputElement;

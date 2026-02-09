@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getPaletteName } from '$lib/colorUtils';
-  import { updateLightnessNudger } from '$lib/stores';
+  import { contrastColors, updateLightnessNudger } from '$lib/stores';
   import ColorSwatch from './ColorSwatch.svelte';
 
   interface Props {
@@ -10,7 +10,7 @@
 
   let { neutrals = $bindable([]), lightnessNudgerValues = $bindable([]) }: Props = $props();
 
-  const neutralName = $derived(neutrals.length > 0 ? getPaletteName(neutrals) : 'Neutral');
+  const neutralName = $derived(neutrals.length > 0 ? getPaletteName(neutrals, $contrastColors.low) : 'Neutral');
 </script>
 
 <section class="card" data-testid="neutral-palette">

@@ -62,6 +62,27 @@ describe('colorUtils', () => {
       expect(typeof name).toBe('string');
     });
 
+    it('does not always return white when palette includes white and reference is dark', () => {
+      const palette = ['#051534', '#102c60', '#ff0000', '#9dc1ff', '#ffffff'];
+      const name = getPaletteName(palette, '#071531');
+      expect(name).toBeTruthy();
+      expect(name).not.toBe('Unnamed');
+      const normalized = name.trim().toLowerCase();
+      expect(normalized).not.toBe('white');
+      expect(normalized).not.toBe('black');
+    });
+
+    it('honors numeric index reference when provided', () => {
+      const palette = ['#ffffff', '#000000', '#ff0000', '#00ff00', '#0000ff'];
+      const nameAt0 = getPaletteName(palette, 0);
+      const nameAt2 = getPaletteName(palette, 2);
+      expect(nameAt0).toBeTruthy();
+      expect(nameAt2).toBeTruthy();
+      expect(nameAt2).not.toBe('Unnamed');
+      expect(nameAt0).not.toBe('Unnamed');
+      expect(nameAt2).not.toBe(nameAt0);
+    });
+
     it('returns consistent name for same palette', () => {
       const palette = ['#ff0000', '#cc0000', '#990000', '#660000', '#330000'];
       const name1 = getPaletteName(palette);
