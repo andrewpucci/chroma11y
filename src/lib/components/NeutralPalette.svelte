@@ -23,7 +23,7 @@
     {#if neutrals.length > 0}
       <div class="swatches">
         {#each neutrals as color, index (index)}
-          <ColorSwatch {color} label="N{index}" showContrast={true} />
+          <ColorSwatch {color} label="N{index}" />
         {/each}
       </div>
 

@@ -5,10 +5,9 @@
   interface Props {
     color: string;
     label?: string;
-    showContrast?: boolean;
   }
 
-  let { color, label = '', showContrast = true }: Props = $props();
+  let { color, label = '' }: Props = $props();
 
   const contrastColorsLocal = $derived($contrastColors);
 
@@ -54,12 +53,10 @@
         <span class="step">{label}</span>
       {/if}
     </div>
-    {#if showContrast}
-      <div class="contrast-info" aria-hidden="true">
-        <span class="low" title="Contrast with low reference">{lowContrastDisplay}</span>
-        <span class="high" title="Contrast with high reference">{highContrastDisplay}</span>
-      </div>
-    {/if}
+    <div class="contrast-info" aria-hidden="true">
+      <span class="low" title="Contrast with low reference">{lowContrastDisplay}</span>
+      <span class="high" title="Contrast with high reference">{highContrastDisplay}</span>
+    </div>
   </div>
 </button>
 

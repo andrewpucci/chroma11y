@@ -71,7 +71,7 @@
         </div>
         <div class="swatches">
           {#each palette as color, index (`${paletteIndex}-${index}`)}
-            <ColorSwatch {color} label={String(index * 10)} showContrast={true} />
+            <ColorSwatch {color} label={String(index * 10)} />
           {/each}
         </div>
       {/each}
