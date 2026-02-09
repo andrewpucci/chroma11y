@@ -10,7 +10,9 @@
 
   let { neutrals = $bindable([]), lightnessNudgerValues = $bindable([]) }: Props = $props();
 
-  const neutralName = $derived(neutrals.length > 0 ? getPaletteName(neutrals, $contrastColors.low) : 'Neutral');
+  const neutralName = $derived(
+    neutrals.length > 0 ? getPaletteName(neutrals, $contrastColors.low) : 'Neutral'
+  );
 </script>
 
 <section class="card" data-testid="neutral-palette">
@@ -23,7 +25,7 @@
     {#if neutrals.length > 0}
       <div class="swatches">
         {#each neutrals as color, index (index)}
-          <ColorSwatch {color} label="N{index}" />
+          <ColorSwatch {color} label={String(index * 10)} />
         {/each}
       </div>
 

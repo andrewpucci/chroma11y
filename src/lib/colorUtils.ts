@@ -522,14 +522,21 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
     let referenceColorRaw =
       typeof lowStepIndex === 'string'
         ? lowStepIndex
-        : palette[Math.max(0, Math.min(palette.length - 1, lowStepIndex))] ?? palette[0];
+        : (palette[Math.max(0, Math.min(palette.length - 1, lowStepIndex))] ?? palette[0]);
 
-    if (typeof lowStepIndex === 'number' && (!referenceColorRaw || !isValidHexColor(referenceColorRaw))) {
+    if (
+      typeof lowStepIndex === 'number' &&
+      (!referenceColorRaw || !isValidHexColor(referenceColorRaw))
+    ) {
       referenceColorRaw = palette[0];
     }
 
     // Validate that we have a valid hex color
-    if (!referenceColorRaw || typeof referenceColorRaw !== 'string' || !isValidHexColor(referenceColorRaw)) {
+    if (
+      !referenceColorRaw ||
+      typeof referenceColorRaw !== 'string' ||
+      !isValidHexColor(referenceColorRaw)
+    ) {
       console.warn('Invalid color in palette for naming:', referenceColorRaw);
       return 'Unnamed';
     }
@@ -572,22 +579,18 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
 
     const selectionPool = chromaticCandidates.length > 0 ? chromaticCandidates : basePool;
 
-    const bestMatch = selectionPool
-      .reduce<
-        | {
-            color: string;
-            distance: number;
-          }
-        | null
-      >((best, candidate) => {
-        const contrast = getContrast(lowContrastColor, candidate);
-        const distance = Math.abs(contrast - targetContrast);
+    const bestMatch = selectionPool.reduce<{
+      color: string;
+      distance: number;
+    } | null>((best, candidate) => {
+      const contrast = getContrast(lowContrastColor, candidate);
+      const distance = Math.abs(contrast - targetContrast);
 
-        if (!best || distance < best.distance) {
-          return { color: candidate, distance };
-        }
-        return best;
-      }, null);
+      if (!best || distance < best.distance) {
+        return { color: candidate, distance };
+      }
+      return best;
+    }, null);
 
     const colorToName = bestMatch?.color ?? lowContrastColor;
 
