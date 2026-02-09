@@ -36,8 +36,8 @@
 </script>
 
 <svelte:head>
-  <title>Svelte Color Generator</title>
-  <meta name="description" content="Advanced color generator using OKLCH color space" />
+  <title>Chroma11y</title>
+  <meta name="description" content="Accessible color palette generator powered by OKLCH" />
 </svelte:head>
 
 <div class="app">

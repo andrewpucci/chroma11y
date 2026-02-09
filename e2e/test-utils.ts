@@ -2,10 +2,10 @@ import { Page, expect } from '@playwright/test';
 import type { AxeResults } from 'axe-core';
 
 /**
- * Wait for the Svelte Color Generator app to be fully loaded
+ * Wait for the Chroma11y app to be fully loaded
  */
 export async function waitForAppReady(page: Page): Promise<void> {
-  await page.waitForSelector('h1:has-text("Svelte Color Generator")', { timeout: 10000 });
+  await expect(page.locator('#main-heading')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#baseColor')).toBeVisible();
   await expect(page.locator('.color-swatch').first()).toBeVisible();
 }

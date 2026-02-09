@@ -23,7 +23,7 @@ test.describe('Local Storage Persistence', () => {
 
     // Verify localStorage was updated
     const storedState = await page.evaluate(() => {
-      return localStorage.getItem('svelte-color-generator-state');
+      return localStorage.getItem('chroma11y-state');
     });
     expect(storedState).toBeTruthy();
     expect(storedState).toContain('800080');
@@ -107,10 +107,7 @@ test.describe('URL State Persistence', () => {
   test('URL state takes precedence over localStorage', async ({ page }) => {
     // Set localStorage to blue
     await page.evaluate(() => {
-      localStorage.setItem(
-        'svelte-color-generator-state',
-        JSON.stringify({ baseColor: '#0000ff' })
-      );
+      localStorage.setItem('chroma11y-state', JSON.stringify({ baseColor: '#0000ff' }));
     });
 
     // Navigate with URL parameter for red

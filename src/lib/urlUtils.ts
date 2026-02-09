@@ -1,6 +1,6 @@
 /**
  * URL State Persistence Utilities
- * Encodes and decodes color generator state to/from URL parameters
+ * Encodes and decodes Chroma11y state to/from URL parameters
  */
 
 export interface UrlColorState {

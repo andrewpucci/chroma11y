@@ -1,9 +1,9 @@
 /**
  * Local Storage Persistence Utilities
- * Saves and restores color generator state to/from localStorage
+ * Saves and restores Chroma11y state to/from localStorage
  */
 
-const STORAGE_KEY = 'svelte-color-generator-state';
+const STORAGE_KEY = 'chroma11y-state';
 
 export interface StoredColorState {
   baseColor?: string;

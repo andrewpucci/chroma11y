@@ -1,6 +1,6 @@
-# Svelte Color Generator
+# Chroma11y
 
-A modern, accessible color palette generator built with Svelte 5, featuring OKLCH color space, WCAG contrast calculations, and multiple export formats.
+Accessible color palette generator powered by OKLCH, with WCAG contrast checking and multiple export formats. Built with Svelte 5.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Svelte 5](https://img.shields.io/badge/Svelte-5-orange.svg)](https://svelte.dev/)
@@ -79,7 +79,7 @@ git clone <repository-url>
 2. Navigate to the project directory:
 
 ```bash
-cd svelte-colorgenerator
+cd chroma11y
 ```
 
 3. Install dependencies:
@@ -426,7 +426,7 @@ This project is licensed under the GPL v3 License - see the [LICENSE](LICENSE) f
 
 ### Migration
 
-This Svelte implementation is a complete rewrite of the [original vanilla JavaScript color generator](https://codepen.io/andrewpucci/pen/xxQqjvr), achieving feature parity with modern improvements.
+Chroma11y is a complete rewrite of the [original vanilla JavaScript color generator](https://codepen.io/andrewpucci/pen/xxQqjvr), achieving feature parity with modern improvements.
 
 ### Dependencies
 

@@ -293,14 +293,17 @@
 <div
   class="app-shell"
   role="application"
-  aria-label="Color Generator"
+  aria-label="Chroma11y"
   style="--num-colors: {numColorsLocal};"
 >
   <header class="topbar">
     <div class="topbar-inner" bind:this={topbarInnerEl}>
       <div class="brand">
-        <h1 id="main-heading">Svelte Color Generator</h1>
-        <p class="tagline">Advanced color generation using OKLCH color space</p>
+        <img src="/logo.svg" alt="" class="brand-logo" width="40" height="40" />
+        <div class="brand-text">
+          <h1 id="main-heading">Chroma11y</h1>
+          <p class="tagline">Accessible color palettes, powered by OKLCH</p>
+        </div>
       </div>
 
       <div class="topbar-actions">
@@ -415,6 +418,16 @@
   }
 
   .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .brand-logo {
+    flex-shrink: 0;
+  }
+
+  .brand-text {
     display: grid;
     gap: 0.25rem;
   }

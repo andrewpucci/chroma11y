@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Complete Svelte 5 implementation of color generator
+- Complete Chroma11y implementation (Svelte 5 + TypeScript)
 - OKLCH color space support with configurable color palettes
 - Neutral palette generation with warmth control
 - Bezier curve controls (x1, y1, x2, y2) for precise lightness distribution

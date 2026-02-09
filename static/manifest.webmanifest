@@ -1,6 +1,6 @@
 {
-  "name": "Svelte Color Generator",
-  "short_name": "ColorGen",
+  "name": "Chroma11y",
+  "short_name": "Chroma11y",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fafafa",
@@ -15,6 +15,12 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

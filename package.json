@@ -1,14 +1,15 @@
 {
-  "name": "svelte-colorgenerator",
+  "name": "chroma11y",
   "version": "1.0.0",
-  "description": "A modern, accessible color palette generator with OKLCH color space, WCAG contrast calculations, and multiple export formats",
+  "description": "Accessible color palette generator powered by OKLCH, with WCAG contrast checking and multiple export formats",
   "keywords": [
     "color",
     "palette",
     "generator",
     "accessibility",
     "oklch",
-    "svelte",
+    "a11y",
+    "chroma11y",
     "design-tokens",
     "wcag",
     "contrast"

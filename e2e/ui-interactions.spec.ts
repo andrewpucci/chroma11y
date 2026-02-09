@@ -15,7 +15,7 @@ test.describe('UI Interactions', () => {
 
   test.describe('App Loading', () => {
     test('loads the application successfully', async ({ page }) => {
-      await expect(page.locator('h1')).toContainText('Svelte Color Generator');
+      await expect(page.locator('h1')).toContainText('Chroma11y');
       await expect(page.locator('#baseColor')).toBeVisible();
       await expect(page.locator('.color-swatch').first()).toBeVisible();
     });

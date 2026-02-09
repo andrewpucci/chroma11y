@@ -1,20 +1,54 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Simplified palette fan: 5 cards spanning 90° -->
+  <defs>
+    <clipPath id="fc">
+      <path d="M0,0 L28,0 L28,4 L18,4 L18,28.4 L0,28.4 Z" />
+    </clipPath>
+  </defs>
   <style>
-    .bg { fill: #fafafa; }
+    :root { --stroke-color: white; }
+    .o { fill: none; stroke: var(--stroke-color); }
+    .rv { fill: var(--stroke-color); }
     @media (prefers-color-scheme: dark) {
-      .bg { fill: #212529; }
+      :root { --stroke-color: black; }
     }
   </style>
-  <rect width="32" height="32" class="bg" rx="2"/>
-  <g>
-    <rect x="3" y="3" width="8" height="8" fill="#e6f0ff" rx="1"/>
-    <rect x="12" y="3" width="8" height="8" fill="#b3d7ff" rx="1"/>
-    <rect x="21" y="3" width="8" height="8" fill="#80bfff" rx="1"/>
-    <rect x="3" y="12" width="8" height="8" fill="#4da6ff" rx="1"/>
-    <rect x="12" y="12" width="8" height="8" fill="#1a8cff" rx="1"/>
-    <rect x="21" y="12" width="8" height="8" fill="#0073e6" rx="1"/>
-    <rect x="3" y="21" width="8" height="8" fill="#0059b3" rx="1"/>
-    <rect x="12" y="21" width="8" height="8" fill="#004080" rx="1"/>
-    <rect x="21" y="21" width="8" height="8" fill="#002b4d" rx="1"/>
+
+  <!-- Outermost → innermost, monochrome light blue with linear lightness progression -->
+  <g clip-path="url(#fc)">
+
+  <!-- Card 5 (outermost, lightest) -->
+  <g transform="translate(23,23) rotate(-90)">
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#e0eafc"/>
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
   </g>
+
+  <!-- Card 4 -->
+  <g transform="translate(23,23) rotate(-67.5)">
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#c0d4f8"/>
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
+  </g>
+
+  <!-- Card 3 -->
+  <g transform="translate(23,23) rotate(-45)">
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#a0bef4"/>
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
+  </g>
+
+  <!-- Card 2 -->
+  <g transform="translate(23,23) rotate(-22.5)">
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#80a8f0"/>
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
+  </g>
+
+  </g><!-- /clip -->
+
+  <!-- Card 1 (frontmost, darkest) -->
+  <g transform="translate(23,23) rotate(0)">
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#6092ec"/>
+    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
+  </g>
+
+  <!-- Rivet (same color as border) -->
+  <circle cx="23" cy="23" r="1.5" class="rv"/>
 </svg>
