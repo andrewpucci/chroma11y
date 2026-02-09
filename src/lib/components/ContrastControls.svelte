@@ -218,6 +218,7 @@
     display: flex;
     gap: 1rem;
     margin-bottom: 0.5rem;
+    justify-content: space-between;
   }
 
   .color-sample {
