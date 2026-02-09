@@ -1,5 +1,4 @@
 import { Page, expect } from '@playwright/test';
-import type { AxeResults } from 'axe-core';
 
 /**
  * Wait for the Chroma11y app to be fully loaded
@@ -90,24 +89,4 @@ export async function setNumberInput(page: Page, index: number, value: string): 
   const targetInput = numberInputs.nth(index);
   await targetInput.fill(value);
   await waitForColorGeneration(page);
-}
-
-/**
- * Check if accessibility violations exist for specific impact level
- */
-export function hasViolationsByImpact(
-  violations: AxeResults['violations'],
-  impact: string
-): boolean {
-  return violations.some((v) => v.impact === impact);
-}
-
-/**
- * Get violations by impact level
- */
-export function getViolationsByImpact(
-  violations: AxeResults['violations'],
-  impact: string
-): AxeResults['violations'] {
-  return violations.filter((v) => v.impact === impact);
 }

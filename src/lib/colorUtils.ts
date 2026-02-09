@@ -469,36 +469,6 @@ export function generateMultiplePalettes(params: PaletteGenParams): string[][] {
 }
 
 /**
- * Normalizes chroma values across palettes for consistent appearance
- * Public interface for external use - kept for backward compatibility
- */
-export function normalizeChromaValues(palettes: string[][]): void {
-  // Convert hex to OKLCH
-  const oklchPalettes: Oklch[][] = palettes.map((palette) =>
-    palette.map((color) => oklch(color) as Oklch)
-  );
-
-  // Normalize (chromaMultiplier not used in current implementation)
-  normalizeChromaValuesInternal(oklchPalettes);
-
-  // Convert back to hex
-  palettes.forEach((palette, paletteIndex) => {
-    palette.forEach((_, colorIndex) => {
-      const oklchColor = oklchPalettes[paletteIndex][colorIndex];
-      if (oklchColor) {
-        const clampedColor = clampChroma(oklchColor, 'oklch');
-        const hexColor = formatHex(clampedColor);
-        if (hexColor) {
-          palettes[paletteIndex][colorIndex] = hexColor;
-        }
-      }
-    });
-  });
-}
-
-// ===== HELPER FUNCTIONS =====
-
-/**
  * Converts hex color to RGB object
  */
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -570,19 +540,4 @@ export function getPaletteName(palette: string[]): string {
     console.error('Error getting palette name:', error);
     return 'Unnamed';
   }
-}
-
-/**
- * Function for backward compatibility - generates a single palette
- */
-export function generateColorPalette(params: PaletteGenParams): string[] {
-  const result = generatePalettes(
-    {
-      ...params,
-      numPalettes: 1,
-      currentTheme: 'light'
-    } as ColorGenParams,
-    true
-  );
-  return result.palettes[0] || [];
 }

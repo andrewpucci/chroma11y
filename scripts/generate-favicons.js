@@ -17,6 +17,7 @@ const MASKABLE_SIZE = 512;
 
 /**
  * Parses an SVG string and returns its viewBox and inner content
+ * @param {string} svgString
  */
 function parseSvg(svgString) {
   const dom = new JSDOM(svgString, { contentType: 'image/svg+xml' });
@@ -32,6 +33,11 @@ function parseSvg(svgString) {
   return { viewBox, innerContent };
 }
 
+/**
+ * @param {string} svg
+ * @param {number} size
+ * @param {number} padding
+ */
 function wrapSvgWithPadding(svg, size, padding) {
   const { viewBox, innerContent } = parseSvg(svg);
   const contentSize = size - padding * 2;
@@ -50,6 +56,10 @@ function wrapSvgWithPadding(svg, size, padding) {
   return wrappedDom.serialize();
 }
 
+/**
+ * @param {string} svg
+ * @param {number} size
+ */
 function createMaskableSvg(svg, size) {
   // Safe zone is 409×409 circle centered in 512×512
   // So padding = (512 - 409) / 2 = 51.5px on each side

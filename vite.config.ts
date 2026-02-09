@@ -2,11 +2,10 @@ import devtoolsJson from 'vite-plugin-devtools-json';
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
 import { faviconPlugin } from './scripts/vite-plugin-favicons.js';
 
 export default defineConfig({
-  plugins: [sveltekit(), devtoolsJson(), vanillaExtractPlugin(), faviconPlugin()],
+  plugins: [sveltekit(), devtoolsJson(), faviconPlugin()],
 
   test: {
     expect: { requireAssertions: true },
