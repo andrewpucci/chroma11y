@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { copyToClipboard, getContrast, getPrintableContrast } from '$lib/colorUtils';
+  import { copyToClipboard, getContrast, getPrintableContrast, MIN_CONTRAST_RATIO } from '$lib/colorUtils';
   import { contrastColors } from '$lib/stores';
 
   interface Props {
@@ -17,19 +17,18 @@
   const textColor = $derived(calculateTextColor(color, contrastColorsLocal));
 
   function calculateTextColor(bgColor: string, contrast: { low: string; high: string }): string {
-    const minContrastRatio = 4.5;
     const lowRatio = getContrast(bgColor, contrast.low);
     const highRatio = getContrast(bgColor, contrast.high);
 
     // If both meet threshold, use the one with better (higher) contrast
-    if (lowRatio >= minContrastRatio && highRatio >= minContrastRatio) {
+    if (lowRatio >= MIN_CONTRAST_RATIO && highRatio >= MIN_CONTRAST_RATIO) {
       return highRatio > lowRatio ? contrast.high : contrast.low;
     }
 
     // Only one meets threshold, use that one
-    if (lowRatio >= minContrastRatio) {
+    if (lowRatio >= MIN_CONTRAST_RATIO) {
       return contrast.low;
-    } else if (highRatio >= minContrastRatio) {
+    } else if (highRatio >= MIN_CONTRAST_RATIO) {
       return contrast.high;
     } else {
       // Neither meets minimum, use the one with better contrast
@@ -52,8 +51,8 @@
     {/if}
     <span class="hex">{color}</span>
     <div class="contrast-info" aria-hidden="true">
-      <span class="low" title="Contrast with low reference">{lowContrastDisplay}</span>
-      <span class="high" title="Contrast with high reference">{highContrastDisplay}</span>
+      <span class="low" title="Contrast with low step">{lowContrastDisplay}</span>
+      <span class="high" title="Contrast with high step">{highContrastDisplay}</span>
     </div>
   </div>
 </button>

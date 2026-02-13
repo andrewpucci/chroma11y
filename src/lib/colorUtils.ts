@@ -581,8 +581,6 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
       }
     };
 
-    const targetContrast = 4.5;
-
     const normalizedPalette = palette
       .filter((value): value is string => typeof value === 'string' && isValidHexColor(value))
       .map((c) => normalizeHexColor(c) ?? c);
@@ -603,7 +601,7 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
       distance: number;
     } | null>((best, candidate) => {
       const contrast = getContrast(lowContrastColor, candidate);
-      const distance = Math.abs(contrast - targetContrast);
+      const distance = Math.abs(contrast - MIN_CONTRAST_RATIO);
 
       if (!best || distance < best.distance) {
         return { color: candidate, distance };
@@ -624,7 +622,7 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
       const altCandidate = selectionPool
         .map((candidate) => ({
           candidate,
-          distance: Math.abs(getContrast(lowContrastColor, candidate) - targetContrast)
+          distance: Math.abs(getContrast(lowContrastColor, candidate) - MIN_CONTRAST_RATIO)
         }))
         .sort((a, b) => a.distance - b.distance)
         .find(({ candidate }) => {

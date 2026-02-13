@@ -54,7 +54,7 @@
 <section class="card neutral-palette" data-testid="neutral-palette">
   <div class="card-header">
     <div class="card-title">Neutral Palette</div>
-    <div class="card-subtitle">{neutralName}</div>
+    <div class="card-subtitle">Adjust nudgers to fine-tune each neutral step's lightness</div>
   </div>
 
   <div class="card-body">
