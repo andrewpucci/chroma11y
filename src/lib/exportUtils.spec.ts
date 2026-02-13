@@ -39,28 +39,28 @@ describe('exportUtils', () => {
     it('exports color palettes with correct names', () => {
       const tokens = exportAsDesignTokens([], samplePalettes);
 
-      // First palette should be 'royalblue' (detected from color)
-      const royalblue = tokens.royalblue as DesignTokens;
-      expect(royalblue['0']).toEqual({
+      // First palette should be 'blue-ribbon' (detected from color)
+      const blueRibbon = tokens['blue-ribbon'] as DesignTokens;
+      expect(blueRibbon['0']).toEqual({
         $type: 'color',
         $value: {
           colorSpace: 'srgb',
           components: [0.9019607843137255, 0.9411764705882353, 1],
           hex: '#e6f0ff'
         },
-        $description: 'Royalblue color step 0'
+        $description: 'Blue Ribbon color step 0'
       });
 
-      // Second palette should be 'deeppink' (detected from color)
-      const deeppink = tokens.deeppink as DesignTokens;
-      expect(deeppink['0']).toEqual({
+      // Second palette should be 'mellow-melon' (detected from color)
+      const mellowMelon = tokens['mellow-melon'] as DesignTokens;
+      expect(mellowMelon['0']).toEqual({
         $type: 'color',
         $value: {
           colorSpace: 'srgb',
           components: [1, 0.9019607843137255, 0.9411764705882353],
           hex: '#ffe6f0'
         },
-        $description: 'Deeppink color step 0'
+        $description: 'Mellow Melon color step 0'
       });
     });
 
@@ -89,14 +89,14 @@ describe('exportUtils', () => {
 
     it('exports palettes with correct naming', () => {
       const css = exportAsCSS([], samplePalettes);
-      expect(css).toContain('--color-royalblue-0: #e6f0ff;');
-      expect(css).toContain('--color-deeppink-0: #ffe6f0;');
+      expect(css).toContain('--color-blue-ribbon-0: #e6f0ff;');
+      expect(css).toContain('--color-mellow-melon-0: #ffe6f0;');
     });
 
     it('includes section comments', () => {
       const css = exportAsCSS(sampleNeutrals, samplePalettes);
       expect(css).toContain('/* Neutral Colors */');
-      expect(css).toContain('/* Royalblue Palette */');
+      expect(css).toContain('/* Blue Ribbon Palette */');
     });
   });
 
@@ -109,14 +109,14 @@ describe('exportUtils', () => {
 
     it('exports palettes with correct naming', () => {
       const scss = exportAsSCSS([], samplePalettes);
-      expect(scss).toContain('$color-royalblue-0: #e6f0ff;');
-      expect(scss).toContain('$color-deeppink-0: #ffe6f0;');
+      expect(scss).toContain('$color-blue-ribbon-0: #e6f0ff;');
+      expect(scss).toContain('$color-mellow-melon-0: #ffe6f0;');
     });
 
     it('includes section comments', () => {
       const scss = exportAsSCSS(sampleNeutrals, samplePalettes);
       expect(scss).toContain('// Neutral Colors');
-      expect(scss).toContain('// Royalblue Palette');
+      expect(scss).toContain('// Blue Ribbon Palette');
     });
 
     it('does not use :root selector', () => {

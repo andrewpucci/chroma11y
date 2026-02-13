@@ -29,7 +29,11 @@ function getPaletteNameForExport(palette: string[], index: number): string {
   // Try to get dynamic name from color detection
   const dynamicName = getPaletteName(palette);
   if (dynamicName && dynamicName !== 'Unnamed') {
-    return dynamicName.toLowerCase();
+    // Slugify: lowercase, replace non-alphanumeric with hyphens, collapse multiple hyphens, trim
+    return dynamicName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
   }
   // Fall back to default names or index-based naming
   return DEFAULT_PALETTE_NAMES[index] || `palette-${index + 1}`;
@@ -105,7 +109,7 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
             components: rgb,
             hex: color
           },
-          $description: `${paletteName.charAt(0).toUpperCase() + paletteName.slice(1)} color step ${step}`
+          $description: `${paletteName.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()).trim()} color step ${step}`
         };
       }
     });
@@ -134,7 +138,7 @@ export function exportAsCSS(neutrals: string[], palettes: string[][]): string {
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
     const paletteName = getPaletteNameForExport(palette, paletteIndex);
-    css += `\n  /* ${paletteName.charAt(0).toUpperCase() + paletteName.slice(1)} Palette */\n`;
+    css += `\n  /* ${paletteName.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()).trim()} Palette */\n`;
 
     palette.forEach((color, index) => {
       const step = index * 10;
@@ -162,7 +166,7 @@ export function exportAsSCSS(neutrals: string[], palettes: string[][]): string {
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
     const paletteName = getPaletteNameForExport(palette, paletteIndex);
-    scss += `\n// ${paletteName.charAt(0).toUpperCase() + paletteName.slice(1)} Palette\n`;
+    scss += `\n// ${paletteName.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()).trim()} Palette\n`;
 
     palette.forEach((color, index) => {
       const step = index * 10;

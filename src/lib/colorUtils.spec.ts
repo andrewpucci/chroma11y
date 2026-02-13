@@ -7,6 +7,7 @@ import {
   getContrast,
   getPrintableContrast,
   getPaletteName,
+  nearestFriendlyColorName,
   generatePalettes,
   type ColorGenParams
 } from './colorUtils';
@@ -50,6 +51,27 @@ describe('colorUtils', () => {
       const decimalStr = result.toString();
       const decimalPart = decimalStr.split('.')[1] || '';
       expect(decimalPart.length).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe('nearestFriendlyColorName', () => {
+    it('returns a human-friendly name for a hex color', () => {
+      const name = nearestFriendlyColorName('#ff0000');
+      expect(name).toBeTruthy();
+      expect(typeof name).toBe('string');
+      expect(name).not.toBe('Unnamed');
+    });
+
+    it('returns consistent results for the same input', () => {
+      const name1 = nearestFriendlyColorName('#3366cc');
+      const name2 = nearestFriendlyColorName('#3366cc');
+      expect(name1).toBe(name2);
+    });
+
+    it('returns different names for very different colors', () => {
+      const red = nearestFriendlyColorName('#ff0000');
+      const blue = nearestFriendlyColorName('#0000ff');
+      expect(red).not.toBe(blue);
     });
   });
 

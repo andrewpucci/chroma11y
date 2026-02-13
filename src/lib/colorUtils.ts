@@ -9,12 +9,12 @@ import {
   samples,
   interpolate,
   wcagContrast,
-  colorsNamed,
   differenceCiede2000,
   nearest,
   parse,
   rgb
 } from 'culori';
+import { colornames as shortColorNames } from 'color-name-list/short';
 import easing from 'bezier-easing';
 import { transpose, mean } from 'mathjs';
 import type { Oklch } from 'culori';
@@ -121,10 +121,29 @@ export interface PaletteGenParams extends ColorGenParams {
 
 // ===== COLOR NAMING =====
 
+/** Map from hex values to human-friendly color names */
+const hexToNameMap = new Map<string, string>(
+  shortColorNames.map(({ name, hex }) => [hex.toLowerCase(), name])
+);
+
+/** Array of hex values from the short color name list for nearest-color matching */
+const shortColorHexValues = shortColorNames.map(({ hex }) => hex);
+
 /**
  * Finds the nearest named color using CIEDE2000 color difference formula
+ * Uses ~1.5k human-friendly names from color-name-list/short
  */
-export const nearestNamedColors = nearest(Object.keys(colorsNamed), differenceCiede2000());
+const findNearestHex = nearest(shortColorHexValues, differenceCiede2000());
+
+/**
+ * Returns the nearest human-friendly color name for a given hex color
+ */
+export function nearestFriendlyColorName(hex: string): string {
+  const results = findNearestHex(hex, 1);
+  if (!results || results.length === 0) return 'Unnamed';
+  const matchedHex = results[0].toLowerCase();
+  return hexToNameMap.get(matchedHex) ?? 'Unnamed';
+}
 
 // ===== DARK MODE CALCULATION =====
 
@@ -594,23 +613,12 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
 
     const colorToName = bestMatch?.color ?? lowContrastColor;
 
-    // Defensive: ensure nearestNamedColors is available and colorsNamed has entries
-    if (!nearestNamedColors || Object.keys(colorsNamed).length === 0) {
-      return 'Unnamed';
-    }
-
-    const getNearestName = (hex: string): string => {
-      const colorNames = nearestNamedColors(hex);
-      const colorName = Array.isArray(colorNames) ? colorNames[0] : colorNames;
-      return (typeof colorName === 'string' ? colorName : 'Unnamed') || 'Unnamed';
-    };
-
     const isExtremeName = (name: string): boolean => {
       const normalized = name.trim().toLowerCase();
       return normalized === 'white' || normalized === 'black';
     };
 
-    let chosenName = getNearestName(colorToName);
+    let chosenName = nearestFriendlyColorName(colorToName);
 
     if (isExtremeName(chosenName) && selectionPool.length > 0) {
       const altCandidate = selectionPool
@@ -620,12 +628,12 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
         }))
         .sort((a, b) => a.distance - b.distance)
         .find(({ candidate }) => {
-          const altName = getNearestName(candidate);
+          const altName = nearestFriendlyColorName(candidate);
           return altName !== 'Unnamed' && !isExtremeName(altName);
         });
 
       if (altCandidate) {
-        chosenName = getNearestName(altCandidate.candidate);
+        chosenName = nearestFriendlyColorName(altCandidate.candidate);
       }
     }
 
