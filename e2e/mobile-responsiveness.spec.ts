@@ -103,8 +103,8 @@ test.describe('Mobile Responsiveness', () => {
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
       await page.goto('/');
 
-      await page.waitForSelector('.swatches', { timeout: 5000 });
-      const swatches = page.getByTestId('neutral-palette').locator('.swatches').first();
+      await page.waitForSelector('.neutral-grid', { timeout: 5000 });
+      const swatches = page.getByTestId('neutral-palette').locator('.neutral-grid').first();
       const flexWrap = await swatches.evaluate((el) => window.getComputedStyle(el).flexWrap);
 
       expect(flexWrap).toBe('wrap');

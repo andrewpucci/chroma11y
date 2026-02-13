@@ -1,0 +1,73 @@
+/* Common nudger input styles shared across components */
+.nudger-container {
+  background: var(--bg-tertiary);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.nudger-input {
+  width: 100%;
+  padding: 0.35rem 0.45rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-family: var(--text-mono);
+  text-align: center;
+  border-radius: 0;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.nudger-input:focus {
+  outline: none;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Highlight input when value is not 0 */
+.nudger-input[data-nonzero] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Touch-friendly on mobile */
+@media (max-width: 768px) {
+  .nudger-input {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+}
+
+/* Neutral palette specific overrides */
+.neutral-palette .nudger-input {
+  padding: 0.35rem 0.25rem;
+  font-size: 0.75rem;
+}
+
+.neutral-palette .nudger-container {
+  border: none;
+  border-radius: 0;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border-top: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+}
+
+/* Palette grid specific overrides */
+.palette-grid .nudger-input {
+  width: 96px;
+}
+
+@media (max-width: 768px) {
+  .palette-grid .nudger-input {
+    width: 110px;
+  }
+
+  .neutral-palette .nudger-input {
+    padding: 0.6rem 0.25rem;
+    font-size: 0.85rem;
+  }
+}
+

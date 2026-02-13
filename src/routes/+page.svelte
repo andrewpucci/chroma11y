@@ -335,8 +335,8 @@
       data-testid="app-content"
     >
       <div class="content-inner">
-        <NeutralPalette bind:neutrals={neutralsLocal} bind:lightnessNudgerValues />
-        <PaletteGrid palettes={palettesLocal} bind:hueNudgerValues />
+        <NeutralPalette neutrals={neutralsLocal} lightnessNudgerValues={lightnessNudgerValues} />
+        <PaletteGrid palettes={palettesLocal} hueNudgerValues={hueNudgerValues} />
       </div>
     </main>
   </div>
@@ -347,7 +347,8 @@
     --content-width: calc(
       var(--control-width) + var(--layout-gap) + (var(--num-colors) * var(--swatch-width)) +
         ((var(--num-colors) - 1) * var(--swatch-gap)) + (var(--card-padding) * 2) +
-        (var(--card-border-width) * 2) + (var(--column-padding) * 2)
+        (var(--card-border-width) * 2) + (var(--column-padding) * 2) +
+        (var(--palette-block-padding) * 2) + (var(--palette-block-border-width) * 2)
     );
     --container-max: min(
       var(--content-width),
@@ -391,6 +392,8 @@
   @media (max-width: 980px) {
     .layout {
       grid-template-columns: 1fr;
+      padding: var(--layout-gap) 0.5rem 1.25rem 0.5rem;
+      max-width: none;
     }
   }
 </style>

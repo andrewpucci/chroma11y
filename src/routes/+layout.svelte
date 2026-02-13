@@ -86,6 +86,8 @@
     --control-width: 440px;
     --card-padding: 1rem;
     --card-border-width: 1px;
+    --palette-block-padding: 0.75rem;
+    --palette-block-border-width: 1px;
     --container-max-limit: 2400px;
     --container-vw: 92vw;
     --text-mono:

@@ -48,7 +48,7 @@ test.describe('Algorithm Validation', () => {
     const paletteHexes = paletteSection.locator('.swatches').first().locator('.hex');
     const paletteBefore = await paletteHexes.nth(5).textContent();
 
-    const hueNudger = page.locator('.hue-nudger-input').first();
+    const hueNudger = page.locator('.palette-block').first().locator('.nudger-input');
     await expect(hueNudger).toBeVisible();
     await hueNudger.fill('60');
     await page.waitForTimeout(500);

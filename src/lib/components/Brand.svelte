@@ -1,23 +1,21 @@
 <script lang="ts">
+  import DynamicSvg from '$lib/components/DynamicSvg.svelte';
+  
   interface Props {
-    logoSrc?: string;
-    logoWidth?: number;
-    logoHeight?: number;
     title?: string;
     tagline?: string;
   }
 
   let {
-    logoSrc = '/logo.svg',
-    logoWidth = 40,
-    logoHeight = 40,
     title = 'Chroma11y',
     tagline = 'Accessible color palettes, powered by OKLCH'
   }: Props = $props();
 </script>
 
 <div class="brand">
-  <img src={logoSrc} alt="" class="brand-logo" width={logoWidth} height={logoHeight} />
+  <div class="brand-logo">
+    <DynamicSvg src="/favicon.svg" class="brand-svg" />
+  </div>
   <div class="brand-text">
     <h1 id="main-heading">{title}</h1>
     <p class="tagline">{tagline}</p>
@@ -33,6 +31,8 @@
 
   .brand-logo {
     flex-shrink: 0;
+    height: 2.5rem; /* Approximate height of h1 + tagline */
+    width: auto;
   }
 
   .brand-text {
@@ -54,6 +54,10 @@
   @media (max-width: 520px) {
     .brand h1 {
       font-size: 1.2rem;
+    }
+    
+    .brand-logo {
+      height: 2.2rem; /* Slightly smaller for mobile */
     }
   }
 </style>

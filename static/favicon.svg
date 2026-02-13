@@ -1,54 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Simplified palette fan: 5 cards spanning 90° -->
-  <defs>
-    <clipPath id="fc">
-      <path d="M0,0 L28,0 L28,4 L18,4 L18,28.4 L0,28.4 Z" />
-    </clipPath>
-  </defs>
-  <style>
-    :root { --stroke-color: white; }
-    .o { fill: none; stroke: var(--stroke-color); }
-    .rv { fill: var(--stroke-color); }
-    @media (prefers-color-scheme: dark) {
-      :root { --stroke-color: black; }
-    }
-  </style>
-
-  <!-- Outermost → innermost, monochrome light blue with linear lightness progression -->
-  <g clip-path="url(#fc)">
-
-  <!-- Card 5 (outermost, lightest) -->
-  <g transform="translate(23,23) rotate(-90)">
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#e0eafc"/>
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
-  </g>
-
-  <!-- Card 4 -->
-  <g transform="translate(23,23) rotate(-67.5)">
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#c0d4f8"/>
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
-  </g>
-
-  <!-- Card 3 -->
-  <g transform="translate(23,23) rotate(-45)">
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#a0bef4"/>
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
-  </g>
-
-  <!-- Card 2 -->
-  <g transform="translate(23,23) rotate(-22.5)">
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#80a8f0"/>
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
-  </g>
-
-  </g><!-- /clip -->
-
-  <!-- Card 1 (frontmost, darkest) -->
-  <g transform="translate(23,23) rotate(0)">
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" fill="#6092ec"/>
-    <rect x="-5" y="-19" width="10" height="24" rx="1.5" class="o" stroke-width="0.8"/>
-  </g>
-
-  <!-- Rivet (same color as border) -->
-  <circle cx="23" cy="23" r="1.5" class="rv"/>
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<style>
+  /* Light theme strokes match light background */
+  html[data-theme="light"] .stroke-adaptive { stroke: #ffffff; }
+  /* Dark theme strokes match dark background */  
+  html[data-theme="dark"] .stroke-adaptive { stroke: #0d1117; }
+  /* Default fallback */
+  .stroke-adaptive { stroke: #ffffff; }
+</style>
+<g clip-path="url(#clip0_123_6)">
+<path d="M1 16.5L1 23.5C1 24.3284 1.67157 25 2.5 25H23.5C24.3284 25 25 24.3284 25 23.5V16.5C25 15.6716 24.3284 15 23.5 15L2.5 15C1.67157 15 1 15.6716 1 16.5Z" fill="#bcd5ff"/>
+<path d="M1 16.5L1 23.5C1 24.3284 1.67157 25 2.5 25H23.5C24.3284 25 25 24.3284 25 23.5V16.5C25 15.6716 24.3284 15 23.5 15L2.5 15C1.67157 15 1 15.6716 1 16.5Z" class="stroke-adaptive" stroke-width="0.8"/>
+<path d="M3.78568 9.49544L1.1069 15.9626C0.789875 16.728 1.15333 17.6054 1.91869 17.9224L21.3202 25.9588C22.0855 26.2758 22.963 25.9124 23.28 25.147L25.9588 18.6798C26.2758 17.9145 25.9124 17.037 25.147 16.72L5.74553 8.68364C4.98016 8.36662 4.10271 8.73007 3.78568 9.49544Z" fill="#87b3ff"/>
+<path d="M3.78568 9.49544L1.1069 15.9626C0.789875 16.728 1.15333 17.6054 1.91869 17.9224L21.3202 25.9588C22.0855 26.2758 22.963 25.9124 23.28 25.147L25.9588 18.6798C26.2758 17.9145 25.9124 17.037 25.147 16.72L5.74553 8.68364C4.98016 8.36662 4.10271 8.73007 3.78568 9.49544Z" class="stroke-adaptive" stroke-width="0.8"/>
+<path d="M9.03985 4.09009L4.0901 9.03984C3.50432 9.62563 3.50432 10.5754 4.0901 11.1612L18.9393 26.0104C19.5251 26.5962 20.4749 26.5962 21.0607 26.0104L26.0104 21.0607C26.5962 20.4749 26.5962 19.5251 26.0104 18.9393L11.1612 4.09009C10.5754 3.50431 9.62564 3.50431 9.03985 4.09009Z" fill="#2c77ff"/>
+<path d="M9.03985 4.09009L4.0901 9.03984C3.50432 9.62563 3.50432 10.5754 4.0901 11.1612L18.9393 26.0104C19.5251 26.5962 20.4749 26.5962 21.0607 26.0104L26.0104 21.0607C26.5962 20.4749 26.5962 19.5251 26.0104 18.9393L11.1612 4.09009C10.5754 3.50431 9.62564 3.50431 9.03985 4.09009Z" class="stroke-adaptive" stroke-width="0.8"/>
+<path d="M15.9626 1.1069L9.49544 3.78568C8.73007 4.10271 8.36662 4.98016 8.68364 5.74553L16.72 25.147C17.037 25.9124 17.9145 26.2758 18.6798 25.9588L25.147 23.28C25.9124 22.963 26.2758 22.0855 25.9588 21.3202L17.9224 1.91869C17.6054 1.15333 16.728 0.789872 15.9626 1.1069Z" fill="#004dcb"/>
+<path d="M15.9626 1.1069L9.49544 3.78568C8.73007 4.10271 8.36662 4.98016 8.68364 5.74553L16.72 25.147C17.037 25.9124 17.9145 26.2758 18.6798 25.9588L25.147 23.28C25.9124 22.963 26.2758 22.0855 25.9588 21.3202L17.9224 1.91869C17.6054 1.15333 16.728 0.789872 15.9626 1.1069Z" class="stroke-adaptive" stroke-width="0.8"/>
+<path d="M23.5 1H16.5C15.6716 1 15 1.67157 15 2.5V23.5C15 24.3284 15.6716 25 16.5 25H23.5C24.3284 25 25 24.3284 25 23.5V2.5C25 1.67157 24.3284 1 23.5 1Z" fill="#002e82"/>
+<path d="M23.5 1H16.5C15.6716 1 15 1.67157 15 2.5V23.5C15 24.3284 15.6716 25 16.5 25H23.5C24.3284 25 25 24.3284 25 23.5V2.5C25 1.67157 24.3284 1 23.5 1Z" class="stroke-adaptive" stroke-width="0.8"/>
+<path d="M20 21.5C20.8284 21.5 21.5 20.8284 21.5 20C21.5 19.1716 20.8284 18.5 20 18.5C19.1716 18.5 18.5 19.1716 18.5 20C18.5 20.8284 19.1716 21.5 20 21.5Z" class="stroke-adaptive"/>
+</g>
+<defs>
+<clipPath id="clip0_123_6">
+<rect width="27.0711" height="27.0711" fill="white"/>
+</clipPath>
+</defs>
 </svg>
