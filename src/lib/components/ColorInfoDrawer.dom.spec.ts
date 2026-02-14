@@ -161,7 +161,8 @@ describe('ColorInfoDrawer', () => {
   // ── Close behaviour ────────────────────────────────────────
 
   it('closes the drawer when the close button is clicked', async () => {
-    const user = userEvent.setup();
+    vi.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     openDrawer(makeDrawerData());
     render(ColorInfoDrawer);
 
@@ -169,22 +170,27 @@ describe('ColorInfoDrawer', () => {
 
     const closeBtn = screen.getByRole('button', { name: /close color info drawer/i });
     await user.click(closeBtn);
+    await vi.advanceTimersByTimeAsync(300);
 
     expect(get(drawerIsOpen)).toBe(false);
     expect(announce).toHaveBeenCalledWith('Color info drawer closed');
+    vi.useRealTimers();
   });
 
   it('closes the drawer when Escape is pressed', async () => {
-    const user = userEvent.setup();
+    vi.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     openDrawer(makeDrawerData());
     render(ColorInfoDrawer);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
+    await vi.advanceTimersByTimeAsync(300);
 
     expect(get(drawerIsOpen)).toBe(false);
     expect(announce).toHaveBeenCalledWith('Color info drawer closed');
+    vi.useRealTimers();
   });
 
   // ── Accessibility ──────────────────────────────────────────
