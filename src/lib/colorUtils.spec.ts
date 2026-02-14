@@ -13,6 +13,12 @@ import {
   colorToCssRgb,
   colorToCssOklch,
   colorToCssHsl,
+  colorToCssP3,
+  colorToCssRec2020,
+  colorToCssDisplay,
+  getContrastAPCA,
+  getContrastForAlgorithm,
+  getPrintableContrastForAlgorithm,
   type ColorGenParams
 } from './colorUtils';
 
@@ -341,6 +347,111 @@ describe('colorUtils', () => {
       const result = colorToCssHsl(black);
       expect(result).toMatch(/hsl\([\d.]+ [\d.]+% 0%\)/);
       expect(result).not.toContain('none');
+    });
+  });
+
+  describe('colorToCssP3', () => {
+    it('converts a color to Display P3 format', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssP3(blue);
+      expect(result).toMatch(/^color\(display-p3 [\d.-]+ [\d.-]+ [\d.-]+\)$/);
+    });
+
+    it('returns fallback for invalid input', () => {
+      const result = colorToCssP3(null as unknown as InstanceType<typeof Color>);
+      expect(result).toBe('color(display-p3 0 0 0)');
+    });
+  });
+
+  describe('colorToCssRec2020', () => {
+    it('converts a color to Rec. 2020 format', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssRec2020(blue);
+      expect(result).toMatch(/^color\(rec2020 [\d.-]+ [\d.-]+ [\d.-]+\)$/);
+    });
+
+    it('returns fallback for invalid input', () => {
+      const result = colorToCssRec2020(null as unknown as InstanceType<typeof Color>);
+      expect(result).toBe('color(rec2020 0 0 0)');
+    });
+  });
+
+  describe('colorToCssDisplay', () => {
+    it('dispatches hex + srgb to colorToCssHex', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssDisplay(blue, 'hex', 'srgb');
+      expect(result).toMatch(/^#[0-9a-f]{6}$/);
+    });
+
+    it('dispatches rgb + srgb to colorToCssRgb', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssDisplay(blue, 'rgb', 'srgb');
+      expect(result).toMatch(/^rgb\(/);
+    });
+
+    it('dispatches oklch to colorToCssOklch regardless of gamut', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssDisplay(blue, 'oklch', 'p3');
+      expect(result).toMatch(/^oklch\(/);
+    });
+
+    it('dispatches hex + p3 to colorToCssP3', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssDisplay(blue, 'hex', 'p3');
+      expect(result).toMatch(/^color\(display-p3/);
+    });
+
+    it('dispatches hsl + rec2020 to colorToCssRec2020', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssDisplay(blue, 'hsl', 'rec2020');
+      expect(result).toMatch(/^color\(rec2020/);
+    });
+  });
+
+  describe('getContrastAPCA', () => {
+    it('returns high Lc for black text on white background', () => {
+      const lc = getContrastAPCA('#000000', '#ffffff');
+      expect(lc).toBeGreaterThan(100);
+    });
+
+    it('returns 0 for same colors', () => {
+      const lc = getContrastAPCA('#808080', '#808080');
+      expect(lc).toBeCloseTo(0, 0);
+    });
+
+    it('returns absolute value (always positive)', () => {
+      const lc = getContrastAPCA('#ffffff', '#000000');
+      expect(lc).toBeGreaterThan(0);
+    });
+
+    it('returns 0 for invalid input', () => {
+      const lc = getContrastAPCA('invalid', '#ffffff');
+      expect(lc).toBe(0);
+    });
+  });
+
+  describe('getContrastForAlgorithm', () => {
+    it('dispatches to WCAG21 when algorithm is WCAG21 (bgColor, fgColor)', () => {
+      const result = getContrastForAlgorithm('#ffffff', '#000000', 'WCAG21');
+      expect(result).toBeCloseTo(21, 0);
+    });
+
+    it('dispatches to APCA with swapped args (bgColor, fgColor → textColor, bgColor)', () => {
+      const result = getContrastForAlgorithm('#000000', '#ffffff', 'APCA');
+      expect(result).toBeGreaterThan(100);
+    });
+  });
+
+  describe('getPrintableContrastForAlgorithm', () => {
+    it('returns rounded value for WCAG21 (bgColor, fgColor)', () => {
+      const result = getPrintableContrastForAlgorithm('#ffffff', '#000000', 'WCAG21');
+      expect(result).toBe(21);
+    });
+
+    it('returns rounded Lc value for APCA (bgColor, fgColor)', () => {
+      const result = getPrintableContrastForAlgorithm('#000000', '#ffffff', 'APCA');
+      expect(typeof result).toBe('number');
+      expect(result).toBeGreaterThan(0);
     });
   });
 });

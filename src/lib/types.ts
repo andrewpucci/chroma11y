@@ -1,3 +1,18 @@
+/** Supported display color space formats */
+export type DisplayColorSpace = 'hex' | 'rgb' | 'oklch' | 'hsl';
+
+/** Supported gamut mapping targets */
+export type GamutSpace = 'srgb' | 'p3' | 'rec2020';
+
+/** Theme preference (auto follows prefers-color-scheme) */
+export type ThemePreference = 'light' | 'dark' | 'auto';
+
+/** Swatch label display options */
+export type SwatchLabels = 'both' | 'step' | 'value' | 'none';
+
+/** Supported contrast algorithm identifiers */
+export type ContrastAlgorithm = 'WCAG21' | 'APCA';
+
 /**
  * Serializable color state for URL and localStorage persistence.
  * All fields are optional to support partial state updates.
@@ -18,4 +33,9 @@ export interface SerializableColorState {
   highStep?: number;
   lightnessNudgers?: number[];
   hueNudgers?: number[];
+  displayColorSpace?: DisplayColorSpace;
+  gamutSpace?: GamutSpace;
+  themePreference?: ThemePreference;
+  swatchLabels?: SwatchLabels;
+  contrastAlgorithm?: ContrastAlgorithm;
 }

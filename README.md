@@ -36,7 +36,7 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 
 ### Accessibility
 
-- **WCAG contrast calculations** - Real-time contrast ratio display
+- **WCAG 2.1 & APCA contrast** - Choose between contrast algorithms
 - **Auto/manual contrast modes** - Choose contrast colors automatically or manually
 - **Contrast ratio display** - See low/high contrast ratios for each color
 - **Keyboard navigation** - Full keyboard accessibility
@@ -50,18 +50,25 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 - **Warmth control** - Add warmth to neutral palette
 - **Chroma multiplier** - Control overall saturation
 
+### Display Settings
+
+- **Color space display** - View colors as Hex, RGB, OKLCH, or HSL
+- **Gamut mapping** - Clamp to sRGB, Display P3, or Rec. 2020
+- **Swatch labels** - Show step numbers, color values, both, or none
+- **Contrast algorithm** - Switch between WCAG 2.1 ratios and APCA Lc values
+
 ### Export & Sharing
 
-- **JSON design tokens** - Export as design token format
-- **CSS custom properties** - Generate CSS variables
-- **SCSS variables** - Export as SCSS format
+- **JSON design tokens** - Export as design token format (always sRGB per spec)
+- **CSS custom properties** - Generate CSS variables in selected color space
+- **SCSS variables** - Export as SCSS in selected color space
 - **Click-to-copy** - Copy individual colors instantly
 - **URL state sharing** - Share configurations via URL
 - **Local storage** - Save preferences automatically
 
 ### Experience
 
-- **Theme switching** - Light and dark modes
+- **Theme switching** - Light, dark, and auto (follows system preference)
 - **Responsive** - Optimized for all screen sizes
 - **Fast performance** - All operations <200ms
 - **Intuitive controls** - Easy-to-use interface

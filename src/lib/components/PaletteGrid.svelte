@@ -8,10 +8,16 @@
   interface Props {
     palettes?: Color[][];
     palettesHex?: string[][];
+    palettesDisplay?: string[][];
     hueNudgerValues?: number[];
   }
 
-  let { palettes = [], palettesHex = [], hueNudgerValues = [] }: Props = $props();
+  let {
+    palettes = [],
+    palettesHex = [],
+    palettesDisplay = [],
+    hueNudgerValues = []
+  }: Props = $props();
 
   // Cache palette names to avoid repeated calculations during render
   const paletteNames = $derived(
@@ -123,6 +129,7 @@
             {#each palette as color, index (`${paletteIndex}-${index}`)}
               <ColorSwatch
                 {color}
+                displayValue={palettesDisplay[paletteIndex]?.[index] ?? color}
                 label={String(index * 10)}
                 oklchColor={palettes[paletteIndex]?.[index] ?? null}
                 paletteName={paletteNames[paletteIndex]}

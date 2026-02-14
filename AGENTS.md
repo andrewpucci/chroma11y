@@ -2,7 +2,7 @@
 
 Global instructions for Cascade. Directory-specific guidance lives in scoped `AGENTS.md` files (`src/lib/`, `src/lib/components/`, `e2e/`).
 
-Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG contrast checking and multiple export formats. It is a single-page app (SPA) built with Svelte 5 and SvelteKit, deployed as a static site.
+Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG 2.1 and APCA contrast checking, configurable display color spaces, and multiple export formats. It is a single-page app (SPA) built with Svelte 5 and SvelteKit, deployed as a static site.
 
 ## Setup commands
 
@@ -73,7 +73,7 @@ npm run check      # svelte-check (type checking)
 - **Framework**: Svelte 5 with SvelteKit (static adapter, SPA mode with `index.html` fallback)
 - **Language**: TypeScript 5.9, strict mode
 - **Build**: Vite 7
-- **Color science**: `colorjs.io` (OKLCH, gamut mapping, WCAG 2.1 contrast, CIEDE2000 delta)
+- **Color science**: `colorjs.io` (OKLCH, gamut mapping, WCAG 2.1 contrast, APCA contrast, CIEDE2000 delta)
 - **Easing**: `bezier-easing` (lightness curve control points)
 - **Color naming**: `color-name-list` (CIEDE2000 nearest-match)
 - **HTML sanitization**: `dompurify`
@@ -117,7 +117,7 @@ This is an accessibility-focused project. Maintain these patterns globally:
 - **ARIA labels** on all interactive elements
 - **Keyboard navigation** support throughout
 - **Skip link** to main content
-- **WCAG contrast ratios** displayed for every swatch (4.5:1 AA threshold)
+- **Contrast ratios** displayed for every swatch (WCAG 2.1 AA 4.5:1 or APCA Lc 60 threshold, configurable)
 - `role="application"` on the app shell
 - Never remove ARIA attributes, keyboard handlers, or screen reader announcements without replacement
 
@@ -143,6 +143,7 @@ This project uses **Svelte 5 with runes**. Follow these patterns:
 - Pure functions preferred — side effects isolated to stores and `$effect()`
 - Error handling: try/catch with fallback values (never crash the UI)
 - Color objects (`colorjs.io` `Color`) are the internal representation; hex conversion happens at the store/display layer
+- Helper functions mutate the store: `updateColorState()`, `setTheme()`, `setThemePreference()`, `updateLightnessNudger()`, `updateHueNudger()`, `updateContrastFromNeutrals()`, `updateContrastStep()`, `resetColorState()`
 
 ## Security
 

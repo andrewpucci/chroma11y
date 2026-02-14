@@ -5,9 +5,16 @@
   interface Props {
     neutrals?: string[];
     palettes?: string[][];
+    displayNeutrals?: string[];
+    displayPalettes?: string[][];
   }
 
-  let { neutrals = [], palettes = [] }: Props = $props();
+  let {
+    neutrals = [],
+    palettes = [],
+    displayNeutrals = [],
+    displayPalettes = []
+  }: Props = $props();
 
   function exportJSON() {
     downloadDesignTokens(neutrals, palettes);
@@ -15,12 +22,12 @@
   }
 
   function exportCSS() {
-    downloadCSS(neutrals, palettes);
+    downloadCSS(neutrals, palettes, displayNeutrals, displayPalettes);
     announce('Downloaded CSS variables');
   }
 
   function exportSCSS() {
-    downloadSCSS(neutrals, palettes);
+    downloadSCSS(neutrals, palettes, displayNeutrals, displayPalettes);
     announce('Downloaded SCSS variables');
   }
 </script>

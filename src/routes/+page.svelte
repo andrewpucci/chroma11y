@@ -5,6 +5,8 @@
     palettes,
     neutralsHex,
     palettesHex,
+    neutralsDisplay,
+    palettesDisplay,
     numColors,
     numPalettes,
     baseColor,
@@ -20,9 +22,15 @@
     contrastMode,
     lowStep,
     highStep,
+    displayColorSpace,
+    gamutSpace,
+    themePreference,
+    swatchLabels,
+    contrastAlgorithm,
     updateColorState,
     updateContrastFromNeutrals,
-    setTheme
+    setTheme,
+    setThemePreference
   } from '$lib/stores';
   import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
   import { loadStateFromStorage, saveStateToStorage } from '$lib/storageUtils';
@@ -36,6 +44,7 @@
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
   import PaletteGrid from '$lib/components/PaletteGrid.svelte';
   import ContrastControls from '$lib/components/ContrastControls.svelte';
+  import DisplaySettings from '$lib/components/DisplaySettings.svelte';
   import Card from '$lib/components/Card.svelte';
   import AppHeader from '$lib/components/AppHeader.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
@@ -46,12 +55,19 @@
   let palettesLocal = $derived($palettes);
   let neutralsHexLocal = $derived($neutralsHex);
   let palettesHexLocal = $derived($palettesHex);
+  let neutralsDisplayLocal = $derived($neutralsDisplay);
+  let palettesDisplayLocal = $derived($palettesDisplay);
   let lightnessNudgerValues = $derived($lightnessNudgers);
   let hueNudgerValues = $derived($hueNudgers);
   let currentThemeLocal = $derived($currentTheme);
   let contrastModeLocal = $derived($contrastMode);
   let lowStepLocal = $derived($lowStep);
   let highStepLocal = $derived($highStep);
+  let displayColorSpaceLocal = $derived($displayColorSpace);
+  let gamutSpaceLocal = $derived($gamutSpace);
+  let themePreferenceLocal = $derived($themePreference);
+  let swatchLabelsLocal = $derived($swatchLabels);
+  let contrastAlgorithmLocal = $derived($contrastAlgorithm);
 
   // Bindable state for controls
   let baseColorLocal = $state('#1862E6');
@@ -101,19 +117,44 @@
   // Load initial state from URL or localStorage
   onMount(() => {
     const urlState = getUrlState();
+    const storedState = loadStateFromStorage();
     if (Object.keys(urlState).length > 0) {
       applyUrlState(urlState);
-    } else {
-      const storedState = loadStateFromStorage();
-      if (storedState) {
-        applyUrlState(storedState);
-      }
+    } else if (storedState) {
+      applyUrlState(storedState);
+    }
+
+    // themePreference is only in localStorage, not the URL — always load it from storage
+    if (storedState?.themePreference) {
+      setThemePreference(storedState.themePreference);
     }
     urlStateLoaded = true;
 
+    // Set up matchMedia listener for auto theme preference
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      if ($themePreference === 'auto') {
+        setTheme(e.matches ? 'dark' : 'light');
+      }
+    };
+    // Apply initial auto theme if preference is auto
+    if ($themePreference === 'auto') {
+      handleMediaChange(mql);
+    }
+    mql.addEventListener('change', handleMediaChange);
+
     return () => {
       if (urlUpdateTimeout) clearTimeout(urlUpdateTimeout);
+      mql.removeEventListener('change', handleMediaChange);
     };
+  });
+
+  // React to themePreference changes to apply auto theme
+  $effect(() => {
+    if (themePreferenceLocal === 'auto' && typeof window !== 'undefined') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(isDark ? 'dark' : 'light');
+    }
   });
 
   // Sync local bindable state to stores when they change
@@ -204,12 +245,22 @@
       y1: y1Local,
       x2: x2Local,
       y2: y2Local,
-      theme: currentThemeLocal,
       contrastMode: contrastModeLocal,
       lowStep: lowStepLocal,
       highStep: highStepLocal,
       lightnessNudgers: lightnessNudgerValues,
-      hueNudgers: hueNudgerValues
+      hueNudgers: hueNudgerValues,
+      displayColorSpace: displayColorSpaceLocal,
+      gamutSpace: gamutSpaceLocal,
+      swatchLabels: swatchLabelsLocal,
+      contrastAlgorithm: contrastAlgorithmLocal
+    };
+
+    // theme and themePreference are persisted to localStorage only, not the URL
+    const storageState: UrlColorState = {
+      ...state,
+      theme: currentThemeLocal,
+      themePreference: themePreferenceLocal
     };
 
     // Clear any existing timeout before setting new one
@@ -220,7 +271,7 @@
     // Create new timeout and capture ID for cleanup
     urlUpdateTimeout = setTimeout(() => {
       updateBrowserUrl(state);
-      saveStateToStorage(state);
+      saveStateToStorage(storageState);
     }, 500);
 
     // Cleanup function clears the module-level timeout
@@ -233,6 +284,7 @@
   });
 
   function applyUrlState(urlState: UrlColorState) {
+    // Apply theme preset first (sets generation params like bezier, contrast steps)
     if (urlState.theme) {
       setTheme(urlState.theme);
     }
@@ -254,6 +306,12 @@
     if (urlState.highStep !== undefined) stateUpdate.highStep = urlState.highStep;
     if (urlState.lightnessNudgers) stateUpdate.lightnessNudgers = urlState.lightnessNudgers;
     if (urlState.hueNudgers) stateUpdate.hueNudgers = urlState.hueNudgers;
+    if (urlState.displayColorSpace) stateUpdate.displayColorSpace = urlState.displayColorSpace;
+    if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
+    if (urlState.swatchLabels) stateUpdate.swatchLabels = urlState.swatchLabels;
+    if (urlState.contrastAlgorithm) stateUpdate.contrastAlgorithm = urlState.contrastAlgorithm;
+    // themePreference is loaded from localStorage, not URL
+    if (urlState.themePreference) stateUpdate.themePreference = urlState.themePreference;
 
     if (Object.keys(stateUpdate).length > 0) {
       updateColorState(stateUpdate);
@@ -327,8 +385,17 @@
         <ContrastControls />
       </Card>
 
+      <Card title="Settings" subtitle="Display preferences and contrast options">
+        <DisplaySettings />
+      </Card>
+
       <Card title="Export" subtitle="Download tokens in common formats">
-        <ExportButtons neutrals={neutralsHexLocal} palettes={palettesHexLocal} />
+        <ExportButtons
+          neutrals={neutralsHexLocal}
+          palettes={palettesHexLocal}
+          displayNeutrals={neutralsDisplayLocal}
+          displayPalettes={palettesDisplayLocal}
+        />
       </Card>
     </Sidebar>
 
@@ -342,9 +409,15 @@
         <NeutralPalette
           neutrals={neutralsLocal}
           neutralsHex={neutralsHexLocal}
+          neutralsDisplay={neutralsDisplayLocal}
           {lightnessNudgerValues}
         />
-        <PaletteGrid palettes={palettesLocal} palettesHex={palettesHexLocal} {hueNudgerValues} />
+        <PaletteGrid
+          palettes={palettesLocal}
+          palettesHex={palettesHexLocal}
+          palettesDisplay={palettesDisplayLocal}
+          {hueNudgerValues}
+        />
       </div>
     </main>
   </div>

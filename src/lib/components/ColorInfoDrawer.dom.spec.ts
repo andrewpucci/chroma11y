@@ -136,26 +136,32 @@ describe('ColorInfoDrawer', () => {
     expect(screen.getByText('High step')).toBeInTheDocument();
   });
 
-  it('shows AA and AAA badges for both contrast rows', () => {
+  it('shows both WCAG and APCA badges for both contrast rows', () => {
     openDrawer(makeDrawerData());
     render(ColorInfoDrawer);
 
     const aaBadges = screen.getAllByText(/^AA /);
     const aaaBadges = screen.getAllByText(/^AAA /);
+    const largeBadges = screen.getAllByText(/^Large /);
+    const bodyBadges = screen.getAllByText(/^Body /);
 
     expect(aaBadges).toHaveLength(2);
     expect(aaaBadges).toHaveLength(2);
+    expect(largeBadges).toHaveLength(2);
+    expect(bodyBadges).toHaveLength(2);
   });
 
-  it('shows contrast ratio values in N:1 format', () => {
+  it('shows WCAG ratios in N:1 format and APCA values in Lc format', () => {
     openDrawer(makeDrawerData());
     const { container } = render(ColorInfoDrawer);
 
     const ratios = container.querySelectorAll('.contrast-ratio');
-    expect(ratios).toHaveLength(2);
-    for (const el of ratios) {
-      expect(el.textContent).toMatch(/\d+(\.\d+)?:1/);
-    }
+    expect(ratios).toHaveLength(4);
+
+    const wcagRatios = Array.from(ratios).filter((el) => el.textContent?.includes(':1'));
+    const apcaRatios = Array.from(ratios).filter((el) => el.textContent?.includes('Lc'));
+    expect(wcagRatios).toHaveLength(2);
+    expect(apcaRatios).toHaveLength(2);
   });
 
   // ── Close behaviour ────────────────────────────────────────

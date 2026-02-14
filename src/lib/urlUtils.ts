@@ -4,6 +4,7 @@
  */
 
 import type { SerializableColorState } from './types';
+import type { DisplayColorSpace, GamutSpace, SwatchLabels, ContrastAlgorithm } from './types';
 
 export type UrlColorState = SerializableColorState;
 
@@ -28,8 +29,7 @@ export function encodeStateToUrl(state: UrlColorState): string {
   if (state.x2 !== undefined) params.set('x2', state.x2.toString());
   if (state.y2 !== undefined) params.set('y2', state.y2.toString());
 
-  // Theme and contrast
-  if (state.theme) params.set('t', state.theme);
+  // Contrast
   if (state.contrastMode) params.set('m', state.contrastMode);
   if (state.lowStep !== undefined) params.set('ls', state.lowStep.toString());
   if (state.highStep !== undefined) params.set('hs', state.highStep.toString());
@@ -50,6 +50,14 @@ export function encodeStateToUrl(state: UrlColorState): string {
       .join(',');
     if (nudgerStr) params.set('hn', nudgerStr);
   }
+
+  // Display settings
+  if (state.displayColorSpace && state.displayColorSpace !== 'hex')
+    params.set('ds', state.displayColorSpace);
+  if (state.gamutSpace && state.gamutSpace !== 'srgb') params.set('gs', state.gamutSpace);
+  if (state.swatchLabels && state.swatchLabels !== 'both') params.set('sl', state.swatchLabels);
+  if (state.contrastAlgorithm && state.contrastAlgorithm !== 'WCAG21')
+    params.set('ca', state.contrastAlgorithm);
 
   return params.toString();
 }
@@ -130,10 +138,7 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
     }
   }
 
-  // Theme and contrast
-  const theme = searchParams.get('t');
-  if (theme === 'dark' || theme === 'light') state.theme = theme;
-
+  // Contrast
   const contrastMode = searchParams.get('m');
   if (contrastMode === 'manual' || contrastMode === 'auto') state.contrastMode = contrastMode;
 
@@ -163,6 +168,27 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   if (hueNudgers) {
     state.hueNudgers = parseNudgers(hueNudgers, 11, -180, 180);
   }
+
+  // Display settings
+  const VALID_DISPLAY_SPACES: DisplayColorSpace[] = ['hex', 'rgb', 'oklch', 'hsl'];
+  const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
+  const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
+  const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG21', 'APCA'];
+
+  const ds = searchParams.get('ds');
+  if (ds && VALID_DISPLAY_SPACES.includes(ds as DisplayColorSpace))
+    state.displayColorSpace = ds as DisplayColorSpace;
+
+  const gs = searchParams.get('gs');
+  if (gs && VALID_GAMUT_SPACES.includes(gs as GamutSpace)) state.gamutSpace = gs as GamutSpace;
+
+  const sl = searchParams.get('sl');
+  if (sl && VALID_SWATCH_LABELS.includes(sl as SwatchLabels))
+    state.swatchLabels = sl as SwatchLabels;
+
+  const ca = searchParams.get('ca');
+  if (ca && VALID_CONTRAST_ALGOS.includes(ca as ContrastAlgorithm))
+    state.contrastAlgorithm = ca as ContrastAlgorithm;
 
   return state;
 }

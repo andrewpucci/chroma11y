@@ -8,10 +8,16 @@
   interface Props {
     neutrals?: Color[];
     neutralsHex?: string[];
+    neutralsDisplay?: string[];
     lightnessNudgerValues?: number[];
   }
 
-  let { neutrals = [], neutralsHex = [], lightnessNudgerValues = [] }: Props = $props();
+  let {
+    neutrals = [],
+    neutralsHex = [],
+    neutralsDisplay = [],
+    lightnessNudgerValues = []
+  }: Props = $props();
 
   const neutralName = $derived(
     neutralsHex.length > 0 ? getPaletteName(neutralsHex, $contrastColors.low) : 'Neutral'
@@ -66,6 +72,7 @@
           <div class="neutral-item">
             <ColorSwatch
               {color}
+              displayValue={neutralsDisplay[index] ?? color}
               label={String(index * 10)}
               oklchColor={neutrals[index] ?? null}
               paletteName={neutralName}
