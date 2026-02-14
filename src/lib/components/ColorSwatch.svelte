@@ -71,7 +71,7 @@
 
 <button
   class="color-swatch"
-  style="background-color: {color}; color: {textColor};"
+  style="background-color: {displayValue || color}; color: {textColor};"
   onclick={() => {
     if (oklchColor) {
       openDrawer({ hex: color, oklch: oklchColor, step: label, paletteName, isNeutral });
