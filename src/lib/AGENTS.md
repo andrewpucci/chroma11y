@@ -18,9 +18,9 @@ Core logic, stores, and utilities for Chroma11y. Unit tests are co-located along
 Stores use the classic `writable`/`derived` API from `svelte/store` (not runes) — this is intentional for cross-module shared state.
 
 - **`colorStore`** — single writable store holding all color state (`ColorState` interface)
-- Derived stores expose individual slices: `neutrals`, `palettes`, `neutralsHex`, `palettesHex`, `baseColor`, `warmth`, `chromaMultiplier`, bezier params, `lightnessNudgers`, `hueNudgers`, `currentTheme`, `contrastMode`, etc.
-- **`neutralsHex`** and **`palettesHex`** are centralized derived stores that convert Color objects to hex strings — these are the intended place to swap output format when configurable color spaces are added
-- Helper functions mutate the store: `updateColorState()`, `setTheme()`, `toggleTheme()`, `updateLightnessNudger()`, `updateHueNudger()`, `updateContrastFromNeutrals()`, `updateContrastStep()`, `resetColorState()`
+- Derived stores expose individual slices: `neutrals`, `palettes`, `neutralsHex`, `palettesHex`, `neutralsDisplay`, `palettesDisplay`, `baseColor`, `warmth`, `chromaMultiplier`, bezier params, `lightnessNudgers`, `hueNudgers`, `currentTheme`, `contrastMode`, `displayColorSpace`, `gamutSpace`, `themePreference`, `swatchLabels`, `contrastAlgorithm`, etc.
+- **`neutralsHex`** and **`palettesHex`** convert Color objects to hex strings (always sRGB); **`neutralsDisplay`** and **`palettesDisplay`** format colors according to the selected `displayColorSpace` and `gamutSpace`
+- Helper functions mutate the store: `updateColorState()`, `setTheme()`, `setThemePreference()`, `updateLightnessNudger()`, `updateHueNudger()`, `updateContrastFromNeutrals()`, `updateContrastStep()`, `resetColorState()`
 - Theme presets (`THEME_PRESETS.light` / `THEME_PRESETS.dark`) define default bezier curves, chroma multipliers, and contrast steps per theme
 
 ## Color generation pipeline
@@ -32,21 +32,21 @@ Defined in `colorUtils.ts`. The algorithm:
 3. **Normalize chroma** — transpose the chroma matrix across palettes and average each column for consistent saturation per step
 4. **Apply lightness nudgers** — final step, adds per-step lightness offsets to both neutrals and palettes
 
-Key functions: `generatePalettes()`, `generateBaseNeutrals()`, `getContrast()`, `getPaletteName()`, `colorToCssHex()`, `colorToCssRgb()`, `colorToCssOklch()`, `colorToCssHsl()`
+Key functions: `generatePalettes()`, `generateBaseNeutrals()`, `getContrast()`, `getContrastAPCA()`, `getContrastForAlgorithm()`, `getPaletteName()`, `colorToCssHex()`, `colorToCssRgb()`, `colorToCssOklch()`, `colorToCssHsl()`, `colorToCssP3()`, `colorToCssRec2020()`, `colorToCssDisplay()`
 
 ## Export formats
 
 Defined in `exportUtils.ts`:
 
 - **JSON Design Tokens** — compliant with [Design Tokens Format Module](https://www.designtokens.org/tr/2025.10/), includes sRGB components + hex
-- **CSS Custom Properties** — `:root { --color-{name}-{step}: #hex; }`
-- **SCSS Variables** — `$color-{name}-{step}: #hex;`
+- **CSS Custom Properties** — `:root { --color-{name}-{step}: <value>; }` (respects display color space setting)
+- **SCSS Variables** — `$color-{name}-{step}: <value>;` (respects display color space setting)
 
 Palette names are auto-detected via CIEDE2000 nearest color matching, with fallback defaults.
 
 ## Persistence
 
-- **URL state** (`urlUtils.ts`) — all parameters encoded as compact query params (`c`, `w`, `cm`, `x1`…`y2`, `t`, `m`, `ls`, `hs`, `ln`, `hn`). Updated via `replaceState` (no history pollution). Debounced 500ms.
+- **URL state** (`urlUtils.ts`) — all parameters encoded as compact query params (`c`, `w`, `cm`, `x1`…`y2`, `t`, `m`, `ls`, `hs`, `ln`, `hn`, `ds`, `gs`, `tp`, `sl`, `ca`). Updated via `replaceState` (no history pollution). Debounced 500ms.
 - **localStorage** (`storageUtils.ts`) — mirrors URL state under key `chroma11y-state`. URL takes priority on load.
 
 ## Testing conventions
