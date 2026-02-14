@@ -8,18 +8,6 @@ import easing from 'bezier-easing';
 import { announce } from '$lib/announce';
 import type { DisplayColorSpace, GamutSpace, ContrastAlgorithm } from '$lib/types';
 
-/** Transpose a 2D array (swap rows ↔ columns) */
-function transpose<T>(matrix: T[][]): T[][] {
-  if (matrix.length === 0) return [];
-  return matrix[0].map((_, col) => matrix.map((row) => row[col]));
-}
-
-/** Arithmetic mean of a number array */
-function mean(values: number[]): number {
-  if (values.length === 0) return 0;
-  return values.reduce((sum, v) => sum + v, 0) / values.length;
-}
-
 // Re-export Color so consumers can use it as the OKLCH type
 export type { default as ColorType } from 'colorjs.io';
 
@@ -152,6 +140,7 @@ export interface ColorGenParams {
   currentTheme: 'light' | 'dark';
   lightnessNudgers?: number[];
   hueNudgers?: number[];
+  gamutSpace?: GamutSpace;
 }
 
 // ===== COLOR NAMING =====
@@ -314,23 +303,86 @@ export function generateBaseNeutrals(params: ColorGenParams): Color[] {
   return baseNeutrals;
 }
 
+// ===== GAMUT BOUNDARY HELPERS =====
+
+/** Resolve a GamutSpace value to the colorjs.io space id */
+function resolveGamutSpaceId(gamut?: GamutSpace): string {
+  switch (gamut) {
+    case 'p3':
+      return 'p3';
+    case 'rec2020':
+      return 'rec2020';
+    default:
+      return 'srgb';
+  }
+}
+
+/**
+ * Finds the maximum OKLCH chroma at a given lightness and hue that stays within the target gamut.
+ * Uses binary search over chroma with colorjs.io's inGamut() check.
+ * @param l - OKLCH lightness (0–1)
+ * @param h - OKLCH hue (0–360)
+ * @param gamut - Target gamut space (defaults to sRGB)
+ * @returns Maximum chroma value that is in-gamut
+ */
+export function maxChromaInGamut(l: number, h: number, gamut: GamutSpace = 'srgb'): number {
+  // Extremes have zero chroma
+  if (l <= 0.0001 || l >= 0.9999) return 0;
+
+  const spaceId = resolveGamutSpaceId(gamut);
+  let lo = 0;
+  let hi = 0.4; // OKLCH chroma rarely exceeds 0.4
+
+  for (let i = 0; i < 20; i++) {
+    const mid = (lo + hi) / 2;
+    const test = oklchColor(l, mid, h);
+    if (test.inGamut(spaceId)) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+
+  return lo;
+}
+
 // ===== PALETTE GENERATION =====
 
 /**
- * Generates a single color palette based on base neutrals and a hue-shifted base color
+ * Generates a single color palette based on base neutrals and a hue-shifted base color.
+ * Uses gamut-boundary-relative chroma so that every hue uses the same proportion
+ * of its available gamut, producing visually even saturation across palettes.
  */
 function generatePalette(
   baseNeutrals: Color[],
   baseColor: Color,
-  chromaMultiplier: number
+  chromaMultiplier: number,
+  referenceHue: number,
+  gamut: GamutSpace = 'srgb'
 ): Color[] {
-  const targetChroma = (baseColor.oklch.c || 0) * chromaMultiplier;
+  const baseChroma = (baseColor.oklch.c || 0) * chromaMultiplier;
+  const paletteHue = baseColor.oklch.h ?? 0;
 
   return baseNeutrals.map((neutralColor) => {
     const l = neutralColor.oklch.l ?? 0;
     // Preserve pure black/white endpoints — don't apply chroma to extremes
-    const c = l >= 0.9999 || l <= 0.0001 ? 0 : targetChroma;
-    return oklchColor(l, c, baseColor.oklch.h ?? 0);
+    if (l >= 0.9999 || l <= 0.0001) return oklchColor(l, 0, paletteHue);
+
+    // Compute the gamut boundary for the reference hue and this palette's hue
+    const refMaxC = maxChromaInGamut(l, referenceHue, gamut);
+    const hueMaxC = maxChromaInGamut(l, paletteHue, gamut);
+
+    // Scale chroma proportionally: if the base chroma is X% of the reference
+    // hue's boundary, apply the same X% to this hue's boundary
+    let c: number;
+    if (refMaxC > 1e-6) {
+      const ratio = baseChroma / refMaxC;
+      c = ratio * hueMaxC;
+    } else {
+      c = baseChroma;
+    }
+
+    return oklchColor(l, c, paletteHue);
   });
 }
 
@@ -363,42 +415,13 @@ function applyLightnessNudgers(
 }
 
 /**
- * Normalizes chroma values across palettes for consistent appearance
- * Averages chroma values across all palettes for each color step
- */
-function normalizeChromaValuesInternal(palettes: Color[][]): {
-  normalizedPalettes: Color[][];
-  normalizedChromaValues: number[];
-} {
-  const cValues = palettes.map((palette) => palette.map((color) => color.oklch.c || 0));
-
-  const normalizedCs = transpose(cValues).map((column) => {
-    const avgChroma = mean(column) || 0;
-    return Math.max(0, avgChroma);
-  });
-
-  // Return new palettes array with normalized chroma values (no mutation)
-  const normalizedPalettes = palettes.map((palette) =>
-    palette.map((color, j) => {
-      const c = color.clone();
-      if (normalizedCs[j] !== undefined) {
-        c.oklch.c = normalizedCs[j];
-      }
-      return c;
-    })
-  );
-
-  return { normalizedPalettes, normalizedChromaValues: normalizedCs };
-}
-
-/**
  * Generates multiple color palettes
  * Returns Color objects; hex conversion is handled by the store layer
  */
-export function generatePalettes(
-  params: ColorGenParams,
-  shouldNormalizeChroma: boolean = true
-): { neutrals: Color[]; palettes: Color[][]; normalizedChromaValues: number[] } {
+export function generatePalettes(params: ColorGenParams): {
+  neutrals: Color[];
+  palettes: Color[][];
+} {
   // Generate base neutrals WITHOUT nudgers
   const baseNeutrals = generateBaseNeutrals(params);
 
@@ -411,36 +434,30 @@ export function generatePalettes(
   const baseH = baseColor.oklch.h;
   if (baseH == null || isNaN(baseH)) baseColor.oklch.h = 0;
 
+  // The reference hue is the base color's hue — all palettes scale relative to it
+  const referenceHue = baseColor.oklch.h ?? 0;
+  const gamut = params.gamutSpace ?? 'srgb';
+
   // Generate palettes with hue variations using BASE neutrals (without nudgers)
   const palettes: Color[][] = Array.from({ length: params.numPalettes }, (_, i) => {
     const hueNudger = params.hueNudgers?.[i] || 0;
     const hueOffset = (360 / params.numPalettes) * i + hueNudger;
     const tempColor = baseColor.clone();
     tempColor.oklch.h = ((baseColor.oklch.h ?? 0) + hueOffset) % 360;
-    return generatePalette(baseNeutrals, tempColor, params.chromaMultiplier);
+    return generatePalette(baseNeutrals, tempColor, params.chromaMultiplier, referenceHue, gamut);
   });
 
-  // Normalize chroma values if needed
-  let normalizedChromaValues: number[] = [];
-  let normalizedPalettes = palettes;
-  if (shouldNormalizeChroma && params.chromaMultiplier > 0) {
-    const result = normalizeChromaValuesInternal(palettes);
-    normalizedChromaValues = result.normalizedChromaValues;
-    normalizedPalettes = result.normalizedPalettes;
-  }
-
-  // Apply lightness nudgers as the FINAL step (after chroma normalization)
+  // Apply lightness nudgers as the FINAL step
   const lightnessNudgers = params.lightnessNudgers || [];
   const { neutrals: neutralsWithNudgers, palettes: palettesWithNudgers } = applyLightnessNudgers(
     baseNeutrals,
-    normalizedPalettes,
+    palettes,
     lightnessNudgers
   );
 
   return {
     neutrals: neutralsWithNudgers,
-    palettes: palettesWithNudgers,
-    normalizedChromaValues
+    palettes: palettesWithNudgers
   };
 }
 

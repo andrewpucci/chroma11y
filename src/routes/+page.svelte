@@ -195,6 +195,7 @@
     const _theme = currentThemeLocal;
     const _lightnessNudgers = lightnessNudgerValues;
     const _hueNudgers = hueNudgerValues;
+    const _gamutSpace = gamutSpaceLocal;
     const _isDragging = isDraggingSlider;
     void _numColors;
     void _numPalettes;
@@ -208,6 +209,7 @@
     void _theme;
     void _lightnessNudgers;
     void _hueNudgers;
+    void _gamutSpace;
 
     // Skip generation while dragging to prevent layout reflow
     if (_isDragging || !urlStateLoaded) return;
@@ -331,11 +333,12 @@
       chromaMultiplier: chromaMultiplierLocal,
       currentTheme: currentThemeLocal,
       lightnessNudgers: lightnessNudgerValues,
-      hueNudgers: hueNudgerValues
+      hueNudgers: hueNudgerValues,
+      gamutSpace: gamutSpaceLocal
     };
 
     try {
-      const result = generatePalettes(params, true);
+      const result = generatePalettes(params);
       // Atomic update to prevent race conditions
       updateColorState({
         neutrals: result.neutrals,

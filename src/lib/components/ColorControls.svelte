@@ -108,8 +108,8 @@
     </div>
 
     <div class="field">
-      <label class="label" for="chroma">Chroma Multiplier ({chromaMultiplier.toFixed(2)})</label>
-      <input id="chroma" type="range" min="0.1" max="2" step="0.01" bind:value={chromaMultiplier} />
+      <label class="label" for="saturation">Saturation ({chromaMultiplier.toFixed(2)})</label>
+      <input id="saturation" type="range" min="0" max="2" step="0.01" bind:value={chromaMultiplier} />
     </div>
 
     <div class="field">
