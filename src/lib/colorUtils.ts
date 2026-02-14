@@ -6,6 +6,7 @@ import Color from 'colorjs.io';
 import { colornames as shortColorNames } from 'color-name-list/short';
 import easing from 'bezier-easing';
 import { announce } from '$lib/announce';
+import type { DisplayColorSpace, GamutSpace, ContrastAlgorithm } from '$lib/types';
 
 /** Transpose a 2D array (swap rows ↔ columns) */
 function transpose<T>(matrix: T[][]): T[][] {
@@ -506,6 +507,136 @@ export function colorToCssHsl(color: Color): string {
   } catch {
     return 'hsl(0 0% 0%)';
   }
+}
+
+/**
+ * Gamut-maps any Color object to Display P3 and returns a CSS color() string.
+ * e.g. "color(display-p3 0.097 0.384 0.901)"
+ */
+export function colorToCssP3(color: Color): string {
+  try {
+    const p3 = color.clone().toGamut({ space: 'p3' }).to('p3');
+    const [r, g, b] = p3.coords.map((v) => parseFloat((v ?? 0).toFixed(6)));
+    return `color(display-p3 ${r} ${g} ${b})`;
+  } catch {
+    return 'color(display-p3 0 0 0)';
+  }
+}
+
+/**
+ * Gamut-maps any Color object to Rec. 2020 and returns a CSS color() string.
+ * e.g. "color(rec2020 0.169 0.353 0.872)"
+ */
+export function colorToCssRec2020(color: Color): string {
+  try {
+    const rec = color.clone().toGamut({ space: 'rec2020' }).to('rec2020');
+    const [r, g, b] = rec.coords.map((v) => parseFloat((v ?? 0).toFixed(6)));
+    return `color(rec2020 ${r} ${g} ${b})`;
+  } catch {
+    return 'color(rec2020 0 0 0)';
+  }
+}
+
+/**
+ * Formats a Color object as a CSS string in the given display color space and gamut.
+ * This is the main dispatcher used by derived stores and components.
+ */
+export function colorToCssDisplay(
+  color: Color,
+  space: DisplayColorSpace,
+  gamut: GamutSpace
+): string {
+  switch (space) {
+    case 'oklch':
+      return colorToCssOklch(color);
+    case 'hex':
+      switch (gamut) {
+        case 'p3':
+          return colorToCssP3(color);
+        case 'rec2020':
+          return colorToCssRec2020(color);
+        default:
+          return colorToCssHex(color);
+      }
+    case 'rgb':
+      switch (gamut) {
+        case 'p3':
+          return colorToCssP3(color);
+        case 'rec2020':
+          return colorToCssRec2020(color);
+        default:
+          return colorToCssRgb(color);
+      }
+    case 'hsl':
+      switch (gamut) {
+        case 'p3':
+          return colorToCssP3(color);
+        case 'rec2020':
+          return colorToCssRec2020(color);
+        default:
+          return colorToCssHsl(color);
+      }
+    default:
+      return colorToCssHex(color);
+  }
+}
+
+// ===== CONTRAST ALGORITHM HELPERS =====
+
+/** Minimum APCA Lc value for body text (approximate threshold) */
+export const MIN_APCA_LC_BODY = 60;
+
+/** Minimum APCA Lc value for large text (approximate threshold) */
+export const MIN_APCA_LC_LARGE = 45;
+
+/**
+ * Calculates the APCA contrast (Lc value) between a text color and a background color.
+ * APCA is asymmetric: the order of arguments matters (text on background).
+ * Returns the absolute Lc value (always positive).
+ * @param textColor - Foreground/text color (hex string)
+ * @param bgColor - Background color (hex string)
+ * @returns Absolute Lc value (0–106)
+ */
+export function getContrastAPCA(textColor: string, bgColor: string): number {
+  try {
+    const lc = Color.contrast(new Color(textColor), new Color(bgColor), 'APCA');
+    return Math.abs(lc);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Formats an APCA Lc value to a readable number with 1 decimal place
+ */
+export function getPrintableContrastAPCA(textColor: string, bgColor: string): number {
+  return Math.round(getContrastAPCA(textColor, bgColor) * 10) / 10;
+}
+
+/**
+ * Unified contrast function that dispatches to the correct algorithm.
+ * Returns the raw contrast value (ratio for WCAG21, absolute Lc for APCA).
+ */
+export function getContrastForAlgorithm(
+  color1: string,
+  color2: string,
+  algorithm: ContrastAlgorithm
+): number {
+  return algorithm === 'APCA' ? getContrastAPCA(color1, color2) : getContrast(color1, color2);
+}
+
+/**
+ * Formats a contrast value for display based on the selected algorithm.
+ * Returns a rounded number suitable for UI display.
+ */
+export function getPrintableContrastForAlgorithm(
+  color1: string,
+  color2: string,
+  algorithm: ContrastAlgorithm
+): number {
+  return algorithm === 'APCA'
+    ? getPrintableContrastAPCA(color1, color2)
+    : getPrintableContrast(color1, color2);
 }
 
 /**

@@ -1,6 +1,13 @@
 import { writable, derived } from 'svelte/store';
 import type Color from 'colorjs.io';
-import { colorToCssHex } from '$lib/colorUtils';
+import { colorToCssHex, colorToCssDisplay } from '$lib/colorUtils';
+import type {
+  DisplayColorSpace,
+  GamutSpace,
+  ThemePreference,
+  SwatchLabels,
+  ContrastAlgorithm
+} from '$lib/types';
 
 /**
  * Interface for color state
@@ -27,6 +34,11 @@ interface ColorState {
   lightnessNudgers: number[];
   hueNudgers: number[];
   currentTheme: 'light' | 'dark';
+  displayColorSpace: DisplayColorSpace;
+  gamutSpace: GamutSpace;
+  themePreference: ThemePreference;
+  swatchLabels: SwatchLabels;
+  contrastAlgorithm: ContrastAlgorithm;
   _lastUpdated?: number;
 }
 
@@ -54,7 +66,11 @@ const THEME_PRESETS = {
     neutrals: [],
     palettes: [],
     lightnessNudgers: [],
-    hueNudgers: []
+    hueNudgers: [],
+    displayColorSpace: 'hex' as DisplayColorSpace,
+    gamutSpace: 'srgb' as GamutSpace,
+    swatchLabels: 'both' as SwatchLabels,
+    contrastAlgorithm: 'WCAG21' as ContrastAlgorithm
   },
   dark: {
     numColors: 11,
@@ -76,7 +92,11 @@ const THEME_PRESETS = {
     neutrals: [],
     palettes: [],
     lightnessNudgers: [],
-    hueNudgers: []
+    hueNudgers: [],
+    displayColorSpace: 'hex' as DisplayColorSpace,
+    gamutSpace: 'srgb' as GamutSpace,
+    swatchLabels: 'both' as SwatchLabels,
+    contrastAlgorithm: 'WCAG21' as ContrastAlgorithm
   }
 };
 
@@ -85,7 +105,8 @@ const THEME_PRESETS = {
  */
 const DEFAULT_STATE = {
   ...THEME_PRESETS.light,
-  currentTheme: 'light'
+  currentTheme: 'light',
+  themePreference: 'light' as ThemePreference
 };
 
 // Create the main color store
@@ -155,6 +176,43 @@ export const lightnessNudgers = derived(colorStore, ($colorStore) => $colorStore
 // Derived store for hue nudgers
 export const hueNudgers = derived(colorStore, ($colorStore) => $colorStore.hueNudgers);
 
+// Derived store for display color space
+export const displayColorSpace = derived(
+  colorStore,
+  ($colorStore) => $colorStore.displayColorSpace
+);
+
+// Derived store for gamut space
+export const gamutSpace = derived(colorStore, ($colorStore) => $colorStore.gamutSpace);
+
+// Derived store for theme preference
+export const themePreference = derived(colorStore, ($colorStore) => $colorStore.themePreference);
+
+// Derived store for swatch labels
+export const swatchLabels = derived(colorStore, ($colorStore) => $colorStore.swatchLabels);
+
+// Derived store for contrast algorithm
+export const contrastAlgorithm = derived(
+  colorStore,
+  ($colorStore) => $colorStore.contrastAlgorithm
+);
+
+// Derived store for neutrals formatted in the selected display color space
+export const neutralsDisplay = derived(colorStore, ($colorStore) =>
+  $colorStore.neutrals.map((c) =>
+    colorToCssDisplay(c, $colorStore.displayColorSpace, $colorStore.gamutSpace)
+  )
+);
+
+// Derived store for palettes formatted in the selected display color space
+export const palettesDisplay = derived(colorStore, ($colorStore) =>
+  $colorStore.palettes.map((palette) =>
+    palette.map((c) =>
+      colorToCssDisplay(c, $colorStore.displayColorSpace, $colorStore.gamutSpace)
+    )
+  )
+);
+
 /**
  * Updates the color state with new values
  */
@@ -165,7 +223,8 @@ export const updateColorState = (newState: Partial<ColorState>) => {
 };
 
 /**
- * Switches between light and dark themes
+ * Applies a resolved theme (light or dark) to the store, loading the theme preset.
+ * This is called when the resolved theme changes (either from explicit preference or auto detection).
  */
 export const setTheme = (theme: 'light' | 'dark') => {
   if (!THEME_PRESETS[theme]) {
@@ -185,19 +244,23 @@ export const setTheme = (theme: 'light' | 'dark') => {
 };
 
 /**
- * Toggles between light and dark themes
+ * Sets the theme preference (light, dark, or auto).
+ * When 'auto', the resolved theme is determined by the caller via matchMedia.
+ * When 'light' or 'dark', also applies the theme preset immediately.
  */
-export const toggleTheme = () => {
+export const setThemePreference = (preference: ThemePreference) => {
   colorStore.update((currentState) => {
-    const newTheme = currentState.currentTheme === 'light' ? 'dark' : 'light';
-    const themePreset = THEME_PRESETS[newTheme];
-
-    return {
-      ...currentState,
-      ...themePreset,
-      currentTheme: newTheme,
-      _lastUpdated: Date.now()
-    } as ColorState;
+    const newState = { ...currentState, themePreference: preference };
+    if (preference !== 'auto') {
+      const themePreset = THEME_PRESETS[preference];
+      return {
+        ...newState,
+        ...themePreset,
+        currentTheme: preference,
+        _lastUpdated: Date.now()
+      } as ColorState;
+    }
+    return newState;
   });
 };
 
@@ -300,6 +363,7 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
     return {
       ...themePreset,
       currentTheme: targetTheme,
+      themePreference: targetTheme as ThemePreference,
       _lastUpdated: Date.now()
     } as ColorState;
   });
