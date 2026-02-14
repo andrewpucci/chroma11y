@@ -66,31 +66,24 @@
     }
   }}
   title={oklchColor ? `View color details for ${color}` : `Click to copy ${color}`}
-  aria-label="Color {color}{label ? `, step ${label}` : ''}. {oklchColor
-    ? 'Click to view color details'
-    : 'Click to copy to clipboard'}"
+  aria-label="{label ? `${label} ` : ''}{color}{oklchColor
+    ? ' — view color details'
+    : ' — copy to clipboard'}"
 >
-  <div class="overlay" aria-hidden="true"></div>
-  <div class="content">
-    {#if label}
-      <span class="step">{label}</span>
-    {/if}
-    <span class="hex">{color}</span>
-    <div class="contrast-info" aria-hidden="true">
-      <span class="low" title="Contrast with low step">{lowContrastDisplay}</span>
-      <span class="high" title="Contrast with high step">{highContrastDisplay}</span>
-    </div>
-  </div>
+  {#if label}
+    <span class="step">{label}</span>
+  {/if}
+  <span class="hex">{color}</span>
+  <span class="contrast-info" aria-hidden="true">{lowContrastDisplay} {highContrastDisplay}</span>
 </button>
 
 <style>
   .color-swatch {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-end;
-    padding: 0;
+    display: grid;
+    gap: 0.25rem;
+    align-content: end;
+    padding: 0.45rem 0.5rem;
     border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
     border-radius: 12px;
     cursor: pointer;
@@ -105,7 +98,8 @@
     overflow: hidden;
   }
 
-  .overlay {
+  .color-swatch::before {
+    content: '';
     position: absolute;
     inset: 0;
     background: linear-gradient(
@@ -115,15 +109,6 @@
     );
     opacity: 0.35;
     pointer-events: none;
-  }
-
-  .content {
-    position: relative;
-    z-index: 1;
-    padding: 0.45rem 0.5rem;
-    display: grid;
-    gap: 0.25rem;
-    min-width: 0;
   }
 
   /* Touch-friendly tap targets on mobile (44x44px minimum) */
@@ -172,6 +157,7 @@
   }
 
   .hex {
+    position: relative;
     font-size: 0.74rem;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -184,6 +170,7 @@
   }
 
   .step {
+    position: relative;
     font-size: 0.74rem;
     opacity: 0.9;
     font-weight: 650;
@@ -192,22 +179,12 @@
   }
 
   .contrast-info {
+    position: relative;
     display: flex;
-    gap: 4px;
+    justify-content: space-between;
     font-size: 0.72rem;
-    opacity: 0.92;
+    opacity: 0.65;
     font-family: var(--text-mono);
     white-space: nowrap;
-    justify-content: space-between;
-  }
-
-  .contrast-info .low {
-    color: inherit;
-    opacity: 0.7;
-  }
-
-  .contrast-info .high {
-    color: inherit;
-    opacity: 0.7;
   }
 </style>

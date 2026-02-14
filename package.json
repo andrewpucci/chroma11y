@@ -32,11 +32,13 @@
     "lint:fix": "prettier --write . && eslint . --fix",
     "test:unit": "vitest",
     "test": "npm run test:unit -- --run && npm run test:e2e",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:lighthouse": "rm -rf lighthouse-report .lighthouseci && lhci autorun; open $(node -e \"const m=require('./lighthouse-report/manifest.json');console.log(m.find(r=>r.isRepresentativeRun).htmlPath)\")"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
     "@eslint/js": "^9.39.1",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.58.2",
     "@resvg/resvg-js": "^2.6.2",
     "@sveltejs/adapter-static": "^3.0.10",

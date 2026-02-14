@@ -20,13 +20,9 @@ describe('ExportButtons', () => {
   it('disables export actions when there are no colors', () => {
     render(ExportButtons, { props: { neutrals: [], palettes: [] } });
 
-    expect(
-      screen.getByRole('button', { name: /export colors as json design tokens/i })
-    ).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: /export colors as css custom properties/i })
-    ).toBeDisabled();
-    expect(screen.getByRole('button', { name: /export colors as scss variables/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /export json design tokens/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /export css custom properties/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /export scss variables/i })).toBeDisabled();
   });
 
   it('exports JSON/CSS/SCSS using the provided color data', async () => {
@@ -37,16 +33,14 @@ describe('ExportButtons', () => {
 
     render(ExportButtons, { props: { neutrals, palettes } });
 
-    await user.click(screen.getByRole('button', { name: /export colors as json design tokens/i }));
+    await user.click(screen.getByRole('button', { name: /export json design tokens/i }));
     expect(downloadDesignTokens).toHaveBeenCalledWith(neutrals, palettes);
     expect(announce).toHaveBeenCalled();
 
-    await user.click(
-      screen.getByRole('button', { name: /export colors as css custom properties/i })
-    );
+    await user.click(screen.getByRole('button', { name: /export css custom properties/i }));
     expect(downloadCSS).toHaveBeenCalledWith(neutrals, palettes);
 
-    await user.click(screen.getByRole('button', { name: /export colors as scss variables/i }));
+    await user.click(screen.getByRole('button', { name: /export scss variables/i }));
     expect(downloadSCSS).toHaveBeenCalledWith(neutrals, palettes);
   });
 });

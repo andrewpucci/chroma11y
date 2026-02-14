@@ -30,7 +30,7 @@
     class="btn"
     onclick={exportJSON}
     disabled={neutrals.length === 0 && palettes.length === 0}
-    aria-label="Export colors as JSON design tokens"
+    aria-label="Export JSON design tokens"
   >
     <span aria-hidden="true">📄</span> Export JSON
   </button>
@@ -38,7 +38,7 @@
     class="btn"
     onclick={exportCSS}
     disabled={neutrals.length === 0 && palettes.length === 0}
-    aria-label="Export colors as CSS custom properties"
+    aria-label="Export CSS custom properties"
   >
     <span aria-hidden="true">🎨</span> Export CSS
   </button>
@@ -46,7 +46,7 @@
     class="btn"
     onclick={exportSCSS}
     disabled={neutrals.length === 0 && palettes.length === 0}
-    aria-label="Export colors as SCSS variables"
+    aria-label="Export SCSS variables"
   >
     <span aria-hidden="true">📝</span> Export SCSS
   </button>
