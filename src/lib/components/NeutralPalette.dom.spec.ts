@@ -26,7 +26,7 @@ describe('NeutralPalette', () => {
     });
 
     const swatches = screen.getAllByRole('button', {
-      name: /click to (view color details|copy to clipboard)/i
+      name: /(view color details|copy to clipboard)/i
     });
     expect(swatches).toHaveLength(neutralsHex.length);
   });

@@ -12,7 +12,7 @@
 
 <section class="card">
   <div class="card-header">
-    <div class="card-title">{title}</div>
+    <h2 class="card-title">{title}</h2>
     {#if subtitle}
       <div class="card-subtitle">{subtitle}</div>
     {/if}

@@ -335,7 +335,6 @@
     <main
       class="content"
       id="main-content"
-      role="region"
       aria-labelledby="main-heading"
       data-testid="app-content"
     >

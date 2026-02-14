@@ -86,7 +86,7 @@
 
 <section class="card palette-grid" data-testid="generated-palettes">
   <div class="card-header">
-    <div class="card-title">Generated Palettes</div>
+    <h2 class="card-title">Generated Palettes</h2>
     <div class="card-subtitle">Click any swatch to view color details</div>
   </div>
 

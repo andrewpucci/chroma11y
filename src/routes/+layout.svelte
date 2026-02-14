@@ -323,7 +323,7 @@
     --bg-secondary: #f6f7f9;
     --bg-tertiary: #eef0f4;
     --text-primary: #1a1a1a;
-    --text-secondary: #6c757d;
+    --text-secondary: #636a72;
     --border: #dee2e6;
     --accent: #1862e6;
     --accent-hover: #1352c4;
