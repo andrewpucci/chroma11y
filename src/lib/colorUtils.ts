@@ -474,9 +474,20 @@ export function colorToCssRgb(color: Color): string {
  * Converts any Color object to a CSS oklch() string (CSS Color 4 syntax).
  * e.g. "oklch(55% 0.19 264)"
  */
-export function colorToCssOklch(color: Color): string {
+export function colorToCssOklch(color: Color, gamut: GamutSpace = 'srgb'): string {
   try {
-    const oklch = color.clone().to('oklch');
+    // Sanitize NaN hue before gamut mapping (achromatic colors have NaN hue in colorjs.io)
+    const clone = color.clone();
+    const rawH = clone.oklch.h;
+    if (rawH == null || isNaN(rawH)) clone.oklch.h = 0;
+    // Gamut-map to the target space first so the OKLCH values represent the actual
+    // rendered color, avoiding browser-induced hue shifts for out-of-gamut colors
+    const gamutSpace = gamut === 'rec2020' ? 'rec2020' : gamut === 'p3' ? 'p3' : 'srgb';
+    const mapped = clone.toGamut({
+      space: gamutSpace,
+      blackWhiteClamp: { channel: 'oklch.l', min: 0.0001, max: 0.9999 }
+    });
+    const oklch = mapped.to('oklch');
     const l = oklch.oklch.l ?? 0;
     const c = oklch.oklch.c ?? 0;
     const h = oklch.oklch.h;
@@ -548,7 +559,7 @@ export function colorToCssDisplay(
 ): string {
   switch (space) {
     case 'oklch':
-      return colorToCssOklch(color);
+      return colorToCssOklch(color, gamut);
     case 'hex':
       switch (gamut) {
         case 'p3':

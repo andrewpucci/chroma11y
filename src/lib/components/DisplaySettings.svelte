@@ -23,8 +23,6 @@
   const swatchLabelsLocal = $derived($swatchLabels);
   const contrastAlgorithmLocal = $derived($contrastAlgorithm);
 
-  const isGamutDisabled = $derived(displayColorSpaceLocal === 'oklch');
-
   function handleDisplayColorSpaceChange(event: Event) {
     const value = (event.target as HTMLSelectElement).value as DisplayColorSpace;
     updateColorState({ displayColorSpace: value });
@@ -78,19 +76,14 @@
     <select
       class="select"
       id="gamut-space"
-      value={isGamutDisabled ? 'srgb' : gamutSpaceLocal}
+      value={gamutSpaceLocal}
       onchange={handleGamutSpaceChange}
-      disabled={isGamutDisabled}
       aria-label="Gamut mapping target"
-      aria-describedby={isGamutDisabled ? 'gamut-hint' : undefined}
     >
       <option value="srgb">sRGB</option>
       <option value="p3">Display P3</option>
       <option value="rec2020">Rec. 2020</option>
     </select>
-    {#if isGamutDisabled}
-      <span id="gamut-hint" class="help">OKLCH is unbounded — gamut mapping not applicable</span>
-    {/if}
   </div>
 
   <div class="field">
