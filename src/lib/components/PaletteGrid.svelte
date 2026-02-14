@@ -3,19 +3,21 @@
   import { contrastColors, updateHueNudger } from '$lib/stores';
   import ColorSwatch from './ColorSwatch.svelte';
   import '$lib/styles/nudger.css';
+  import type Color from 'colorjs.io';
 
   interface Props {
-    palettes?: string[][];
+    palettes?: Color[][];
+    palettesHex?: string[][];
     hueNudgerValues?: number[];
   }
 
-  let { palettes = [], hueNudgerValues = [] }: Props = $props();
+  let { palettes = [], palettesHex = [], hueNudgerValues = [] }: Props = $props();
 
   // Cache palette names to avoid repeated calculations during render
   const paletteNames = $derived(
-    palettes.length === 0
+    palettesHex.length === 0
       ? []
-      : palettes.map((palette) => getPaletteName(palette, $contrastColors.low))
+      : palettesHex.map((palette) => getPaletteName(palette, $contrastColors.low))
   );
 
   let inputEls: HTMLInputElement[] = $state([]);
@@ -85,12 +87,12 @@
 <section class="card palette-grid" data-testid="generated-palettes">
   <div class="card-header">
     <div class="card-title">Generated Palettes</div>
-    <div class="card-subtitle">Click any swatch to copy the hex value</div>
+    <div class="card-subtitle">Click any swatch to view color details</div>
   </div>
 
   <div class="card-body color-display">
-    {#if palettes.length > 0}
-      {#each palettes as palette, paletteIndex (paletteIndex)}
+    {#if palettesHex.length > 0}
+      {#each palettesHex as palette, paletteIndex (paletteIndex)}
         <div class="palette-block">
           <div class="palette-header">
             <h3 class="palette-title">{paletteNames[paletteIndex]}</h3>
@@ -119,7 +121,12 @@
           </div>
           <div class="swatches">
             {#each palette as color, index (`${paletteIndex}-${index}`)}
-              <ColorSwatch {color} label={String(index * 10)} />
+              <ColorSwatch
+                {color}
+                label={String(index * 10)}
+                oklchColor={palettes[paletteIndex]?.[index] ?? null}
+                paletteName={paletteNames[paletteIndex]}
+              />
             {/each}
           </div>
         </div>

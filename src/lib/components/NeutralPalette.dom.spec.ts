@@ -11,30 +11,32 @@ describe('NeutralPalette', () => {
   });
 
   it('shows an empty state when no neutrals are provided', () => {
-    render(NeutralPalette, { props: { neutrals: [], lightnessNudgerValues: [] } });
+    render(NeutralPalette, { props: { neutralsHex: [], lightnessNudgerValues: [] } });
 
     expect(screen.getByText(/no neutral colors generated yet/i)).toBeInTheDocument();
   });
 
   it('renders a swatch for each neutral color', () => {
-    const neutrals = ['#ffffff', '#000000'];
+    const neutralsHex = ['#ffffff', '#000000'];
     render(NeutralPalette, {
       props: {
-        neutrals,
-        lightnessNudgerValues: new Array(neutrals.length).fill(0)
+        neutralsHex,
+        lightnessNudgerValues: new Array(neutralsHex.length).fill(0)
       }
     });
 
-    const swatches = screen.getAllByRole('button', { name: /click to copy to clipboard/i });
-    expect(swatches).toHaveLength(neutrals.length);
+    const swatches = screen.getAllByRole('button', {
+      name: /click to (view color details|copy to clipboard)/i
+    });
+    expect(swatches).toHaveLength(neutralsHex.length);
   });
 
   it('writes lightness nudger changes to the store', async () => {
-    const neutrals = ['#ffffff'];
+    const neutralsHex = ['#ffffff'];
 
     render(NeutralPalette, {
       props: {
-        neutrals,
+        neutralsHex,
         lightnessNudgerValues: [0]
       }
     });

@@ -2,7 +2,18 @@
  * Export utilities for color palettes
  */
 
-import { hexToRgb, getPaletteName } from './colorUtils';
+import Color from 'colorjs.io';
+import { getPaletteName } from './colorUtils';
+
+/** Parse a hex string to normalized sRGB [r, g, b] (0–1 range), or null on failure */
+function hexToSrgbComponents(hex: string): [number, number, number] | null {
+  try {
+    const [r, g, b] = new Color(hex).to('srgb').coords;
+    return [r ?? 0, g ?? 0, b ?? 0];
+  } catch {
+    return null;
+  }
+}
 
 /** Default palette names used as fallbacks when color naming fails */
 const DEFAULT_PALETTE_NAMES = [
@@ -73,8 +84,7 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
   const neutralTokens: DesignTokens = {};
   neutrals.forEach((color, index) => {
     const step = index * 10;
-    const rgbObj = hexToRgb(color);
-    const rgb = rgbObj ? ([rgbObj.r, rgbObj.g, rgbObj.b] as [number, number, number]) : null;
+    const rgb = hexToSrgbComponents(color);
     if (rgb) {
       neutralTokens[`${step}`] = {
         $type: 'color',
@@ -99,8 +109,7 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
 
     palette.forEach((color, index) => {
       const step = index * 10;
-      const rgbObj = hexToRgb(color);
-      const rgb = rgbObj ? ([rgbObj.r, rgbObj.g, rgbObj.b] as [number, number, number]) : null;
+      const rgb = hexToSrgbComponents(color);
       if (rgb) {
         paletteTokens[`${step}`] = {
           $type: 'color',

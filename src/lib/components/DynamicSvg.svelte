@@ -13,6 +13,7 @@
   let svgContent = $state('');
   let error = $state(false);
 
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- plain cache, no reactivity needed
   const svgCache = new Map<string, string>();
 
   async function loadSvg(url: string) {
@@ -46,11 +47,10 @@
 </script>
 
 {#if error}
-  <div class="svg-error">
-    Failed to load SVG
-  </div>
+  <div class="svg-error">Failed to load SVG</div>
 {:else if svgContent}
   <div class="svg-container {className}" style="width: {width}; height: {height};">
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -- content is sanitized via DOMPurify -->
     {@html svgContent}
   </div>
 {/if}

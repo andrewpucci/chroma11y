@@ -3,16 +3,18 @@
   import { contrastColors, updateLightnessNudger } from '$lib/stores';
   import ColorSwatch from './ColorSwatch.svelte';
   import '$lib/styles/nudger.css';
+  import type Color from 'colorjs.io';
 
   interface Props {
-    neutrals?: string[];
+    neutrals?: Color[];
+    neutralsHex?: string[];
     lightnessNudgerValues?: number[];
   }
 
-  let { neutrals = [], lightnessNudgerValues = [] }: Props = $props();
+  let { neutrals = [], neutralsHex = [], lightnessNudgerValues = [] }: Props = $props();
 
   const neutralName = $derived(
-    neutrals.length > 0 ? getPaletteName(neutrals, $contrastColors.low) : 'Neutral'
+    neutralsHex.length > 0 ? getPaletteName(neutralsHex, $contrastColors.low) : 'Neutral'
   );
 
   let inputEls: HTMLInputElement[] = $state([]);
@@ -58,11 +60,17 @@
   </div>
 
   <div class="card-body">
-    {#if neutrals.length > 0}
+    {#if neutralsHex.length > 0}
       <div class="neutral-grid">
-        {#each neutrals as color, index (index)}
+        {#each neutralsHex as color, index (index)}
           <div class="neutral-item">
-            <ColorSwatch {color} label={String(index * 10)} />
+            <ColorSwatch
+              {color}
+              label={String(index * 10)}
+              oklchColor={neutrals[index] ?? null}
+              paletteName={neutralName}
+              isNeutral={true}
+            />
             <div class="nudger-container">
               <label for="lightness-nudger-{index}" class="visually-hidden"
                 >Lightness adjustment for step {index}</label

@@ -1,13 +1,30 @@
 <script lang="ts">
-  import { copyToClipboard, getContrast, getPrintableContrast, MIN_CONTRAST_RATIO } from '$lib/colorUtils';
+  import {
+    copyToClipboard,
+    getContrast,
+    getPrintableContrast,
+    MIN_CONTRAST_RATIO
+  } from '$lib/colorUtils';
   import { contrastColors } from '$lib/stores';
+  import { openDrawer } from '$lib/drawerStore';
+  import { announce } from '$lib/announce';
+  import type Color from 'colorjs.io';
 
   interface Props {
     color: string;
     label?: string;
+    oklchColor?: Color | null;
+    paletteName?: string;
+    isNeutral?: boolean;
   }
 
-  let { color, label = '' }: Props = $props();
+  let {
+    color,
+    label = '',
+    oklchColor = null,
+    paletteName = '',
+    isNeutral = false
+  }: Props = $props();
 
   const contrastColorsLocal = $derived($contrastColors);
 
@@ -40,9 +57,18 @@
 <button
   class="color-swatch"
   style="background-color: {color}; color: {textColor};"
-  onclick={() => copyToClipboard(color)}
-  title="Click to copy {color}"
-  aria-label="Color {color}{label ? `, step ${label}` : ''}. Click to copy to clipboard"
+  onclick={() => {
+    if (oklchColor) {
+      openDrawer({ hex: color, oklch: oklchColor, step: label, paletteName, isNeutral });
+      announce(`Opened color info for ${color}, step ${label}`);
+    } else {
+      copyToClipboard(color);
+    }
+  }}
+  title={oklchColor ? `View color details for ${color}` : `Click to copy ${color}`}
+  aria-label="Color {color}{label ? `, step ${label}` : ''}. {oklchColor
+    ? 'Click to view color details'
+    : 'Click to copy to clipboard'}"
 >
   <div class="overlay" aria-hidden="true"></div>
   <div class="content">

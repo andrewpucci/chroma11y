@@ -1,6 +1,6 @@
 /**
  * Color Utilities Unit Tests
- * Tests our custom color generation logic, not culori library functions
+ * Tests our custom color generation logic
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -9,8 +9,17 @@ import {
   getPaletteName,
   nearestFriendlyColorName,
   generatePalettes,
+  colorToCssHex,
+  colorToCssRgb,
+  colorToCssOklch,
+  colorToCssHsl,
   type ColorGenParams
 } from './colorUtils';
+
+import Color from 'colorjs.io';
+
+/** Helper: convert Color[] to hex[] for string-based assertions */
+const toHexArray = (colors: InstanceType<typeof Color>[]) => colors.map((c) => colorToCssHex(c));
 
 describe('colorUtils', () => {
   describe('getContrast', () => {
@@ -147,14 +156,14 @@ describe('colorUtils', () => {
 
     it('generates valid hex colors', () => {
       const result = generatePalettes(baseParams, true);
-      const hexRegex = /^#[0-9a-f]{6}$/i;
+      const hexRegex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
-      result.neutrals.forEach((color) => {
+      toHexArray(result.neutrals).forEach((color) => {
         expect(color).toMatch(hexRegex);
       });
 
       result.palettes.forEach((palette) => {
-        palette.forEach((color) => {
+        toHexArray(palette).forEach((color) => {
           expect(color).toMatch(hexRegex);
         });
       });
@@ -162,8 +171,25 @@ describe('colorUtils', () => {
 
     it('light theme neutrals start with white and end with black', () => {
       const result = generatePalettes(baseParams, true);
-      expect(result.neutrals[0].toLowerCase()).toBe('#ffffff');
-      expect(result.neutrals[10].toLowerCase()).toBe('#000000');
+      const hex = toHexArray(result.neutrals);
+      expect(['#ffffff', '#fff']).toContain(hex[0].toLowerCase());
+      expect(['#000000', '#000']).toContain(hex[10].toLowerCase());
+    });
+
+    it('light theme palette step 0 should be white (regression)', () => {
+      const result = generatePalettes(baseParams, true);
+      for (const palette of result.palettes) {
+        const hex = colorToCssHex(palette[0]).toLowerCase();
+        expect(['#ffffff', '#fff']).toContain(hex);
+      }
+    });
+
+    it('light theme palette step 10 should be black (regression)', () => {
+      const result = generatePalettes(baseParams, true);
+      for (const palette of result.palettes) {
+        const hex = colorToCssHex(palette[10]).toLowerCase();
+        expect(['#000000', '#000']).toContain(hex);
+      }
     });
 
     it('dark theme neutrals are reversed from light theme', () => {
@@ -172,7 +198,9 @@ describe('colorUtils', () => {
       const lightResult = generatePalettes(lightParams, true);
       const darkResult = generatePalettes(darkParams, true);
       // Dark theme first color should be darker than light theme first color
-      expect(darkResult.neutrals[0]).not.toBe(lightResult.neutrals[0]);
+      expect(colorToCssHex(darkResult.neutrals[0])).not.toBe(
+        colorToCssHex(lightResult.neutrals[0])
+      );
     });
 
     it('applies lightness nudgers to neutrals', () => {
@@ -183,11 +211,14 @@ describe('colorUtils', () => {
       const params = { ...baseParams, lightnessNudgers: nudgers };
       const withNudger = generatePalettes(params, true);
 
+      const hexWithout = toHexArray(withoutNudger.neutrals);
+      const hexWith = toHexArray(withNudger.neutrals);
+
       // Middle neutral should be different
-      expect(withNudger.neutrals[5]).not.toBe(withoutNudger.neutrals[5]);
+      expect(hexWith[5]).not.toBe(hexWithout[5]);
       // Other neutrals should be the same
-      expect(withNudger.neutrals[0]).toBe(withoutNudger.neutrals[0]);
-      expect(withNudger.neutrals[10]).toBe(withoutNudger.neutrals[10]);
+      expect(hexWith[0]).toBe(hexWithout[0]);
+      expect(hexWith[10]).toBe(hexWithout[10]);
     });
 
     it('applies hue nudgers to palettes', () => {
@@ -198,7 +229,7 @@ describe('colorUtils', () => {
       const result2 = generatePalettes(params2, true);
 
       // Palette colors should be different with different hue nudger
-      expect(result2.palettes[0][5]).not.toBe(result1.palettes[0][5]);
+      expect(colorToCssHex(result2.palettes[0][5])).not.toBe(colorToCssHex(result1.palettes[0][5]));
     });
 
     it('warmth affects neutral color temperature', () => {
@@ -209,15 +240,107 @@ describe('colorUtils', () => {
       const warmResult = generatePalettes(warmParams, true);
 
       // Mid-tone neutrals should differ with different warmth
-      expect(coolResult.neutrals[5]).not.toBe(warmResult.neutrals[5]);
+      expect(colorToCssHex(coolResult.neutrals[5])).not.toBe(colorToCssHex(warmResult.neutrals[5]));
     });
 
     it('produces deterministic output for same inputs', () => {
       const result1 = generatePalettes(baseParams, true);
       const result2 = generatePalettes(baseParams, true);
 
-      expect(result1.neutrals).toEqual(result2.neutrals);
-      expect(result1.palettes).toEqual(result2.palettes);
+      expect(toHexArray(result1.neutrals)).toEqual(toHexArray(result2.neutrals));
+      expect(result1.palettes.map(toHexArray)).toEqual(result2.palettes.map(toHexArray));
+    });
+
+    it('returns Color objects for neutrals and palettes', () => {
+      const result = generatePalettes(baseParams, true);
+
+      for (const color of result.neutrals) {
+        expect(color).toBeInstanceOf(Color);
+        const l = color.oklch.l ?? 0;
+        expect(l).toBeGreaterThanOrEqual(-1e-10);
+        expect(l).toBeLessThanOrEqual(1 + 1e-10);
+      }
+
+      for (const palette of result.palettes) {
+        expect(palette).toHaveLength(result.neutrals.length);
+      }
+    });
+  });
+
+  describe('colorToCssHex', () => {
+    it('converts a blue OKLCH color to hex', () => {
+      const blue = new Color('oklch', [0.55, 0.19, 264]);
+      const hex = colorToCssHex(blue);
+      expect(hex).toMatch(/^#[0-9a-f]{3,6}$/i);
+    });
+
+    it('converts pure white', () => {
+      const white = new Color('oklch', [1, 0, 0]);
+      expect(colorToCssHex(white)).toMatch(/^#f{3,6}$/i);
+    });
+
+    it('converts pure black', () => {
+      const black = new Color('oklch', [0, 0, 0]);
+      expect(colorToCssHex(black)).toMatch(/^#0{3,6}$/i);
+    });
+  });
+
+  describe('colorToCssRgb', () => {
+    it('returns rgb() format string with percentages (CSS Color 4)', () => {
+      const color = new Color('oklch', [0.55, 0.19, 264]);
+      const result = colorToCssRgb(color);
+      expect(result).toMatch(/^rgb\([\d.]+% [\d.]+% [\d.]+%\)$/);
+    });
+
+    it('converts white to rgb(100% 100% 100%)', () => {
+      const white = new Color('oklch', [1, 0, 0]);
+      expect(colorToCssRgb(white)).toBe('rgb(100% 100% 100%)');
+    });
+
+    it('converts black to rgb(0% 0% 0%)', () => {
+      const black = new Color('oklch', [0, 0, 0]);
+      expect(colorToCssRgb(black)).toBe('rgb(0% 0% 0%)');
+    });
+  });
+
+  describe('colorToCssOklch', () => {
+    it('returns oklch() format string with percentage lightness (CSS Color 4)', () => {
+      const color = new Color('oklch', [0.55, 0.19, 264]);
+      expect(colorToCssOklch(color)).toBe('oklch(55% 0.19 264)');
+    });
+
+    it('handles zero chroma and hue', () => {
+      const gray = new Color('oklch', [0.5, 0, 0]);
+      expect(colorToCssOklch(gray)).toBe('oklch(50% 0 0)');
+    });
+
+    it('handles NaN hue (achromatic) without producing NaN in output', () => {
+      const gray = new Color('oklch', [0.5, 0, NaN]);
+      const result = colorToCssOklch(gray);
+      expect(result).not.toContain('NaN');
+      expect(result).not.toContain('none');
+      expect(result).toMatch(/^oklch\(/);
+    });
+  });
+
+  describe('colorToCssHsl', () => {
+    it('returns hsl() format string (CSS Color 4 space-separated)', () => {
+      const color = new Color('oklch', [0.55, 0.19, 264]);
+      const result = colorToCssHsl(color);
+      expect(result).toMatch(/^hsl\([\d.]+ [\d.]+% [\d.]+%\)$/);
+    });
+
+    it('converts white with 100% lightness', () => {
+      const white = new Color('oklch', [1, 0, 0]);
+      const result = colorToCssHsl(white);
+      expect(result).toMatch(/hsl\([\d.]+ [\d.]+% 100%\)/);
+    });
+
+    it('converts black with 0% lightness and no "none" keyword', () => {
+      const black = new Color('oklch', [0, 0, 0]);
+      const result = colorToCssHsl(black);
+      expect(result).toMatch(/hsl\([\d.]+ [\d.]+% 0%\)/);
+      expect(result).not.toContain('none');
     });
   });
 });

@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import Color from 'colorjs.io';
 import ContrastControls from '$lib/components/ContrastControls.svelte';
 import {
   contrastColors,
@@ -47,7 +48,7 @@ describe('ContrastControls', () => {
         '#777777',
         '#666666',
         '#000000'
-      ]
+      ].map((hex) => new Color(hex).to('oklch'))
     });
   });
 
@@ -105,9 +106,10 @@ describe('ContrastControls', () => {
     await fireEvent.change(lowStepSelect, { target: { value: '2' } });
 
     expect(get(lowStep)).toBe(2);
-    expect(get(contrastColors).low).toBe('#dddddd');
+    const lowColor = get(contrastColors).low;
+    expect(hexToRgb(lowColor)).toBe(hexToRgb('#dddddd'));
 
-    expect(screen.getByText('Low: #dddddd')).toBeInTheDocument();
+    expect(screen.getByText(`Low: ${lowColor}`)).toBeInTheDocument();
     const swatches = container.querySelectorAll('.contrast-preview .swatch');
     expect(getComputedStyle(swatches[0] as Element).backgroundColor).toBe(hexToRgb('#dddddd'));
   });
@@ -120,9 +122,10 @@ describe('ContrastControls', () => {
     await fireEvent.change(highStepSelect, { target: { value: '9' } });
 
     expect(get(highStep)).toBe(9);
-    expect(get(contrastColors).high).toBe('#666666');
+    const highColor = get(contrastColors).high;
+    expect(hexToRgb(highColor)).toBe(hexToRgb('#666666'));
 
-    expect(screen.getByText('High: #666666')).toBeInTheDocument();
+    expect(screen.getByText(`High: ${highColor}`)).toBeInTheDocument();
     const swatches = container.querySelectorAll('.contrast-preview .swatch');
     expect(getComputedStyle(swatches[1] as Element).backgroundColor).toBe(hexToRgb('#666666'));
   });

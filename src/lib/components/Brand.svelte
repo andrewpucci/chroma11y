@@ -1,15 +1,13 @@
 <script lang="ts">
   import DynamicSvg from '$lib/components/DynamicSvg.svelte';
-  
+
   interface Props {
     title?: string;
     tagline?: string;
   }
 
-  let {
-    title = 'Chroma11y',
-    tagline = 'Accessible color palettes, powered by OKLCH'
-  }: Props = $props();
+  let { title = 'Chroma11y', tagline = 'Accessible color palettes, powered by OKLCH' }: Props =
+    $props();
 </script>
 
 <div class="brand">
@@ -55,7 +53,7 @@
     .brand h1 {
       font-size: 1.2rem;
     }
-    
+
     .brand-logo {
       height: 2.2rem; /* Slightly smaller for mobile */
     }

@@ -3,6 +3,8 @@
   import {
     neutrals,
     palettes,
+    neutralsHex,
+    palettesHex,
     numColors,
     numPalettes,
     baseColor,
@@ -37,10 +39,13 @@
   import Card from '$lib/components/Card.svelte';
   import AppHeader from '$lib/components/AppHeader.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
+  import ColorInfoDrawer from '$lib/components/ColorInfoDrawer.svelte';
 
   // Derived values from stores (auto-subscribed)
   let neutralsLocal = $derived($neutrals);
   let palettesLocal = $derived($palettes);
+  let neutralsHexLocal = $derived($neutralsHex);
+  let palettesHexLocal = $derived($palettesHex);
   let lightnessNudgerValues = $derived($lightnessNudgers);
   let hueNudgerValues = $derived($hueNudgers);
   let currentThemeLocal = $derived($currentTheme);
@@ -323,7 +328,7 @@
       </Card>
 
       <Card title="Export" subtitle="Download tokens in common formats">
-        <ExportButtons neutrals={neutralsLocal} palettes={palettesLocal} />
+        <ExportButtons neutrals={neutralsHexLocal} palettes={palettesHexLocal} />
       </Card>
     </Sidebar>
 
@@ -335,12 +340,18 @@
       data-testid="app-content"
     >
       <div class="content-inner">
-        <NeutralPalette neutrals={neutralsLocal} lightnessNudgerValues={lightnessNudgerValues} />
-        <PaletteGrid palettes={palettesLocal} hueNudgerValues={hueNudgerValues} />
+        <NeutralPalette
+          neutrals={neutralsLocal}
+          neutralsHex={neutralsHexLocal}
+          {lightnessNudgerValues}
+        />
+        <PaletteGrid palettes={palettesLocal} palettesHex={palettesHexLocal} {hueNudgerValues} />
       </div>
     </main>
   </div>
 </div>
+
+<ColorInfoDrawer />
 
 <style>
   .app-shell {

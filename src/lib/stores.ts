@@ -1,4 +1,6 @@
 import { writable, derived } from 'svelte/store';
+import type Color from 'colorjs.io';
+import { colorToCssHex } from '$lib/colorUtils';
 
 /**
  * Interface for color state
@@ -20,8 +22,8 @@ interface ColorState {
     low: string;
     high: string;
   };
-  neutrals: string[];
-  palettes: string[][];
+  neutrals: Color[];
+  palettes: Color[][];
   lightnessNudgers: number[];
   hueNudgers: number[];
   currentTheme: 'light' | 'dark';
@@ -109,11 +111,21 @@ export const lowStep = derived(colorStore, ($colorStore) => $colorStore.lowStep)
 // Derived store for high step
 export const highStep = derived(colorStore, ($colorStore) => $colorStore.highStep);
 
-// Derived store for neutrals
+// Derived store for neutrals (Color objects)
 export const neutrals = derived(colorStore, ($colorStore) => $colorStore.neutrals);
 
-// Derived store for palettes
+// Derived store for palettes (Color objects)
 export const palettes = derived(colorStore, ($colorStore) => $colorStore.palettes);
+
+// Derived store for neutrals as hex strings
+export const neutralsHex = derived(colorStore, ($colorStore) =>
+  $colorStore.neutrals.map((c) => colorToCssHex(c))
+);
+
+// Derived store for palettes as hex strings
+export const palettesHex = derived(colorStore, ($colorStore) =>
+  $colorStore.palettes.map((palette) => palette.map((c) => colorToCssHex(c)))
+);
 
 // Derived store for numColors
 export const numColors = derived(colorStore, ($colorStore) => $colorStore.numColors);
@@ -230,10 +242,13 @@ export const updateContrastFromNeutrals = () => {
     const clampedLowStep = Math.max(0, Math.min(currentState.lowStep, maxIndex));
     const clampedHighStep = Math.max(0, Math.min(currentState.highStep, maxIndex));
 
-    const lowColor = currentState.neutrals[clampedLowStep] || currentState.neutrals[0];
-    const highColor =
+    const lowColor = colorToCssHex(
+      currentState.neutrals[clampedLowStep] || currentState.neutrals[0]
+    );
+    const highColor = colorToCssHex(
       currentState.neutrals[clampedHighStep] ||
-      currentState.neutrals[currentState.neutrals.length - 1];
+        currentState.neutrals[currentState.neutrals.length - 1]
+    );
 
     return {
       ...currentState,
@@ -265,9 +280,10 @@ export const updateContrastStep = (stepType: 'low' | 'high', step: number) => {
       const clampedLowStep = Math.max(0, Math.min(newState.lowStep, maxIndex));
       const clampedHighStep = Math.max(0, Math.min(newState.highStep, maxIndex));
 
-      const lowColor = newState.neutrals[clampedLowStep] || newState.neutrals[0];
-      const highColor =
-        newState.neutrals[clampedHighStep] || newState.neutrals[newState.neutrals.length - 1];
+      const lowColor = colorToCssHex(newState.neutrals[clampedLowStep] || newState.neutrals[0]);
+      const highColor = colorToCssHex(
+        newState.neutrals[clampedHighStep] || newState.neutrals[newState.neutrals.length - 1]
+      );
       if (lowColor && highColor) {
         newState.contrast = { low: lowColor, high: highColor };
       }

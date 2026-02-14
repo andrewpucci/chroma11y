@@ -2,23 +2,74 @@
  * Color utility functions for OKLCH color generation
  */
 
-import {
-  oklch,
-  formatHex,
-  clampChroma,
-  samples,
-  interpolate,
-  wcagContrast,
-  differenceCiede2000,
-  nearest,
-  parse,
-  rgb
-} from 'culori';
+import Color from 'colorjs.io';
 import { colornames as shortColorNames } from 'color-name-list/short';
 import easing from 'bezier-easing';
-import { transpose, mean } from 'mathjs';
-import type { Oklch } from 'culori';
 import { announce } from '$lib/announce';
+
+/** Transpose a 2D array (swap rows ↔ columns) */
+function transpose<T>(matrix: T[][]): T[][] {
+  if (matrix.length === 0) return [];
+  return matrix[0].map((_, col) => matrix.map((row) => row[col]));
+}
+
+/** Arithmetic mean of a number array */
+function mean(values: number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+// Re-export Color so consumers can use it as the OKLCH type
+export type { default as ColorType } from 'colorjs.io';
+
+// ===== COLOR.JS HELPERS =====
+
+/** Create an OKLCH Color object */
+function oklchColor(l: number, c: number, h: number): Color {
+  return new Color('oklch', [l, c, h]);
+}
+
+/** Gamut-map a Color to sRGB and return as hex string */
+function toHex(color: Color): string {
+  try {
+    return toGamut(color).to('srgb').toString({ format: 'hex' });
+  } catch {
+    return '#000000';
+  }
+}
+
+/**
+ * Gamut-map a Color to sRGB, returning a new Color.
+ * Uses the CSS Color 4 gamut mapping algorithm with tighter black/white
+ * clamping thresholds so near-black/near-white colors snap cleanly.
+ */
+function toGamut(color: Color): Color {
+  return color.clone().toGamut({
+    space: 'srgb',
+    blackWhiteClamp: { channel: 'oklch.l', min: 0.0001, max: 0.9999 }
+  });
+}
+
+/** Parse any CSS color string into a Color object */
+function parseColor(input: string): Color | null {
+  try {
+    return new Color(input);
+  } catch {
+    return null;
+  }
+}
+
+/** Parse a color string and convert to OKLCH */
+function toOklch(input: string): Color | null {
+  const c = parseColor(input);
+  return c ? c.to('oklch') : null;
+}
+
+/** Generate n evenly-spaced samples in [0, 1] */
+function samples(n: number): number[] {
+  if (n <= 1) return [0.5];
+  return Array.from({ length: n }, (_, i) => i / (n - 1));
+}
 
 // ===== CONSTANTS =====
 
@@ -126,23 +177,59 @@ const hexToNameMap = new Map<string, string>(
   shortColorNames.map(({ name, hex }) => [hex.toLowerCase(), name])
 );
 
-/** Array of hex values from the short color name list for nearest-color matching */
-const shortColorHexValues = shortColorNames.map(({ hex }) => hex);
+/** Pre-parsed Color objects for the short color name list (for nearest-color matching) */
+const shortColorEntries: { hex: string; color: Color }[] = shortColorNames
+  .map(({ hex }) => {
+    try {
+      return { hex: hex.toLowerCase(), color: new Color(hex) };
+    } catch {
+      return null;
+    }
+  })
+  .filter((e): e is { hex: string; color: Color } => e !== null);
 
-/**
- * Finds the nearest named color using CIEDE2000 color difference formula
- * Uses ~1.5k human-friendly names from color-name-list/short
- */
-const findNearestHex = nearest(shortColorHexValues, differenceCiede2000());
+/** FIFO cache for nearest color name lookups to avoid repeated O(n) scans */
+const nearestColorCache = new Map<string, string>();
+const NEAREST_COLOR_CACHE_MAX = 256;
+
+/** Clears the nearest color name cache (useful in tests to avoid stale entries) */
+export function clearNearestColorCache(): void {
+  nearestColorCache.clear();
+}
 
 /**
  * Returns the nearest human-friendly color name for a given hex color
+ * Uses CIEDE2000 color difference via color.js, with memoization
  */
 export function nearestFriendlyColorName(hex: string): string {
-  const results = findNearestHex(hex, 1);
-  if (!results || results.length === 0) return 'Unnamed';
-  const matchedHex = results[0].toLowerCase();
-  return hexToNameMap.get(matchedHex) ?? 'Unnamed';
+  const key = hex.toLowerCase();
+  const cached = nearestColorCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const target = parseColor(hex);
+  if (!target) return 'Unnamed';
+
+  let bestHex = '';
+  let bestDelta = Infinity;
+
+  for (const entry of shortColorEntries) {
+    const delta = target.deltaE2000(entry.color);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      bestHex = entry.hex;
+    }
+  }
+
+  const name = hexToNameMap.get(bestHex) ?? 'Unnamed';
+
+  // Evict oldest entries when cache is full
+  if (nearestColorCache.size >= NEAREST_COLOR_CACHE_MAX) {
+    const firstKey = nearestColorCache.keys().next().value;
+    if (firstKey !== undefined) nearestColorCache.delete(firstKey);
+  }
+  nearestColorCache.set(key, name);
+
+  return name;
 }
 
 // ===== DARK MODE CALCULATION =====
@@ -154,72 +241,48 @@ export function nearestFriendlyColorName(hex: string): string {
  */
 function calculateDarkModeStartColor(targetColor: string = '#ffffff'): string {
   const targetContrast = DARK_MODE_TARGET_CONTRAST;
+  const target = new Color(targetColor);
 
   // Binary search to find a color that gives ~18:1 contrast with white
   let minL = 0;
-  let maxL = 0.5; // Expand search range
+  let maxL = 0.5;
   let bestL = 0;
   let bestContrast = MAX_CONTRAST_RATIO;
 
-  // Create a test color to find the right lightness
   for (let i = 0; i < 30; i++) {
     const testL = (minL + maxL) / 2;
-    const testColor = { mode: 'oklch' as const, l: testL, c: 0, h: 0 };
-    const contrast = wcagContrast(testColor, targetColor);
+    const testColor = oklchColor(testL, 0, 0);
+    const contrast = Color.contrast(testColor, target, 'WCAG21');
 
-    // Track the best match
     if (Math.abs(contrast - targetContrast) < Math.abs(bestContrast - targetContrast)) {
       bestL = testL;
       bestContrast = contrast;
     }
 
     if (contrast > targetContrast) {
-      // Too much contrast, need lighter color (higher L)
       minL = testL;
     } else {
-      // Too little contrast, need darker color (lower L)
       maxL = testL;
     }
   }
 
-  // Convert to hex for interpolation
-  return formatHex({ mode: 'oklch', l: bestL, c: 0, h: 0 }) || '#000000';
+  return toHex(oklchColor(bestL, 0, 0));
 }
 
 // ===== CONTRAST FUNCTIONS =====
 
-/** Acceptable color input types for formatColor */
-type ColorInput =
-  | string
-  | { mode: string; l?: number; c?: number; h?: number; r?: number; g?: number; b?: number }
-  | null
-  | undefined;
-
-/**
- * Formats a color object to a hex string
- * @param color - A color string, OKLCH/RGB object, or null/undefined
- * @returns Hex color string or empty string if invalid
- */
-export function formatColor(color: ColorInput): string {
-  if (color === null || color === undefined) {
-    return '';
-  }
-  try {
-    const result = formatHex(color as Parameters<typeof formatHex>[0]);
-    return result || '';
-  } catch {
-    return '';
-  }
-}
-
 /**
  * Calculates the contrast ratio between two colors using WCAG 2.1 formula
- * @param color1 - First color (hex string or color object)
- * @param color2 - Second color (hex string or color object)
+ * @param color1 - First color (hex string)
+ * @param color2 - Second color (hex string)
  * @returns Contrast ratio between 1 and 21
  */
 export function getContrast(color1: string, color2: string): number {
-  return wcagContrast(color1, color2);
+  try {
+    return Color.contrast(new Color(color1), new Color(color2), 'WCAG21');
+  } catch {
+    return 1;
+  }
 }
 
 /**
@@ -234,93 +297,37 @@ export function getPrintableContrast(color1: string, color2: string): number {
 /**
  * Generates base neutral colors WITHOUT nudgers applied
  */
-export function generateBaseNeutrals(params: ColorGenParams): Oklch[] {
+export function generateBaseNeutrals(params: ColorGenParams): Color[] {
   // Determine the starting and ending colors for neutral generation
   const startColorHex =
-    params.currentTheme === 'dark' ? calculateDarkModeStartColor('#ffffff') : '#ffffff'; // Light mode starts with white (step 0 = lightest)
+    params.currentTheme === 'dark' ? calculateDarkModeStartColor('#ffffff') : '#ffffff';
 
-  const endColorHex = params.currentTheme === 'dark' ? '#ffffff' : '#000000'; // Light mode ends with black (step 10 = darkest)
+  const endColorHex = params.currentTheme === 'dark' ? '#ffffff' : '#000000';
 
-  // Convert hex strings to OKLCH color objects for interpolation
-  const startColor = oklch(startColorHex);
-  const endColor = oklch(endColorHex);
-
-  // Ensure colors are valid before interpolation
-  if (!startColor || !endColor) {
-    throw new Error('Failed to parse start or end color for neutral palette');
-  }
+  const startColor = new Color(startColorHex).to('oklch');
+  const endColor = new Color(endColorHex).to('oklch');
 
   // Create bezier easing function
   const bezierEasingFn = easing(params.x1, params.y1, params.x2, params.y2);
 
-  // Create initial color samples using bezier easing with manual index mapping
-  const interpolator = interpolate([startColor, endColor], 'oklch');
+  // Create initial color samples using bezier easing
+  const range = Color.range(startColor, endColor, { space: 'oklch' });
   const initialSamples = samples(params.numColors).map((t) => {
-    // Map the linear sample t to a bezier-eased t
     const easedT = bezierEasingFn(t);
-    return interpolator(easedT);
+    return range(easedT);
   });
 
   // Process each sample to create neutral colors with warmth applied directly in OKLCH
-  const baseNeutrals: Oklch[] = initialSamples.map((oklchColor) => {
-    // Apply warmth adjustment directly in OKLCH color space
-    // Warmth > 0 = warm (orange/yellow hue), Warmth < 0 = cool (blue hue)
-    // Scale by chromaMultiplier so user can control warmth saturation
+  const baseNeutrals: Color[] = initialSamples.map((sample) => {
     const baseWarmthChroma = Math.abs(params.warmth) * WARMTH_CONFIG.CHROMA_SCALE;
     const scaledChroma = baseWarmthChroma * params.chromaMultiplier;
     const clampedChroma = Math.min(scaledChroma, WARMTH_CONFIG.MAX_CHROMA);
-
-    // Determine hue based on warmth direction
     const warmthHue = params.warmth >= 0 ? WARMTH_CONFIG.WARM_HUE : WARMTH_CONFIG.COOL_HUE;
 
-    const adjustedColor: Oklch = {
-      mode: 'oklch' as const,
-      l: oklchColor.l,
-      c: clampedChroma,
-      h: warmthHue
-    };
-
-    // Ensure the color is within the OKLCH gamut
-    return clampChroma(adjustedColor, 'oklch') as Oklch;
+    return oklchColor(sample.oklch.l ?? 0, clampedChroma, warmthHue);
   });
 
   return baseNeutrals;
-}
-
-/**
- * Generates a neutral color palette with lightness nudgers applied
- * Returns hex strings for display
- */
-export function generateNeutralPalette(
-  params: ColorGenParams,
-  lightnessNudgers?: number[]
-): string[] {
-  const baseNeutrals = generateBaseNeutrals(params);
-
-  // Apply lightness nudgers to create display neutrals
-  const neutralsWithNudgers = baseNeutrals.map((color, index) => {
-    const lightnessNudger = lightnessNudgers?.[index] || 0;
-    return {
-      ...color,
-      l: color.l + lightnessNudger
-    };
-  });
-
-  // Convert to hex strings
-  return neutralsWithNudgers.map((color, index) => {
-    try {
-      const clampedColor = clampChroma(color, 'oklch');
-      const hex = formatHex(clampedColor);
-      if (!hex) {
-        console.warn(`Failed to format neutral color at index ${index}, using fallback`);
-        return '#000000';
-      }
-      return hex;
-    } catch (error) {
-      console.error(`Error converting neutral color at index ${index}:`, error);
-      return '#000000';
-    }
-  });
 }
 
 // ===== PALETTE GENERATION =====
@@ -329,23 +336,17 @@ export function generateNeutralPalette(
  * Generates a single color palette based on base neutrals and a hue-shifted base color
  */
 function generatePalette(
-  baseNeutrals: Oklch[],
-  baseColor: Oklch,
+  baseNeutrals: Color[],
+  baseColor: Color,
   chromaMultiplier: number
-): Oklch[] {
-  // Use base color's chroma multiplied by the chroma multiplier
-  const targetChroma = (baseColor.c || 0) * chromaMultiplier;
+): Color[] {
+  const targetChroma = (baseColor.oklch.c || 0) * chromaMultiplier;
 
   return baseNeutrals.map((neutralColor) => {
-    return clampChroma(
-      {
-        mode: 'oklch' as const,
-        l: neutralColor.l,
-        c: targetChroma,
-        h: baseColor.h
-      },
-      'oklch'
-    ) as Oklch;
+    const l = neutralColor.oklch.l ?? 0;
+    // Preserve pure black/white endpoints — don't apply chroma to extremes
+    const c = l >= 0.9999 || l <= 0.0001 ? 0 : targetChroma;
+    return oklchColor(l, c, baseColor.oklch.h ?? 0);
   });
 }
 
@@ -354,27 +355,23 @@ function generatePalette(
  * This is the FINAL step in the algorithm
  */
 function applyLightnessNudgers(
-  neutrals: Oklch[],
-  palettes: Oklch[][],
+  neutrals: Color[],
+  palettes: Color[][],
   lightnessNudgers: number[]
-): { neutrals: Oklch[]; palettes: Oklch[][] } {
-  // Apply to neutrals
+): { neutrals: Color[]; palettes: Color[][] } {
   const updatedNeutrals = neutrals.map((color, index) => {
-    const lightnessNudger = lightnessNudgers[index] || 0;
-    return {
-      ...color,
-      l: color.l + lightnessNudger
-    };
+    const nudger = lightnessNudgers[index] || 0;
+    const c = color.clone();
+    c.oklch.l = (c.oklch.l ?? 0) + nudger;
+    return c;
   });
 
-  // Apply to palettes
   const updatedPalettes = palettes.map((palette) => {
     return palette.map((color, index) => {
-      const lightnessNudger = lightnessNudgers[index] || 0;
-      return {
-        ...color,
-        l: color.l + lightnessNudger
-      };
+      const nudger = lightnessNudgers[index] || 0;
+      const c = color.clone();
+      c.oklch.l = (c.oklch.l ?? 0) + nudger;
+      return c;
     });
   });
 
@@ -385,95 +382,80 @@ function applyLightnessNudgers(
  * Normalizes chroma values across palettes for consistent appearance
  * Averages chroma values across all palettes for each color step
  */
-function normalizeChromaValuesInternal(palettes: Oklch[][]): number[] {
-  // Extract chroma values from all palettes
-  const cValues = palettes.map((palette) => palette.map((color) => color.c || 0));
+function normalizeChromaValuesInternal(palettes: Color[][]): {
+  normalizedPalettes: Color[][];
+  normalizedChromaValues: number[];
+} {
+  const cValues = palettes.map((palette) => palette.map((color) => color.oklch.c || 0));
 
-  // Calculate mean chroma for each column
-  // chromaMultiplier already applied in generatePalette, so just average
-  const normalizedCs = (transpose(cValues) as number[][]).map((column) => {
+  const normalizedCs = transpose(cValues).map((column) => {
     const avgChroma = mean(column) || 0;
     return Math.max(0, avgChroma);
   });
 
-  // Apply normalized chroma values back to palettes
-  palettes.forEach((palette) => {
-    palette.forEach((color, j) => {
+  // Return new palettes array with normalized chroma values (no mutation)
+  const normalizedPalettes = palettes.map((palette) =>
+    palette.map((color, j) => {
+      const c = color.clone();
       if (normalizedCs[j] !== undefined) {
-        color.c = normalizedCs[j];
+        c.oklch.c = normalizedCs[j];
       }
-    });
-  });
+      return c;
+    })
+  );
 
-  return normalizedCs;
+  return { normalizedPalettes, normalizedChromaValues: normalizedCs };
 }
 
 /**
  * Generates multiple color palettes
- * Returns both OKLCH objects (for internal use) and hex strings (for display)
+ * Returns Color objects; hex conversion is handled by the store layer
  */
 export function generatePalettes(
   params: ColorGenParams,
   shouldNormalizeChroma: boolean = true
-): { neutrals: string[]; palettes: string[][]; normalizedChromaValues: number[] } {
+): { neutrals: Color[]; palettes: Color[][]; normalizedChromaValues: number[] } {
   // Generate base neutrals WITHOUT nudgers
   const baseNeutrals = generateBaseNeutrals(params);
 
   // Parse and validate base color
-  const baseColor = oklch(parse(params.baseColor));
-  if (!baseColor || isNaN(baseColor.h || 0) || isNaN(baseColor.c || 0)) {
-    throw new Error('Invalid base color: could not parse or invalid hue/chroma values');
+  const baseColor = toOklch(params.baseColor);
+  if (!baseColor || isNaN(baseColor.oklch.c ?? 0)) {
+    throw new Error('Invalid base color: could not parse or invalid chroma value');
   }
+  // Achromatic colors (e.g. grays) have NaN hue in colorjs.io — default to 0
+  const baseH = baseColor.oklch.h;
+  if (baseH == null || isNaN(baseH)) baseColor.oklch.h = 0;
 
   // Generate palettes with hue variations using BASE neutrals (without nudgers)
-  const palettes: Oklch[][] = Array.from({ length: params.numPalettes }, (_, i) => {
+  const palettes: Color[][] = Array.from({ length: params.numPalettes }, (_, i) => {
     const hueNudger = params.hueNudgers?.[i] || 0;
     const hueOffset = (360 / params.numPalettes) * i + hueNudger;
-    const tempColor: Oklch = {
-      ...baseColor,
-      h: ((baseColor.h || 0) + hueOffset) % 360
-    };
+    const tempColor = baseColor.clone();
+    tempColor.oklch.h = ((baseColor.oklch.h ?? 0) + hueOffset) % 360;
     return generatePalette(baseNeutrals, tempColor, params.chromaMultiplier);
   });
 
   // Normalize chroma values if needed
   let normalizedChromaValues: number[] = [];
+  let normalizedPalettes = palettes;
   if (shouldNormalizeChroma && params.chromaMultiplier > 0) {
-    normalizedChromaValues = normalizeChromaValuesInternal(palettes);
+    const result = normalizeChromaValuesInternal(palettes);
+    normalizedChromaValues = result.normalizedChromaValues;
+    normalizedPalettes = result.normalizedPalettes;
   }
 
   // Apply lightness nudgers as the FINAL step (after chroma normalization)
   const lightnessNudgers = params.lightnessNudgers || [];
   const { neutrals: neutralsWithNudgers, palettes: palettesWithNudgers } = applyLightnessNudgers(
     baseNeutrals,
-    palettes,
+    normalizedPalettes,
     lightnessNudgers
   );
 
-  // Convert to hex strings
-  const neutralsHex = neutralsWithNudgers.map((color) => {
-    try {
-      const clampedColor = clampChroma(color, 'oklch');
-      return formatHex(clampedColor) || '#000000';
-    } catch {
-      return '#000000';
-    }
-  });
-
-  const palettesHex = palettesWithNudgers.map((palette) =>
-    palette.map((color) => {
-      try {
-        const clampedColor = clampChroma(color, 'oklch');
-        return formatHex(clampedColor) || '#000000';
-      } catch {
-        return '#000000';
-      }
-    })
-  );
-
   return {
-    neutrals: neutralsHex,
-    palettes: palettesHex,
+    neutrals: neutralsWithNudgers,
+    palettes: palettesWithNudgers,
     normalizedChromaValues
   };
 }
@@ -484,48 +466,72 @@ export function generatePalettes(
  */
 export function generateMultiplePalettes(params: PaletteGenParams): string[][] {
   const result = generatePalettes(params as ColorGenParams, true);
-  return result.palettes;
+  return result.palettes.map((palette) => palette.map((color) => toHex(color)));
+}
+
+// ===== OKLCH-BASED CONVERSION HELPERS =====
+
+/**
+ * Gamut-maps any Color object to sRGB and returns a hex string.
+ * Accepts colors in any color space (OKLCH, sRGB, etc.).
+ */
+export function colorToCssHex(color: Color): string {
+  try {
+    return toHex(color);
+  } catch {
+    return '#000000';
+  }
 }
 
 /**
- * Converts hex color to RGB object
+ * Gamut-maps any Color object to sRGB and returns a CSS rgb() string (CSS Color 4 syntax).
+ * e.g. "rgb(20.97% 40.548% 87.236%)"
  */
-export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const normalizedHex = hex.startsWith('#') ? hex : `#${hex}`;
-  const parsed = parse(normalizedHex);
-  if (!parsed) return null;
-
-  const srgb = rgb(parsed);
-  if (srgb.r == null || srgb.g == null || srgb.b == null) return null;
-
-  return {
-    r: srgb.r,
-    g: srgb.g,
-    b: srgb.b
-  };
+export function colorToCssRgb(color: Color): string {
+  try {
+    return toGamut(color).to('srgb').toString();
+  } catch {
+    return 'rgb(0% 0% 0%)';
+  }
 }
 
 /**
- * Calculates relative luminance of a color
+ * Converts any Color object to a CSS oklch() string (CSS Color 4 syntax).
+ * e.g. "oklch(55% 0.19 264)"
  */
-export function getLuminance(hex: string): number {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return 0;
-
-  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {
-    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-  });
-
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+export function colorToCssOklch(color: Color): string {
+  try {
+    const oklch = color.clone().to('oklch');
+    const l = oklch.oklch.l ?? 0;
+    const c = oklch.oklch.c ?? 0;
+    const h = oklch.oklch.h;
+    const safeH = h == null || isNaN(h) ? 0 : h;
+    // Round to 6 decimal places; snap near-zero values to 0
+    const lPct = parseFloat((l * 100).toFixed(6));
+    const cRound = c < 1e-6 ? 0 : parseFloat(c.toFixed(6));
+    const hRound = parseFloat(safeH.toFixed(6));
+    return `oklch(${lPct}% ${cRound} ${hRound})`;
+  } catch {
+    return 'oklch(0% 0 0)';
+  }
 }
 
 /**
- * Determines if text should be light or dark on a background color
+ * Gamut-maps any Color object to sRGB and returns a CSS hsl() string (CSS Color 4 syntax).
+ * e.g. "hsl(222.27 72.189% 54.103%)"
  */
-export function getContrastColor(backgroundColor: string): string {
-  const luminance = getLuminance(backgroundColor);
-  const threshold = 0.5;
-  return luminance > threshold ? '#000000' : '#ffffff';
+export function colorToCssHsl(color: Color): string {
+  try {
+    const hslColor = toGamut(color).to('hsl');
+    // Sanitize null/NaN hue and saturation (achromatic colors serialize as "none" otherwise)
+    const h = hslColor.hsl.h;
+    if (h == null || isNaN(h)) hslColor.hsl.h = 0;
+    const s = hslColor.hsl.s;
+    if (s == null || isNaN(s)) hslColor.hsl.s = 0;
+    return hslColor.toString();
+  } catch {
+    return 'hsl(0 0% 0%)';
+  }
 }
 
 /**
@@ -562,8 +568,7 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
 
     const normalizeHexColor = (value: string): string | null => {
       try {
-        const parsed = parse(value);
-        return parsed ? formatHex(parsed) : null;
+        return new Color(value).to('srgb').toString({ format: 'hex' });
       } catch {
         return null;
       }
@@ -573,8 +578,8 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
 
     const getOklchChroma = (hex: string): number | null => {
       try {
-        const color = oklch(hex);
-        const chroma = color?.c;
+        const color = new Color(hex).to('oklch');
+        const chroma = color.oklch.c;
         return typeof chroma === 'number' && isFinite(chroma) ? chroma : null;
       } catch {
         return null;
@@ -586,7 +591,9 @@ export function getPaletteName(palette: string[], lowStepIndex: number | string 
       .map((c) => normalizeHexColor(c) ?? c);
 
     const candidates = normalizedPalette.filter((c) => c !== lowContrastColor);
-    const nonExtremeCandidates = candidates.filter((c) => c !== '#ffffff' && c !== '#000000');
+    const nonExtremeCandidates = candidates.filter(
+      (c) => c !== '#ffffff' && c !== '#000000' && c !== '#fff' && c !== '#000'
+    );
     const basePool = nonExtremeCandidates.length > 0 ? nonExtremeCandidates : candidates;
 
     const chromaticCandidates = basePool.filter((c) => {

@@ -497,7 +497,7 @@ test.describe('Performance Benchmarking', () => {
       console.log(`JavaScript bundle size: ${jsSizeKB.toFixed(2)}KB`);
 
       // JS bundle should be reasonable (less than 350KB)
-      // Note: Includes mathjs, culori, bezier-easing libraries for color calculations
+      // Note: Includes colorjs.io, bezier-easing libraries for color calculations
       expect(jsSizeKB).toBeLessThan(350);
     });
   });
