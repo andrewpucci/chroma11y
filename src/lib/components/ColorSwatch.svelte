@@ -1,17 +1,19 @@
 <script lang="ts">
   import {
     copyToClipboard,
-    getContrast,
-    getPrintableContrast,
-    MIN_CONTRAST_RATIO
+    getPrintableContrastForAlgorithm,
+    getContrastForAlgorithm,
+    MIN_CONTRAST_RATIO,
+    MIN_APCA_LC_BODY
   } from '$lib/colorUtils';
-  import { contrastColors } from '$lib/stores';
+  import { contrastColors, swatchLabels, contrastAlgorithm } from '$lib/stores';
   import { openDrawer } from '$lib/drawerStore';
   import { announce } from '$lib/announce';
   import type Color from 'colorjs.io';
 
   interface Props {
     color: string;
+    displayValue?: string;
     label?: string;
     oklchColor?: Color | null;
     paletteName?: string;
@@ -20,6 +22,7 @@
 
   let {
     color,
+    displayValue = '',
     label = '',
     oklchColor = null,
     paletteName = '',
@@ -27,29 +30,41 @@
   }: Props = $props();
 
   const contrastColorsLocal = $derived($contrastColors);
+  const swatchLabelsLocal = $derived($swatchLabels);
+  const contrastAlgorithmLocal = $derived($contrastAlgorithm);
 
-  const lowContrastDisplay = $derived(getPrintableContrast(color, contrastColorsLocal.low));
-  const highContrastDisplay = $derived(getPrintableContrast(color, contrastColorsLocal.high));
+  const shownValue = $derived(displayValue || color);
+
+  const lowContrastDisplay = $derived(
+    getPrintableContrastForAlgorithm(color, contrastColorsLocal.low, contrastAlgorithmLocal)
+  );
+  const highContrastDisplay = $derived(
+    getPrintableContrastForAlgorithm(color, contrastColorsLocal.high, contrastAlgorithmLocal)
+  );
+
+  const contrastUnit = $derived(contrastAlgorithmLocal === 'APCA' ? ' Lc' : '');
 
   const textColor = $derived(calculateTextColor(color, contrastColorsLocal));
 
   function calculateTextColor(bgColor: string, contrast: { low: string; high: string }): string {
-    const lowRatio = getContrast(bgColor, contrast.low);
-    const highRatio = getContrast(bgColor, contrast.high);
+    const threshold =
+      contrastAlgorithmLocal === 'APCA' ? MIN_APCA_LC_BODY : MIN_CONTRAST_RATIO;
+    const lowVal = getContrastForAlgorithm(bgColor, contrast.low, contrastAlgorithmLocal);
+    const highVal = getContrastForAlgorithm(bgColor, contrast.high, contrastAlgorithmLocal);
 
     // If both meet threshold, use the one with better (higher) contrast
-    if (lowRatio >= MIN_CONTRAST_RATIO && highRatio >= MIN_CONTRAST_RATIO) {
-      return highRatio > lowRatio ? contrast.high : contrast.low;
+    if (lowVal >= threshold && highVal >= threshold) {
+      return highVal > lowVal ? contrast.high : contrast.low;
     }
 
     // Only one meets threshold, use that one
-    if (lowRatio >= MIN_CONTRAST_RATIO) {
+    if (lowVal >= threshold) {
       return contrast.low;
-    } else if (highRatio >= MIN_CONTRAST_RATIO) {
+    } else if (highVal >= threshold) {
       return contrast.high;
     } else {
       // Neither meets minimum, use the one with better contrast
-      return highRatio > lowRatio ? contrast.high : contrast.low;
+      return highVal > lowVal ? contrast.high : contrast.low;
     }
   }
 </script>
@@ -60,21 +75,25 @@
   onclick={() => {
     if (oklchColor) {
       openDrawer({ hex: color, oklch: oklchColor, step: label, paletteName, isNeutral });
-      announce(`Opened color info for ${color}, step ${label}`);
+      announce(`Opened color info for ${shownValue}, step ${label}`);
     } else {
-      copyToClipboard(color);
+      copyToClipboard(shownValue);
     }
   }}
-  title={oklchColor ? `View color details for ${color}` : `Click to copy ${color}`}
-  aria-label="{label ? `${label} ` : ''}{color}{oklchColor
+  title={oklchColor ? `View color details for ${shownValue}` : `Click to copy ${shownValue}`}
+  aria-label="{label ? `${label} ` : ''}{shownValue}{oklchColor
     ? ' — view color details'
     : ' — copy to clipboard'}"
 >
-  {#if label}
+  {#if label && (swatchLabelsLocal === 'both' || swatchLabelsLocal === 'step')}
     <span class="step">{label}</span>
   {/if}
-  <span class="hex">{color}</span>
-  <span class="contrast-info" aria-hidden="true">{lowContrastDisplay} {highContrastDisplay}</span>
+  {#if swatchLabelsLocal === 'both' || swatchLabelsLocal === 'value'}
+    <span class="hex">{shownValue}</span>
+  {/if}
+  {#if swatchLabelsLocal !== 'none'}
+    <span class="contrast-info" aria-hidden="true">{lowContrastDisplay}{contrastUnit} {highContrastDisplay}{contrastUnit}</span>
+  {/if}
 </button>
 
 <style>

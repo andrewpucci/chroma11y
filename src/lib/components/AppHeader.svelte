@@ -1,6 +1,5 @@
 <script lang="ts">
   import Brand from './Brand.svelte';
-  import ThemeToggle from './ThemeToggle.svelte';
 
   interface Props {
     bindInner?: HTMLElement | undefined;
@@ -12,9 +11,6 @@
 <header class="topbar">
   <div class="topbar-inner" bind:this={bindInner}>
     <Brand />
-    <div class="topbar-actions">
-      <ThemeToggle />
-    </div>
   </div>
 </header>
 
