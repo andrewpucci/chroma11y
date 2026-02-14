@@ -47,8 +47,7 @@
   const textColor = $derived(calculateTextColor(color, contrastColorsLocal));
 
   function calculateTextColor(bgColor: string, contrast: { low: string; high: string }): string {
-    const threshold =
-      contrastAlgorithmLocal === 'APCA' ? MIN_APCA_LC_BODY : MIN_CONTRAST_RATIO;
+    const threshold = contrastAlgorithmLocal === 'APCA' ? MIN_APCA_LC_BODY : MIN_CONTRAST_RATIO;
     const lowVal = getContrastForAlgorithm(bgColor, contrast.low, contrastAlgorithmLocal);
     const highVal = getContrastForAlgorithm(bgColor, contrast.high, contrastAlgorithmLocal);
 
@@ -91,8 +90,10 @@
   {#if swatchLabelsLocal === 'both' || swatchLabelsLocal === 'value'}
     <span class="hex">{shownValue}</span>
   {/if}
-  {#if swatchLabelsLocal !== 'none'}
-    <span class="contrast-info" aria-hidden="true">{lowContrastDisplay}{contrastUnit} {highContrastDisplay}{contrastUnit}</span>
+  {#if swatchLabelsLocal === 'both' || swatchLabelsLocal === 'value'}
+    <span class="contrast-info" aria-hidden="true"
+      >{lowContrastDisplay}{contrastUnit} {highContrastDisplay}{contrastUnit}</span
+    >
   {/if}
 </button>
 

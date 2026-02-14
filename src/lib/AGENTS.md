@@ -46,8 +46,8 @@ Palette names are auto-detected via CIEDE2000 nearest color matching, with fallb
 
 ## Persistence
 
-- **URL state** (`urlUtils.ts`) — all parameters encoded as compact query params (`c`, `w`, `cm`, `x1`…`y2`, `t`, `m`, `ls`, `hs`, `ln`, `hn`, `ds`, `gs`, `tp`, `sl`, `ca`). Updated via `replaceState` (no history pollution). Debounced 500ms.
-- **localStorage** (`storageUtils.ts`) — mirrors URL state under key `chroma11y-state`. URL takes priority on load.
+- **URL state** (`urlUtils.ts`) — all parameters encoded as compact query params (`c`, `w`, `cm`, `x1`…`y2`, `t`, `m`, `ls`, `hs`, `ln`, `hn`, `ds`, `gs`, `sl`, `ca`). Updated via `replaceState` (no history pollution). Debounced 500ms.
+- **localStorage** (`storageUtils.ts`) — mirrors URL state under key `chroma11y-state`, plus `themePreference` (localStorage-only, not in URL). URL takes priority on load; display settings are validated on read.
 
 ## Testing conventions
 

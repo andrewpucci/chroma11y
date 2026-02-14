@@ -3,8 +3,10 @@
   import {
     copyToClipboard,
     nearestFriendlyColorName,
-    getContrastForAlgorithm,
-    getPrintableContrastForAlgorithm,
+    getContrast,
+    getPrintableContrast,
+    getContrastAPCA,
+    getPrintableContrastAPCA,
     MIN_CONTRAST_RATIO,
     MIN_APCA_LC_BODY,
     MIN_APCA_LC_LARGE,
@@ -13,7 +15,7 @@
     colorToCssOklch,
     colorToCssHsl
   } from '$lib/colorUtils';
-  import { contrastColors, contrastAlgorithm } from '$lib/stores';
+  import { contrastColors } from '$lib/stores';
   import { announce } from '$lib/announce';
 
   const WCAG_AAA_RATIO = 7;
@@ -21,8 +23,6 @@
   const isOpen = $derived($drawerIsOpen);
   const data = $derived($drawerData);
   const contrastColorsLocal = $derived($contrastColors);
-  const contrastAlgorithmLocal = $derived($contrastAlgorithm);
-  const isAPCA = $derived(contrastAlgorithmLocal === 'APCA');
 
   // Computed color values from OKLCH source of truth
   const colorValues = $derived.by(() => {
@@ -39,36 +39,34 @@
   const lightnessValue = $derived(data ? Math.round((data.oklch.oklch.l ?? 0) * 1000) / 1000 : 0);
 
   const lowContrast = $derived.by(() => {
-    if (!data) return { value: 0, printable: 0, pass1: false, pass2: false };
+    if (!data)
+      return { wcag: 0, wcagAA: false, wcagAAA: false, apca: 0, apcaLarge: false, apcaBody: false };
     const hex = colorValues?.hex ?? data.hex;
-    const value = getContrastForAlgorithm(hex, contrastColorsLocal.low, contrastAlgorithmLocal);
-    const printable = getPrintableContrastForAlgorithm(
-      hex,
-      contrastColorsLocal.low,
-      contrastAlgorithmLocal
-    );
+    const wcag = getContrast(hex, contrastColorsLocal.low);
+    const apca = getContrastAPCA(contrastColorsLocal.low, hex);
     return {
-      value,
-      printable,
-      pass1: isAPCA ? value >= MIN_APCA_LC_LARGE : value >= MIN_CONTRAST_RATIO,
-      pass2: isAPCA ? value >= MIN_APCA_LC_BODY : value >= WCAG_AAA_RATIO
+      wcag: getPrintableContrast(hex, contrastColorsLocal.low),
+      wcagAA: wcag >= MIN_CONTRAST_RATIO,
+      wcagAAA: wcag >= WCAG_AAA_RATIO,
+      apca: getPrintableContrastAPCA(contrastColorsLocal.low, hex),
+      apcaLarge: apca >= MIN_APCA_LC_LARGE,
+      apcaBody: apca >= MIN_APCA_LC_BODY
     };
   });
 
   const highContrast = $derived.by(() => {
-    if (!data) return { value: 0, printable: 0, pass1: false, pass2: false };
+    if (!data)
+      return { wcag: 0, wcagAA: false, wcagAAA: false, apca: 0, apcaLarge: false, apcaBody: false };
     const hex = colorValues?.hex ?? data.hex;
-    const value = getContrastForAlgorithm(hex, contrastColorsLocal.high, contrastAlgorithmLocal);
-    const printable = getPrintableContrastForAlgorithm(
-      hex,
-      contrastColorsLocal.high,
-      contrastAlgorithmLocal
-    );
+    const wcag = getContrast(hex, contrastColorsLocal.high);
+    const apca = getContrastAPCA(contrastColorsLocal.high, hex);
     return {
-      value,
-      printable,
-      pass1: isAPCA ? value >= MIN_APCA_LC_LARGE : value >= MIN_CONTRAST_RATIO,
-      pass2: isAPCA ? value >= MIN_APCA_LC_BODY : value >= WCAG_AAA_RATIO
+      wcag: getPrintableContrast(hex, contrastColorsLocal.high),
+      wcagAA: wcag >= MIN_CONTRAST_RATIO,
+      wcagAAA: wcag >= WCAG_AAA_RATIO,
+      apca: getPrintableContrastAPCA(contrastColorsLocal.high, hex),
+      apcaLarge: apca >= MIN_APCA_LC_LARGE,
+      apcaBody: apca >= MIN_APCA_LC_BODY
     };
   });
 
@@ -349,22 +347,39 @@
                 </div>
               </div>
               <div class="contrast-detail">
-                <span class="contrast-ratio mono">
-                  {lowContrast.printable}{isAPCA ? ' Lc' : ':1'}
+                <span class="contrast-algo-label">WCAG 2.1</span>
+                <span class="contrast-ratio mono">{lowContrast.wcag}:1</span>
+                <span
+                  class="badge"
+                  class:badge--pass={lowContrast.wcagAA}
+                  class:badge--fail={!lowContrast.wcagAA}
+                >
+                  AA {lowContrast.wcagAA ? 'Pass' : 'Fail'}
                 </span>
                 <span
                   class="badge"
-                  class:badge--pass={lowContrast.pass1}
-                  class:badge--fail={!lowContrast.pass1}
+                  class:badge--pass={lowContrast.wcagAAA}
+                  class:badge--fail={!lowContrast.wcagAAA}
                 >
-                  {isAPCA ? 'Large' : 'AA'} {lowContrast.pass1 ? 'Pass' : 'Fail'}
+                  AAA {lowContrast.wcagAAA ? 'Pass' : 'Fail'}
+                </span>
+              </div>
+              <div class="contrast-detail">
+                <span class="contrast-algo-label">APCA</span>
+                <span class="contrast-ratio mono">{lowContrast.apca} Lc</span>
+                <span
+                  class="badge"
+                  class:badge--pass={lowContrast.apcaLarge}
+                  class:badge--fail={!lowContrast.apcaLarge}
+                >
+                  Large {lowContrast.apcaLarge ? 'Pass' : 'Fail'}
                 </span>
                 <span
                   class="badge"
-                  class:badge--pass={lowContrast.pass2}
-                  class:badge--fail={!lowContrast.pass2}
+                  class:badge--pass={lowContrast.apcaBody}
+                  class:badge--fail={!lowContrast.apcaBody}
                 >
-                  {isAPCA ? 'Body' : 'AAA'} {lowContrast.pass2 ? 'Pass' : 'Fail'}
+                  Body {lowContrast.apcaBody ? 'Pass' : 'Fail'}
                 </span>
               </div>
             </div>
@@ -382,22 +397,39 @@
                 </div>
               </div>
               <div class="contrast-detail">
-                <span class="contrast-ratio mono">
-                  {highContrast.printable}{isAPCA ? ' Lc' : ':1'}
+                <span class="contrast-algo-label">WCAG 2.1</span>
+                <span class="contrast-ratio mono">{highContrast.wcag}:1</span>
+                <span
+                  class="badge"
+                  class:badge--pass={highContrast.wcagAA}
+                  class:badge--fail={!highContrast.wcagAA}
+                >
+                  AA {highContrast.wcagAA ? 'Pass' : 'Fail'}
                 </span>
                 <span
                   class="badge"
-                  class:badge--pass={highContrast.pass1}
-                  class:badge--fail={!highContrast.pass1}
+                  class:badge--pass={highContrast.wcagAAA}
+                  class:badge--fail={!highContrast.wcagAAA}
                 >
-                  {isAPCA ? 'Large' : 'AA'} {highContrast.pass1 ? 'Pass' : 'Fail'}
+                  AAA {highContrast.wcagAAA ? 'Pass' : 'Fail'}
+                </span>
+              </div>
+              <div class="contrast-detail">
+                <span class="contrast-algo-label">APCA</span>
+                <span class="contrast-ratio mono">{highContrast.apca} Lc</span>
+                <span
+                  class="badge"
+                  class:badge--pass={highContrast.apcaLarge}
+                  class:badge--fail={!highContrast.apcaLarge}
+                >
+                  Large {highContrast.apcaLarge ? 'Pass' : 'Fail'}
                 </span>
                 <span
                   class="badge"
-                  class:badge--pass={highContrast.pass2}
-                  class:badge--fail={!highContrast.pass2}
+                  class:badge--pass={highContrast.apcaBody}
+                  class:badge--fail={!highContrast.apcaBody}
                 >
-                  {isAPCA ? 'Body' : 'AAA'} {highContrast.pass2 ? 'Pass' : 'Fail'}
+                  Body {highContrast.apcaBody ? 'Pass' : 'Fail'}
                 </span>
               </div>
             </div>
@@ -719,6 +751,15 @@
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+  }
+
+  .contrast-algo-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    min-width: 52px;
   }
 
   .contrast-ratio {

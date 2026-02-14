@@ -551,6 +551,11 @@ export function colorToCssRec2020(color: Color): string {
 /**
  * Formats a Color object as a CSS string in the given display color space and gamut.
  * This is the main dispatcher used by derived stores and components.
+ *
+ * Note: hex, rgb, and hsl formats are sRGB-only. When a wider gamut (P3 / Rec. 2020)
+ * is selected, those formats fall back to the gamut's native `color()` syntax
+ * (e.g. `color(display-p3 …)`) because hex/rgb/hsl cannot represent out-of-sRGB values.
+ * OKLCH is gamut-independent and always returns `oklch(…)` after gamut-mapping.
  */
 export function colorToCssDisplay(
   color: Color,
@@ -626,28 +631,31 @@ export function getPrintableContrastAPCA(textColor: string, bgColor: string): nu
 
 /**
  * Unified contrast function that dispatches to the correct algorithm.
- * Returns the raw contrast value (ratio for WCAG21, absolute Lc for APCA).
+ * Callers pass (bgColor, fgColor) — the background color first, then the foreground/text color.
+ * WCAG 2.1 is symmetric so order doesn't matter; APCA is asymmetric and
+ * requires (textColor, bgColor), so this function swaps internally for APCA.
  */
 export function getContrastForAlgorithm(
-  color1: string,
-  color2: string,
+  bgColor: string,
+  fgColor: string,
   algorithm: ContrastAlgorithm
 ): number {
-  return algorithm === 'APCA' ? getContrastAPCA(color1, color2) : getContrast(color1, color2);
+  return algorithm === 'APCA' ? getContrastAPCA(fgColor, bgColor) : getContrast(fgColor, bgColor);
 }
 
 /**
  * Formats a contrast value for display based on the selected algorithm.
+ * Callers pass (bgColor, fgColor) — same convention as getContrastForAlgorithm.
  * Returns a rounded number suitable for UI display.
  */
 export function getPrintableContrastForAlgorithm(
-  color1: string,
-  color2: string,
+  bgColor: string,
+  fgColor: string,
   algorithm: ContrastAlgorithm
 ): number {
   return algorithm === 'APCA'
-    ? getPrintableContrastAPCA(color1, color2)
-    : getPrintableContrast(color1, color2);
+    ? getPrintableContrastAPCA(fgColor, bgColor)
+    : getPrintableContrast(fgColor, bgColor);
 }
 
 /**

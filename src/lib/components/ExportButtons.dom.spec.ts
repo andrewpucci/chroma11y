@@ -45,11 +45,6 @@ describe('ExportButtons', () => {
     expect(downloadCSS).toHaveBeenCalledWith(neutrals, palettes, displayNeutrals, displayPalettes);
 
     await user.click(screen.getByRole('button', { name: /export scss variables/i }));
-    expect(downloadSCSS).toHaveBeenCalledWith(
-      neutrals,
-      palettes,
-      displayNeutrals,
-      displayPalettes
-    );
+    expect(downloadSCSS).toHaveBeenCalledWith(neutrals, palettes, displayNeutrals, displayPalettes);
   });
 });

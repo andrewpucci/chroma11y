@@ -32,7 +32,9 @@
   function handleGamutSpaceChange(event: Event) {
     const value = (event.target as HTMLSelectElement).value as GamutSpace;
     updateColorState({ gamutSpace: value });
-    announce(`Gamut mapping changed to ${value === 'srgb' ? 'sRGB' : value === 'p3' ? 'Display P3' : 'Rec. 2020'}`);
+    announce(
+      `Gamut mapping changed to ${value === 'srgb' ? 'sRGB' : value === 'p3' ? 'Display P3' : 'Rec. 2020'}`
+    );
   }
 
   function handleThemePreferenceChange(event: Event) {
@@ -44,7 +46,9 @@
   function handleSwatchLabelsChange(event: Event) {
     const value = (event.target as HTMLSelectElement).value as SwatchLabels;
     updateColorState({ swatchLabels: value });
-    announce(`Swatch labels changed to ${value === 'both' ? 'step and value' : value === 'none' ? 'hidden' : value + ' only'}`);
+    announce(
+      `Swatch labels changed to ${value === 'both' ? 'step and value' : value === 'none' ? 'hidden' : value + ' only'}`
+    );
   }
 
   function handleContrastAlgorithmChange(event: Event) {

@@ -431,24 +431,24 @@ describe('colorUtils', () => {
   });
 
   describe('getContrastForAlgorithm', () => {
-    it('dispatches to WCAG21 when algorithm is WCAG21', () => {
+    it('dispatches to WCAG21 when algorithm is WCAG21 (bgColor, fgColor)', () => {
       const result = getContrastForAlgorithm('#ffffff', '#000000', 'WCAG21');
       expect(result).toBeCloseTo(21, 0);
     });
 
-    it('dispatches to APCA when algorithm is APCA', () => {
+    it('dispatches to APCA with swapped args (bgColor, fgColor → textColor, bgColor)', () => {
       const result = getContrastForAlgorithm('#000000', '#ffffff', 'APCA');
       expect(result).toBeGreaterThan(100);
     });
   });
 
   describe('getPrintableContrastForAlgorithm', () => {
-    it('returns rounded value for WCAG21', () => {
+    it('returns rounded value for WCAG21 (bgColor, fgColor)', () => {
       const result = getPrintableContrastForAlgorithm('#ffffff', '#000000', 'WCAG21');
       expect(result).toBe(21);
     });
 
-    it('returns rounded Lc value for APCA', () => {
+    it('returns rounded Lc value for APCA (bgColor, fgColor)', () => {
       const result = getPrintableContrastForAlgorithm('#000000', '#ffffff', 'APCA');
       expect(typeof result).toBe('number');
       expect(result).toBeGreaterThan(0);

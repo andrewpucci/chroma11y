@@ -117,13 +117,16 @@
   // Load initial state from URL or localStorage
   onMount(() => {
     const urlState = getUrlState();
+    const storedState = loadStateFromStorage();
     if (Object.keys(urlState).length > 0) {
       applyUrlState(urlState);
-    } else {
-      const storedState = loadStateFromStorage();
-      if (storedState) {
-        applyUrlState(storedState);
-      }
+    } else if (storedState) {
+      applyUrlState(storedState);
+    }
+
+    // themePreference is only in localStorage, not the URL — always load it from storage
+    if (storedState?.themePreference) {
+      setThemePreference(storedState.themePreference);
     }
     urlStateLoaded = true;
 
@@ -242,7 +245,6 @@
       y1: y1Local,
       x2: x2Local,
       y2: y2Local,
-      theme: currentThemeLocal,
       contrastMode: contrastModeLocal,
       lowStep: lowStepLocal,
       highStep: highStepLocal,
@@ -250,9 +252,15 @@
       hueNudgers: hueNudgerValues,
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
-      themePreference: themePreferenceLocal,
       swatchLabels: swatchLabelsLocal,
       contrastAlgorithm: contrastAlgorithmLocal
+    };
+
+    // theme and themePreference are persisted to localStorage only, not the URL
+    const storageState: UrlColorState = {
+      ...state,
+      theme: currentThemeLocal,
+      themePreference: themePreferenceLocal
     };
 
     // Clear any existing timeout before setting new one
@@ -263,7 +271,7 @@
     // Create new timeout and capture ID for cleanup
     urlUpdateTimeout = setTimeout(() => {
       updateBrowserUrl(state);
-      saveStateToStorage(state);
+      saveStateToStorage(storageState);
     }, 500);
 
     // Cleanup function clears the module-level timeout
@@ -276,6 +284,7 @@
   });
 
   function applyUrlState(urlState: UrlColorState) {
+    // Apply theme preset first (sets generation params like bezier, contrast steps)
     if (urlState.theme) {
       setTheme(urlState.theme);
     }
@@ -299,12 +308,10 @@
     if (urlState.hueNudgers) stateUpdate.hueNudgers = urlState.hueNudgers;
     if (urlState.displayColorSpace) stateUpdate.displayColorSpace = urlState.displayColorSpace;
     if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
-    if (urlState.themePreference) {
-      stateUpdate.themePreference = urlState.themePreference;
-      setThemePreference(urlState.themePreference);
-    }
     if (urlState.swatchLabels) stateUpdate.swatchLabels = urlState.swatchLabels;
     if (urlState.contrastAlgorithm) stateUpdate.contrastAlgorithm = urlState.contrastAlgorithm;
+    // themePreference is loaded from localStorage, not URL
+    if (urlState.themePreference) stateUpdate.themePreference = urlState.themePreference;
 
     if (Object.keys(stateUpdate).length > 0) {
       updateColorState(stateUpdate);

@@ -62,15 +62,7 @@ const THEME_PRESETS = {
     contrast: {
       low: '#ffffff',
       high: '#000000'
-    },
-    neutrals: [],
-    palettes: [],
-    lightnessNudgers: [],
-    hueNudgers: [],
-    displayColorSpace: 'hex' as DisplayColorSpace,
-    gamutSpace: 'srgb' as GamutSpace,
-    swatchLabels: 'both' as SwatchLabels,
-    contrastAlgorithm: 'WCAG21' as ContrastAlgorithm
+    }
   },
   dark: {
     numColors: 11,
@@ -88,15 +80,7 @@ const THEME_PRESETS = {
     contrast: {
       low: '#071531',
       high: '#ffffff'
-    },
-    neutrals: [],
-    palettes: [],
-    lightnessNudgers: [],
-    hueNudgers: [],
-    displayColorSpace: 'hex' as DisplayColorSpace,
-    gamutSpace: 'srgb' as GamutSpace,
-    swatchLabels: 'both' as SwatchLabels,
-    contrastAlgorithm: 'WCAG21' as ContrastAlgorithm
+    }
   }
 };
 
@@ -105,8 +89,16 @@ const THEME_PRESETS = {
  */
 const DEFAULT_STATE = {
   ...THEME_PRESETS.light,
+  neutrals: [] as Color[],
+  palettes: [] as Color[][],
+  lightnessNudgers: [] as number[],
+  hueNudgers: [] as number[],
   currentTheme: 'light',
-  themePreference: 'light' as ThemePreference
+  themePreference: 'auto' as ThemePreference,
+  displayColorSpace: 'hex' as DisplayColorSpace,
+  gamutSpace: 'srgb' as GamutSpace,
+  swatchLabels: 'both' as SwatchLabels,
+  contrastAlgorithm: 'WCAG21' as ContrastAlgorithm
 };
 
 // Create the main color store
@@ -207,9 +199,7 @@ export const neutralsDisplay = derived(colorStore, ($colorStore) =>
 // Derived store for palettes formatted in the selected display color space
 export const palettesDisplay = derived(colorStore, ($colorStore) =>
   $colorStore.palettes.map((palette) =>
-    palette.map((c) =>
-      colorToCssDisplay(c, $colorStore.displayColorSpace, $colorStore.gamutSpace)
-    )
+    palette.map((c) => colorToCssDisplay(c, $colorStore.displayColorSpace, $colorStore.gamutSpace))
   )
 );
 
@@ -361,9 +351,10 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
     const themePreset = THEME_PRESETS[targetTheme];
 
     return {
+      ...currentState,
       ...themePreset,
       currentTheme: targetTheme,
-      themePreference: targetTheme as ThemePreference,
+      themePreference: 'auto' as ThemePreference,
       _lastUpdated: Date.now()
     } as ColorState;
   });

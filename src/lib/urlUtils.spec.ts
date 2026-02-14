@@ -28,10 +28,15 @@ describe('urlUtils', () => {
       expect(encoded).toContain('y2=0.38');
     });
 
-    it('encodes theme and contrast mode', () => {
-      const state: UrlColorState = { theme: 'dark', contrastMode: 'manual' };
+    it('does not encode theme (localStorage only)', () => {
+      const state: UrlColorState = { theme: 'dark' };
       const encoded = encodeStateToUrl(state);
-      expect(encoded).toContain('t=dark');
+      expect(encoded).not.toContain('t=');
+    });
+
+    it('encodes contrast mode', () => {
+      const state: UrlColorState = { contrastMode: 'manual' };
+      const encoded = encodeStateToUrl(state);
       expect(encoded).toContain('m=manual');
     });
 
@@ -83,15 +88,14 @@ describe('urlUtils', () => {
       expect(state.y2).toBe(0.38);
     });
 
-    it('decodes theme and contrast mode', () => {
-      const params = new URLSearchParams('t=dark&m=manual');
+    it('decodes contrast mode', () => {
+      const params = new URLSearchParams('m=manual');
       const state = decodeStateFromUrl(params);
-      expect(state.theme).toBe('dark');
       expect(state.contrastMode).toBe('manual');
     });
 
-    it('ignores invalid theme values', () => {
-      const params = new URLSearchParams('t=invalid');
+    it('ignores t param (theme is localStorage only)', () => {
+      const params = new URLSearchParams('t=dark');
       const state = decodeStateFromUrl(params);
       expect(state.theme).toBeUndefined();
     });
@@ -140,10 +144,10 @@ describe('urlUtils', () => {
       expect(encoded).not.toContain('gs=');
     });
 
-    it('encodes theme preference', () => {
+    it('does not encode themePreference (localStorage only)', () => {
       const state: UrlColorState = { themePreference: 'auto' };
       const encoded = encodeStateToUrl(state);
-      expect(encoded).toContain('tp=auto');
+      expect(encoded).not.toContain('tp=');
     });
 
     it('encodes swatch labels when not default', () => {
@@ -184,10 +188,10 @@ describe('urlUtils', () => {
       expect(state.gamutSpace).toBe('rec2020');
     });
 
-    it('decodes theme preference', () => {
+    it('ignores tp param (themePreference is localStorage only)', () => {
       const params = new URLSearchParams('tp=auto');
       const state = decodeStateFromUrl(params);
-      expect(state.themePreference).toBe('auto');
+      expect(state.themePreference).toBeUndefined();
     });
 
     it('decodes swatch labels', () => {
@@ -203,11 +207,10 @@ describe('urlUtils', () => {
     });
 
     it('ignores invalid display settings values', () => {
-      const params = new URLSearchParams('ds=invalid&gs=bad&tp=wrong&sl=nope&ca=fake');
+      const params = new URLSearchParams('ds=invalid&gs=bad&sl=nope&ca=fake');
       const state = decodeStateFromUrl(params);
       expect(state.displayColorSpace).toBeUndefined();
       expect(state.gamutSpace).toBeUndefined();
-      expect(state.themePreference).toBeUndefined();
       expect(state.swatchLabels).toBeUndefined();
       expect(state.contrastAlgorithm).toBeUndefined();
     });
@@ -217,7 +220,6 @@ describe('urlUtils', () => {
       const state = decodeStateFromUrl(params);
       expect(state.displayColorSpace).toBeUndefined();
       expect(state.gamutSpace).toBeUndefined();
-      expect(state.themePreference).toBeUndefined();
       expect(state.swatchLabels).toBeUndefined();
       expect(state.contrastAlgorithm).toBeUndefined();
     });
@@ -235,7 +237,6 @@ describe('urlUtils', () => {
         y1: 0,
         x2: 0.28,
         y2: 0.38,
-        theme: 'dark',
         contrastMode: 'auto',
         lowStep: 0,
         highStep: 10,
@@ -255,7 +256,6 @@ describe('urlUtils', () => {
       expect(decoded.y1).toBe(original.y1);
       expect(decoded.x2).toBe(original.x2);
       expect(decoded.y2).toBe(original.y2);
-      expect(decoded.theme).toBe(original.theme);
       expect(decoded.contrastMode).toBe(original.contrastMode);
       expect(decoded.lowStep).toBe(original.lowStep);
       expect(decoded.highStep).toBe(original.highStep);
@@ -267,7 +267,6 @@ describe('urlUtils', () => {
       const original: UrlColorState = {
         displayColorSpace: 'oklch',
         gamutSpace: 'p3',
-        themePreference: 'auto',
         swatchLabels: 'step',
         contrastAlgorithm: 'APCA'
       };
@@ -277,7 +276,6 @@ describe('urlUtils', () => {
 
       expect(decoded.displayColorSpace).toBe(original.displayColorSpace);
       expect(decoded.gamutSpace).toBe(original.gamutSpace);
-      expect(decoded.themePreference).toBe(original.themePreference);
       expect(decoded.swatchLabels).toBe(original.swatchLabels);
       expect(decoded.contrastAlgorithm).toBe(original.contrastAlgorithm);
     });
