@@ -30,17 +30,26 @@ describe('ExportButtons', () => {
 
     const neutrals = ['#ffffff'];
     const palettes = [['#e6f0ff']];
+    const displayNeutrals = ['#ffffff'];
+    const displayPalettes = [['#e6f0ff']];
 
-    render(ExportButtons, { props: { neutrals, palettes } });
+    render(ExportButtons, {
+      props: { neutrals, palettes, displayNeutrals, displayPalettes }
+    });
 
     await user.click(screen.getByRole('button', { name: /export json design tokens/i }));
     expect(downloadDesignTokens).toHaveBeenCalledWith(neutrals, palettes);
     expect(announce).toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: /export css custom properties/i }));
-    expect(downloadCSS).toHaveBeenCalledWith(neutrals, palettes);
+    expect(downloadCSS).toHaveBeenCalledWith(neutrals, palettes, displayNeutrals, displayPalettes);
 
     await user.click(screen.getByRole('button', { name: /export scss variables/i }));
-    expect(downloadSCSS).toHaveBeenCalledWith(neutrals, palettes);
+    expect(downloadSCSS).toHaveBeenCalledWith(
+      neutrals,
+      palettes,
+      displayNeutrals,
+      displayPalettes
+    );
   });
 });

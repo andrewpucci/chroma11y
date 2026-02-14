@@ -109,6 +109,120 @@ describe('urlUtils', () => {
     });
   });
 
+  describe('display settings encoding', () => {
+    it('encodes display color space when not default', () => {
+      const state: UrlColorState = { displayColorSpace: 'oklch' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('ds=oklch');
+    });
+
+    it('omits display color space when default (hex)', () => {
+      const state: UrlColorState = { displayColorSpace: 'hex' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('ds=');
+    });
+
+    it('encodes gamut space when not default', () => {
+      const state: UrlColorState = { gamutSpace: 'p3' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('gs=p3');
+    });
+
+    it('encodes rec2020 gamut space', () => {
+      const state: UrlColorState = { gamutSpace: 'rec2020' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('gs=rec2020');
+    });
+
+    it('omits gamut space when default (srgb)', () => {
+      const state: UrlColorState = { gamutSpace: 'srgb' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('gs=');
+    });
+
+    it('encodes theme preference', () => {
+      const state: UrlColorState = { themePreference: 'auto' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('tp=auto');
+    });
+
+    it('encodes swatch labels when not default', () => {
+      const state: UrlColorState = { swatchLabels: 'none' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('sl=none');
+    });
+
+    it('omits swatch labels when default (both)', () => {
+      const state: UrlColorState = { swatchLabels: 'both' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('sl=');
+    });
+
+    it('encodes contrast algorithm when not default', () => {
+      const state: UrlColorState = { contrastAlgorithm: 'APCA' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('ca=APCA');
+    });
+
+    it('omits contrast algorithm when default (WCAG21)', () => {
+      const state: UrlColorState = { contrastAlgorithm: 'WCAG21' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('ca=');
+    });
+  });
+
+  describe('display settings decoding', () => {
+    it('decodes display color space', () => {
+      const params = new URLSearchParams('ds=rgb');
+      const state = decodeStateFromUrl(params);
+      expect(state.displayColorSpace).toBe('rgb');
+    });
+
+    it('decodes gamut space', () => {
+      const params = new URLSearchParams('gs=rec2020');
+      const state = decodeStateFromUrl(params);
+      expect(state.gamutSpace).toBe('rec2020');
+    });
+
+    it('decodes theme preference', () => {
+      const params = new URLSearchParams('tp=auto');
+      const state = decodeStateFromUrl(params);
+      expect(state.themePreference).toBe('auto');
+    });
+
+    it('decodes swatch labels', () => {
+      const params = new URLSearchParams('sl=step');
+      const state = decodeStateFromUrl(params);
+      expect(state.swatchLabels).toBe('step');
+    });
+
+    it('decodes contrast algorithm', () => {
+      const params = new URLSearchParams('ca=APCA');
+      const state = decodeStateFromUrl(params);
+      expect(state.contrastAlgorithm).toBe('APCA');
+    });
+
+    it('ignores invalid display settings values', () => {
+      const params = new URLSearchParams('ds=invalid&gs=bad&tp=wrong&sl=nope&ca=fake');
+      const state = decodeStateFromUrl(params);
+      expect(state.displayColorSpace).toBeUndefined();
+      expect(state.gamutSpace).toBeUndefined();
+      expect(state.themePreference).toBeUndefined();
+      expect(state.swatchLabels).toBeUndefined();
+      expect(state.contrastAlgorithm).toBeUndefined();
+    });
+
+    it('leaves display settings undefined when params are missing', () => {
+      const params = new URLSearchParams('c=ff0000');
+      const state = decodeStateFromUrl(params);
+      expect(state.displayColorSpace).toBeUndefined();
+      expect(state.gamutSpace).toBeUndefined();
+      expect(state.themePreference).toBeUndefined();
+      expect(state.swatchLabels).toBeUndefined();
+      expect(state.contrastAlgorithm).toBeUndefined();
+    });
+  });
+
   describe('roundtrip encoding/decoding', () => {
     it('preserves complete state through encode/decode cycle', () => {
       const original: UrlColorState = {
@@ -147,6 +261,25 @@ describe('urlUtils', () => {
       expect(decoded.highStep).toBe(original.highStep);
       expect(decoded.lightnessNudgers).toEqual(original.lightnessNudgers);
       expect(decoded.hueNudgers).toEqual(original.hueNudgers);
+    });
+
+    it('preserves display settings through encode/decode cycle', () => {
+      const original: UrlColorState = {
+        displayColorSpace: 'oklch',
+        gamutSpace: 'p3',
+        themePreference: 'auto',
+        swatchLabels: 'step',
+        contrastAlgorithm: 'APCA'
+      };
+
+      const encoded = encodeStateToUrl(original);
+      const decoded = decodeStateFromUrl(new URLSearchParams(encoded));
+
+      expect(decoded.displayColorSpace).toBe(original.displayColorSpace);
+      expect(decoded.gamutSpace).toBe(original.gamutSpace);
+      expect(decoded.themePreference).toBe(original.themePreference);
+      expect(decoded.swatchLabels).toBe(original.swatchLabels);
+      expect(decoded.contrastAlgorithm).toBe(original.contrastAlgorithm);
     });
   });
 });
