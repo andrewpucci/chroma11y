@@ -1,4 +1,6 @@
 <script lang="ts">
+  import '@fontsource-variable/atkinson-hyperlegible-next';
+  import '@fontsource-variable/atkinson-hyperlegible-mono';
   import { currentTheme } from '$lib/stores';
   import { browser } from '$app/environment';
   import { onMount } from 'svelte';
@@ -54,16 +56,7 @@
 <style>
   :global(html) {
     font-family:
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      Roboto,
-      'Helvetica Neue',
-      Arial,
-      'Apple Color Emoji',
-      'Segoe UI Emoji',
+      'Atkinson Hyperlegible Next Variable', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
       sans-serif;
     line-height: 1.5;
     color-scheme: light dark;
@@ -91,8 +84,8 @@
     --container-max-limit: 2400px;
     --container-vw: 92vw;
     --text-mono:
-      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
-      monospace;
+      'Atkinson Hyperlegible Mono Variable', ui-monospace, 'Cascadia Code', 'Source Code Pro',
+      Menlo, Consolas, monospace;
   }
 
   /* Global focus styles for accessibility */
