@@ -73,7 +73,7 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/andrewpucci/chroma11y.git
 ```
 
 2. Navigate to the project directory:
@@ -216,21 +216,18 @@ Share your color configuration by copying the URL. All parameters are encoded in
 ```
 src/
 ├── lib/
-│   ├── components/
-│   │   ├── ColorControls.svelte    # Parameter controls
-│   │   ├── ColorSwatch.svelte      # Individual color display
-│   │   ├── ContrastControls.svelte # Contrast mode controls
-│   │   ├── ExportButtons.svelte    # Export functionality
-│   │   ├── NeutralPalette.svelte   # Neutral color display
-│   │   ├── PaletteGrid.svelte      # Color palette grid
-│   │   └── ThemeToggle.svelte      # Light/dark theme
-│   ├── colorUtils.ts               # Color generation algorithms
-│   ├── exportUtils.ts              # Export format generators
-│   ├── stores.ts                   # Svelte stores (state)
-│   ├── storageUtils.ts             # LocalStorage persistence
-│   └── urlUtils.ts                 # URL state encoding
+│   ├── components/              # UI components (controls, swatches, drawer, etc.)
+│   ├── styles/                  # Shared CSS
+│   ├── colorUtils.ts            # Color generation algorithms
+│   ├── exportUtils.ts           # Export format generators
+│   ├── stores.ts                # Svelte stores (state)
+│   ├── storageUtils.ts          # LocalStorage persistence
+│   ├── urlUtils.ts              # URL state encoding
+│   ├── drawerStore.ts           # Color info drawer state
+│   ├── announce.ts              # Screen reader announcements
+│   └── types.ts                 # Shared TypeScript types
 └── routes/
-    └── +page.svelte                # Main application page
+    └── +page.svelte             # Main application page
 ```
 
 ### Tech Stack
@@ -238,11 +235,10 @@ src/
 - **Framework**: Svelte 5 (reactive components, runes)
 - **Language**: TypeScript (type safety)
 - **Build Tool**: Vite + SvelteKit
-- **Color Library**: Culori (OKLCH, contrast, color conversion)
-- **Math Library**: mathjs (chroma normalization)
+- **Color Library**: colorjs.io (OKLCH, contrast, color conversion)
 - **Easing**: bezier-easing (lightness curves)
 - **Testing**: Playwright (E2E), Vitest (unit)
-- **Styling**: Vanilla Extract CSS
+- **Styling**: Scoped Svelte CSS
 
 ### Key Algorithms
 
@@ -274,6 +270,7 @@ Normalizes chroma values across all palettes using matrix transpose and mean:
 
 ```typescript
 const normalizedChroma = transpose(chromaMatrix).map((column) => mean(column));
+// transpose() and mean() are internal helpers in colorUtils.ts
 ```
 
 #### WCAG Contrast Calculation
@@ -281,7 +278,7 @@ const normalizedChroma = transpose(chromaMatrix).map((column) => mean(column));
 Calculates contrast ratios for accessibility:
 
 ```typescript
-const ratio = wcagContrast(backgroundColor, textColor);
+const ratio = getContrast(backgroundColor, textColor);
 // Returns 1-21, where 4.5+ is WCAG AA compliant
 ```
 
@@ -336,22 +333,17 @@ npx playwright test --ui
 
 ### Test Coverage
 
-**E2E Tests** (19 tests across 7 spec files):
+**E2E Tests** (`e2e/`):
 
-- `algorithm-validation.spec.ts` - Color generation consistency
-- `export-validation.spec.ts` - Export format validation
-- `mobile-responsiveness.spec.ts` - Mobile compatibility
-- `performance.spec.ts` - Performance benchmarks
-- `persistence.spec.ts` - URL/localStorage persistence
-- `ui-interactions.spec.ts` - User interactions
-- `visual-comparison.spec.ts` - Visual regression testing
+- Algorithm validation, export formats, mobile responsiveness
+- Performance benchmarks, URL/localStorage persistence, UI interactions
+- Bezier editor interaction
 
-**Unit Tests** (4 spec files):
+**Unit & DOM Tests** (`src/`):
 
-- `colorUtils.spec.ts` - Color utility functions
-- `exportUtils.spec.ts` - Export format generators
-- `urlUtils.spec.ts` - URL encoding/decoding
-- `page.svelte.spec.ts` - Page component logic
+- Color utility functions, export format generators, URL encoding/decoding
+- Component DOM tests (BezierEditor, ColorControls, ColorInfoDrawer, ContrastControls, ExportButtons, NeutralPalette, PaletteGrid, ThemeToggle)
+- Favicon generation
 
 ### Linting & Formatting
 
@@ -430,8 +422,7 @@ Chroma11y is a complete rewrite of the [original vanilla JavaScript color genera
 
 ### Dependencies
 
-- [Culori](https://culorijs.org/) - Color manipulation and conversion
-- [mathjs](https://mathjs.org/) - Mathematical operations
+- [colorjs.io](https://colorjs.io/) - Color manipulation and conversion
 - [bezier-easing](https://github.com/gre/bezier-easing) - Bezier curve calculations
 - [Svelte](https://svelte.dev/) - Reactive UI framework
 - [SvelteKit](https://kit.svelte.dev/) - Application framework

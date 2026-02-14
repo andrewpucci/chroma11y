@@ -3,25 +3,11 @@
  * Saves and restores Chroma11y state to/from localStorage
  */
 
-const STORAGE_KEY = 'chroma11y-state';
+import type { SerializableColorState } from './types';
 
-export interface StoredColorState {
-  baseColor?: string;
-  warmth?: number;
-  chromaMultiplier?: number;
-  numColors?: number;
-  numPalettes?: number;
-  x1?: number;
-  y1?: number;
-  x2?: number;
-  y2?: number;
-  theme?: 'light' | 'dark';
-  contrastMode?: 'auto' | 'manual';
-  lowStep?: number;
-  highStep?: number;
-  lightnessNudgers?: number[];
-  hueNudgers?: number[];
-}
+export type StoredColorState = SerializableColorState;
+
+const STORAGE_KEY = 'chroma11y-state';
 
 /**
  * Saves state to localStorage
@@ -70,21 +56,5 @@ export function clearStoredState(): void {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.warn('Failed to clear localStorage:', error);
-  }
-}
-
-/**
- * Checks if localStorage is available
- */
-export function isStorageAvailable(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  try {
-    const test = '__storage_test__';
-    localStorage.setItem(test, test);
-    localStorage.removeItem(test);
-    return true;
-  } catch {
-    return false;
   }
 }
