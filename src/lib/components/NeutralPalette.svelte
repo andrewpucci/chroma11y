@@ -72,7 +72,7 @@
               isNeutral={true}
             />
             <div class="nudger-container">
-              <label for="lightness-nudger-{index}" class="visually-hidden"
+              <label for="lightness-nudger-{index}" class="sr-only"
                 >Lightness adjustment for step {index}</label
               >
               <input
@@ -184,17 +184,5 @@
     .neutral-item {
       width: var(--swatch-width-sm, 92px);
     }
-  }
-
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
   }
 </style>

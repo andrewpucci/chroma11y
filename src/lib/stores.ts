@@ -27,10 +27,6 @@ interface ColorState {
   lightnessNudgers: number[];
   hueNudgers: number[];
   currentTheme: 'light' | 'dark';
-  THEME_PRESETS: {
-    light: Omit<ColorState, 'currentTheme' | 'THEME_PRESETS'>;
-    dark: Omit<ColorState, 'currentTheme' | 'THEME_PRESETS'>;
-  };
   _lastUpdated?: number;
 }
 
@@ -89,8 +85,7 @@ const THEME_PRESETS = {
  */
 const DEFAULT_STATE = {
   ...THEME_PRESETS.light,
-  currentTheme: 'light',
-  THEME_PRESETS
+  currentTheme: 'light'
 };
 
 // Create the main color store
@@ -305,7 +300,6 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
     return {
       ...themePreset,
       currentTheme: targetTheme,
-      THEME_PRESETS,
       _lastUpdated: Date.now()
     } as ColorState;
   });

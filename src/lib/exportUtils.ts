@@ -5,6 +5,11 @@
 import Color from 'colorjs.io';
 import { getPaletteName } from './colorUtils';
 
+/** Converts a kebab-case slug to Title Case (e.g. "blue-ribbon" → "Blue Ribbon") */
+function slugToTitle(slug: string): string {
+  return slug.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()).trim();
+}
+
 /** Parse a hex string to normalized sRGB [r, g, b] (0–1 range), or null on failure */
 function hexToSrgbComponents(hex: string): [number, number, number] | null {
   try {
@@ -118,7 +123,7 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
             components: rgb,
             hex: color
           },
-          $description: `${paletteName.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()).trim()} color step ${step}`
+          $description: `${slugToTitle(paletteName)} color step ${step}`
         };
       }
     });
@@ -147,7 +152,7 @@ export function exportAsCSS(neutrals: string[], palettes: string[][]): string {
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
     const paletteName = getPaletteNameForExport(palette, paletteIndex);
-    css += `\n  /* ${paletteName.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()).trim()} Palette */\n`;
+    css += `\n  /* ${slugToTitle(paletteName)} Palette */\n`;
 
     palette.forEach((color, index) => {
       const step = index * 10;
@@ -175,7 +180,7 @@ export function exportAsSCSS(neutrals: string[], palettes: string[][]): string {
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
     const paletteName = getPaletteNameForExport(palette, paletteIndex);
-    scss += `\n// ${paletteName.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()).trim()} Palette\n`;
+    scss += `\n// ${slugToTitle(paletteName)} Palette\n`;
 
     palette.forEach((color, index) => {
       const step = index * 10;

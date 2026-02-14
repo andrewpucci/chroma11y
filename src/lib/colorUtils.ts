@@ -77,10 +77,10 @@ function samples(n: number): number[] {
 export const MIN_CONTRAST_RATIO = 4.5;
 
 /** Target contrast ratio for dark mode start color */
-export const DARK_MODE_TARGET_CONTRAST = 18;
+const DARK_MODE_TARGET_CONTRAST = 18;
 
 /** Maximum contrast ratio (white on black or vice versa) */
-export const MAX_CONTRAST_RATIO = 21;
+const MAX_CONTRAST_RATIO = 21;
 
 /** Warmth adjustment constants for OKLCH */
 export const WARMTH_CONFIG = {
@@ -120,15 +120,6 @@ export function isValidHexColor(color: string): boolean {
   return HEX_COLOR_PATTERN.test(color);
 }
 
-/**
- * Validates if a string is a valid 6-digit hex color (#RRGGBB format only)
- * @param color - The color string to validate
- * @returns true if valid 6-digit hex color, false otherwise
- */
-export function isValidHex6Color(color: string): boolean {
-  return /^#[0-9A-Fa-f]{6}$/.test(color);
-}
-
 // ===== UTILITY FUNCTIONS =====
 
 export function copyToClipboard(text: string): void {
@@ -160,14 +151,6 @@ export interface ColorGenParams {
   currentTheme: 'light' | 'dark';
   lightnessNudgers?: number[];
   hueNudgers?: number[];
-}
-
-/**
- * Interface for palette generation parameters (alias for backward compatibility)
- */
-export interface PaletteGenParams extends ColorGenParams {
-  contrastLow?: string;
-  contrastHigh?: string;
 }
 
 // ===== COLOR NAMING =====
@@ -458,15 +441,6 @@ export function generatePalettes(
     palettes: palettesWithNudgers,
     normalizedChromaValues
   };
-}
-
-/**
- * Generates multiple color palettes (simplified interface)
- * Wrapper around generatePalettes for ease of use
- */
-export function generateMultiplePalettes(params: PaletteGenParams): string[][] {
-  const result = generatePalettes(params as ColorGenParams, true);
-  return result.palettes.map((palette) => palette.map((color) => toHex(color)));
 }
 
 // ===== OKLCH-BASED CONVERSION HELPERS =====

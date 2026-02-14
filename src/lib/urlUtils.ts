@@ -3,23 +3,9 @@
  * Encodes and decodes Chroma11y state to/from URL parameters
  */
 
-export interface UrlColorState {
-  baseColor?: string;
-  warmth?: number;
-  chromaMultiplier?: number;
-  numColors?: number;
-  numPalettes?: number;
-  x1?: number;
-  y1?: number;
-  x2?: number;
-  y2?: number;
-  theme?: 'light' | 'dark';
-  contrastMode?: 'auto' | 'manual';
-  lowStep?: number;
-  highStep?: number;
-  lightnessNudgers?: number[];
-  hueNudgers?: number[];
-}
+import type { SerializableColorState } from './types';
+
+export type UrlColorState = SerializableColorState;
 
 /**
  * Encodes the color state into URL search parameters

@@ -185,7 +185,6 @@
 
   <div
     class="drawer"
-    class:drawer--open={isOpen}
     role="dialog"
     aria-modal="true"
     aria-labelledby="drawer-title"

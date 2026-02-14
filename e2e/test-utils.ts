@@ -24,16 +24,6 @@ export async function waitForColorGeneration(page: Page): Promise<void> {
 }
 
 /**
- * Get the current theme from the page
- */
-export async function getCurrentTheme(page: Page): Promise<string> {
-  return await page.evaluate(() => {
-    const state = (window as unknown as { colorState?: { currentTheme?: string } }).colorState;
-    return state?.currentTheme || 'light';
-  });
-}
-
-/**
  * Get the current base color value
  */
 export async function getBaseColor(page: Page): Promise<string> {
