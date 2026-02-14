@@ -28,9 +28,8 @@ Stores use the classic `writable`/`derived` API from `svelte/store` (not runes) 
 Defined in `colorUtils.ts`. The algorithm:
 
 1. **Generate base neutrals** — bezier-eased lightness ramp from white→black (light mode) or dark-start→white (dark mode), with warmth applied as OKLCH chroma
-2. **Generate palettes** — for each of `numPalettes`, hue-shift the base color by `(360/numPalettes)*i + hueNudger[i]`, then map base neutral lightness values onto that hue with the chroma multiplier
-3. **Normalize chroma** — transpose the chroma matrix across palettes and average each column for consistent saturation per step
-4. **Apply lightness nudgers** — final step, adds per-step lightness offsets to both neutrals and palettes
+2. **Generate palettes** — for each of `numPalettes`, hue-shift the base color by `(360/numPalettes)*i + hueNudger[i]`, then map base neutral lightness values onto that hue using gamut-boundary-relative chroma: each palette's chroma is scaled as the same proportion of its hue's maximum in-gamut chroma as the base color uses of the reference hue's boundary, producing visually even saturation across hues
+3. **Apply lightness nudgers** — final step, adds per-step lightness offsets to both neutrals and palettes
 
 Key functions: `generatePalettes()`, `generateBaseNeutrals()`, `getContrast()`, `getContrastAPCA()`, `getContrastForAlgorithm()`, `getPaletteName()`, `colorToCssHex()`, `colorToCssRgb()`, `colorToCssOklch()`, `colorToCssHsl()`, `colorToCssP3()`, `colorToCssRec2020()`, `colorToCssDisplay()`
 

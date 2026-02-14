@@ -19,6 +19,7 @@ import {
   getContrastAPCA,
   getContrastForAlgorithm,
   getPrintableContrastForAlgorithm,
+  maxChromaInGamut,
   type ColorGenParams
 } from './colorUtils';
 
@@ -146,22 +147,23 @@ describe('colorUtils', () => {
       chromaMultiplier: 1,
       currentTheme: 'light',
       lightnessNudgers: new Array(11).fill(0),
-      hueNudgers: new Array(11).fill(0)
+      hueNudgers: new Array(11).fill(0),
+      gamutSpace: 'srgb'
     };
 
     it('generates correct number of neutral colors', () => {
-      const result = generatePalettes(baseParams, true);
+      const result = generatePalettes(baseParams);
       expect(result.neutrals).toHaveLength(11);
     });
 
     it('generates correct number of palettes', () => {
       const params = { ...baseParams, numPalettes: 5 };
-      const result = generatePalettes(params, true);
+      const result = generatePalettes(params);
       expect(result.palettes).toHaveLength(5);
     });
 
     it('generates valid hex colors', () => {
-      const result = generatePalettes(baseParams, true);
+      const result = generatePalettes(baseParams);
       const hexRegex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
       toHexArray(result.neutrals).forEach((color) => {
@@ -176,14 +178,14 @@ describe('colorUtils', () => {
     });
 
     it('light theme neutrals start with white and end with black', () => {
-      const result = generatePalettes(baseParams, true);
+      const result = generatePalettes(baseParams);
       const hex = toHexArray(result.neutrals);
       expect(['#ffffff', '#fff']).toContain(hex[0].toLowerCase());
       expect(['#000000', '#000']).toContain(hex[10].toLowerCase());
     });
 
     it('light theme palette step 0 should be white (regression)', () => {
-      const result = generatePalettes(baseParams, true);
+      const result = generatePalettes(baseParams);
       for (const palette of result.palettes) {
         const hex = colorToCssHex(palette[0]).toLowerCase();
         expect(['#ffffff', '#fff']).toContain(hex);
@@ -191,7 +193,7 @@ describe('colorUtils', () => {
     });
 
     it('light theme palette step 10 should be black (regression)', () => {
-      const result = generatePalettes(baseParams, true);
+      const result = generatePalettes(baseParams);
       for (const palette of result.palettes) {
         const hex = colorToCssHex(palette[10]).toLowerCase();
         expect(['#000000', '#000']).toContain(hex);
@@ -201,8 +203,8 @@ describe('colorUtils', () => {
     it('dark theme neutrals are reversed from light theme', () => {
       const lightParams = { ...baseParams, currentTheme: 'light' as const };
       const darkParams = { ...baseParams, currentTheme: 'dark' as const };
-      const lightResult = generatePalettes(lightParams, true);
-      const darkResult = generatePalettes(darkParams, true);
+      const lightResult = generatePalettes(lightParams);
+      const darkResult = generatePalettes(darkParams);
       // Dark theme first color should be darker than light theme first color
       expect(colorToCssHex(darkResult.neutrals[0])).not.toBe(
         colorToCssHex(lightResult.neutrals[0])
@@ -210,12 +212,12 @@ describe('colorUtils', () => {
     });
 
     it('applies lightness nudgers to neutrals', () => {
-      const withoutNudger = generatePalettes(baseParams, true);
+      const withoutNudger = generatePalettes(baseParams);
 
       const nudgers = new Array(11).fill(0);
       nudgers[5] = 0.1;
       const params = { ...baseParams, lightnessNudgers: nudgers };
-      const withNudger = generatePalettes(params, true);
+      const withNudger = generatePalettes(params);
 
       const hexWithout = toHexArray(withoutNudger.neutrals);
       const hexWith = toHexArray(withNudger.neutrals);
@@ -229,10 +231,10 @@ describe('colorUtils', () => {
 
     it('applies hue nudgers to palettes', () => {
       const params1 = { ...baseParams, numPalettes: 1, hueNudgers: [0] };
-      const result1 = generatePalettes(params1, true);
+      const result1 = generatePalettes(params1);
 
       const params2 = { ...baseParams, numPalettes: 1, hueNudgers: [60] };
-      const result2 = generatePalettes(params2, true);
+      const result2 = generatePalettes(params2);
 
       // Palette colors should be different with different hue nudger
       expect(colorToCssHex(result2.palettes[0][5])).not.toBe(colorToCssHex(result1.palettes[0][5]));
@@ -242,23 +244,23 @@ describe('colorUtils', () => {
       const coolParams = { ...baseParams, warmth: -20 };
       const warmParams = { ...baseParams, warmth: 20 };
 
-      const coolResult = generatePalettes(coolParams, true);
-      const warmResult = generatePalettes(warmParams, true);
+      const coolResult = generatePalettes(coolParams);
+      const warmResult = generatePalettes(warmParams);
 
       // Mid-tone neutrals should differ with different warmth
       expect(colorToCssHex(coolResult.neutrals[5])).not.toBe(colorToCssHex(warmResult.neutrals[5]));
     });
 
     it('produces deterministic output for same inputs', () => {
-      const result1 = generatePalettes(baseParams, true);
-      const result2 = generatePalettes(baseParams, true);
+      const result1 = generatePalettes(baseParams);
+      const result2 = generatePalettes(baseParams);
 
       expect(toHexArray(result1.neutrals)).toEqual(toHexArray(result2.neutrals));
       expect(result1.palettes.map(toHexArray)).toEqual(result2.palettes.map(toHexArray));
     });
 
     it('returns Color objects for neutrals and palettes', () => {
-      const result = generatePalettes(baseParams, true);
+      const result = generatePalettes(baseParams);
 
       for (const color of result.neutrals) {
         expect(color).toBeInstanceOf(Color);
@@ -439,6 +441,85 @@ describe('colorUtils', () => {
     it('dispatches to APCA with swapped args (bgColor, fgColor → textColor, bgColor)', () => {
       const result = getContrastForAlgorithm('#000000', '#ffffff', 'APCA');
       expect(result).toBeGreaterThan(100);
+    });
+  });
+
+  describe('maxChromaInGamut', () => {
+    it('returns 0 for near-black lightness', () => {
+      expect(maxChromaInGamut(0, 264)).toBe(0);
+    });
+
+    it('returns 0 for near-white lightness', () => {
+      expect(maxChromaInGamut(1, 264)).toBe(0);
+    });
+
+    it('returns positive chroma for mid-lightness', () => {
+      const c = maxChromaInGamut(0.5, 264);
+      expect(c).toBeGreaterThan(0);
+    });
+
+    it('yellow hue has wider sRGB gamut boundary than blue at high lightness', () => {
+      const yellowMax = maxChromaInGamut(0.85, 100, 'srgb');
+      const blueMax = maxChromaInGamut(0.85, 264, 'srgb');
+      expect(yellowMax).toBeGreaterThan(blueMax);
+    });
+
+    it('P3 gamut boundary is wider than sRGB for the same hue', () => {
+      const srgbMax = maxChromaInGamut(0.6, 150, 'srgb');
+      const p3Max = maxChromaInGamut(0.6, 150, 'p3');
+      expect(p3Max).toBeGreaterThanOrEqual(srgbMax);
+    });
+
+    it('defaults to sRGB when no gamut is specified', () => {
+      const defaultMax = maxChromaInGamut(0.5, 264);
+      const srgbMax = maxChromaInGamut(0.5, 264, 'srgb');
+      expect(defaultMax).toBeCloseTo(srgbMax, 6);
+    });
+  });
+
+  describe('cross-hue chroma consistency', () => {
+    it('palettes use a consistent fraction of their gamut boundary across hues', () => {
+      const params: ColorGenParams = {
+        numColors: 11,
+        numPalettes: 4,
+        baseColor: '#1862e6',
+        warmth: 0,
+        x1: 0.16,
+        y1: 0,
+        x2: 0.28,
+        y2: 0.38,
+        chromaMultiplier: 1,
+        currentTheme: 'light',
+        lightnessNudgers: new Array(11).fill(0),
+        hueNudgers: new Array(4).fill(0),
+        gamutSpace: 'srgb'
+      };
+
+      const result = generatePalettes(params);
+
+      // For each step (excluding endpoints which are black/white),
+      // compute each palette's chroma as a fraction of its hue's gamut boundary
+      for (let step = 1; step < params.numColors - 1; step++) {
+        const fractions = result.palettes.map((palette) => {
+          const color = palette[step];
+          const l = color.oklch.l ?? 0;
+          const h = color.oklch.h ?? 0;
+          const c = color.oklch.c ?? 0;
+          const maxC = maxChromaInGamut(l, h, 'srgb');
+          return maxC > 1e-6 ? c / maxC : 0;
+        });
+
+        const nonZero = fractions.filter((f) => f > 0.01);
+        if (nonZero.length < 2) continue; // skip steps with insufficient data
+
+        const avg = nonZero.reduce((a, b) => a + b, 0) / nonZero.length;
+
+        // Each palette's gamut fraction should be within 5% of the mean
+        for (const f of nonZero) {
+          expect(f).toBeGreaterThan(avg - 0.05);
+          expect(f).toBeLessThan(avg + 0.05);
+        }
+      }
     });
   });
 
