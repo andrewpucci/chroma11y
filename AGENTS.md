@@ -1,5 +1,7 @@
 # AGENTS.md
 
+Global instructions for Cascade. Directory-specific guidance lives in scoped `AGENTS.md` files (`src/lib/`, `src/lib/components/`, `e2e/`).
+
 Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG contrast checking and multiple export formats. It is a single-page app (SPA) built with Svelte 5 and SvelteKit, deployed as a static site.
 
 ## Setup commands
@@ -105,35 +107,11 @@ static/                      # Static assets (favicon, manifest, robots.txt)
 
 ## Architecture & patterns
 
-### State management
-
-State flows through Svelte stores (`src/lib/stores.ts`):
-
-- **`colorStore`** — single writable store holding all color state (`ColorState` interface)
-- Derived stores expose individual slices: `neutrals`, `palettes`, `neutralsHex`, `palettesHex`, `baseColor`, `warmth`, `chromaMultiplier`, bezier params (`x1`/`y1`/`x2`/`y2`), `lightnessNudgers`, `hueNudgers`, `currentTheme`, `contrastMode`, etc.
-- **`neutralsHex`** and **`palettesHex`** are centralized derived stores that convert Color objects to hex strings — these are the intended place to swap output format when configurable color spaces are added in the future
-- Helper functions mutate the store: `updateColorState()`, `setTheme()`, `toggleTheme()`, `updateLightnessNudger()`, `updateHueNudger()`, `updateContrastFromNeutrals()`, `updateContrastStep()`, `resetColorState()`
-- Theme presets (`THEME_PRESETS.light` / `THEME_PRESETS.dark`) define default bezier curves, chroma multipliers, and contrast steps per theme
-
-### Color generation pipeline
-
-Defined in `src/lib/colorUtils.ts`. The algorithm:
-
-1. **Generate base neutrals** — bezier-eased lightness ramp from white→black (light mode) or dark-start→white (dark mode), with warmth applied as OKLCH chroma
-2. **Generate palettes** — for each of `numPalettes`, hue-shift the base color by `(360/numPalettes)*i + hueNudger[i]`, then map base neutral lightness values onto that hue with the chroma multiplier
-3. **Normalize chroma** — transpose the chroma matrix across palettes and average each column for consistent saturation per step
-4. **Apply lightness nudgers** — final step, adds per-step lightness offsets to both neutrals and palettes
-
-Key functions: `generatePalettes()`, `generateBaseNeutrals()`, `getContrast()`, `getPaletteName()`, `colorToCssHex()`, `colorToCssRgb()`, `colorToCssOklch()`, `colorToCssHsl()`
-
-### Persistence
-
-- **URL state** (`urlUtils.ts`) — all parameters encoded as compact query params (`c`, `w`, `cm`, `x1`…`y2`, `t`, `m`, `ls`, `hs`, `ln`, `hn`). Updated via `replaceState` (no history pollution). Debounced 500ms.
-- **localStorage** (`storageUtils.ts`) — mirrors URL state under key `chroma11y-state`. URL takes priority on load.
+Detailed store patterns, color generation pipeline, persistence, export formats, and component inventory are documented in the scoped `AGENTS.md` files under `src/lib/` and `src/lib/components/`.
 
 ### Accessibility
 
-This is an accessibility-focused project. Maintain these patterns:
+This is an accessibility-focused project. Maintain these patterns globally:
 
 - **Screen reader announcements** via `announce()` dispatching `app:announce` custom events to an aria-live region
 - **ARIA labels** on all interactive elements
@@ -141,31 +119,7 @@ This is an accessibility-focused project. Maintain these patterns:
 - **Skip link** to main content
 - **WCAG contrast ratios** displayed for every swatch (4.5:1 AA threshold)
 - `role="application"` on the app shell
-
-### Components
-
-All components are in `src/lib/components/`. Key components:
-
-- **`ColorControls.svelte`** — base color picker, warmth, chroma, bezier curve, num colors/palettes sliders
-- **`BezierEditor.svelte`** — interactive SVG bezier curve editor
-- **`ContrastControls.svelte`** — auto/manual contrast mode, step selectors
-- **`ExportButtons.svelte`** — JSON/CSS/SCSS export triggers
-- **`NeutralPalette.svelte`** — neutral (gray) palette display with lightness nudgers
-- **`PaletteGrid.svelte`** — color palette grid with hue nudgers
-- **`ColorSwatch.svelte`** — individual color swatch (click-to-copy, drawer trigger)
-- **`ColorInfoDrawer.svelte`** — slide-out panel showing color details (hex, rgb, oklch, hsl, contrast, name)
-- **`ThemeToggle.svelte`** — light/dark theme switcher
-- **`AppHeader.svelte`** / **`Sidebar.svelte`** / **`Card.svelte`** / **`Brand.svelte`** — layout components
-
-### Export formats
-
-Defined in `src/lib/exportUtils.ts`:
-
-- **JSON Design Tokens** — compliant with [Design Tokens Format Module](https://www.designtokens.org/tr/2025.10/), includes sRGB components + hex
-- **CSS Custom Properties** — `:root { --color-{name}-{step}: #hex; }`
-- **SCSS Variables** — `$color-{name}-{step}: #hex;`
-
-Palette names are auto-detected via CIEDE2000 nearest color matching, with fallback defaults.
+- Never remove ARIA attributes, keyboard handlers, or screen reader announcements without replacement
 
 ## Svelte 5 conventions
 
