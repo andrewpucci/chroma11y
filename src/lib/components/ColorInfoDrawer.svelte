@@ -63,6 +63,8 @@
   let closeButtonEl: HTMLButtonElement | undefined = $state();
   let triggerEl: HTMLElement | null = $state(null);
   let swapKey = $state(0);
+  let closing = $state(false);
+  const CLOSE_DURATION = 200;
 
   // Track the triggering element and manage focus
   $effect(() => {
@@ -75,13 +77,19 @@
     }
   });
 
-  // Lock body scroll while drawer is open
+  // Lock body scroll while drawer is open, compensating for scrollbar width to prevent layout shift
   $effect(() => {
     if (isOpen) {
-      const prev = document.body.style.overflow;
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      const prevOverflow = document.body.style.overflow;
+      const prevPaddingRight = document.documentElement.style.paddingRight;
       document.body.style.overflow = 'hidden';
+      if (scrollbarWidth > 0) {
+        document.documentElement.style.paddingRight = `${scrollbarWidth}px`;
+      }
       return () => {
-        document.body.style.overflow = prev;
+        document.body.style.overflow = prevOverflow;
+        document.documentElement.style.paddingRight = prevPaddingRight;
       };
     }
   });
@@ -101,13 +109,22 @@
   });
 
   function handleClose() {
-    closeDrawer();
+    if (closing) return;
+    closing = true;
     announce('Color info drawer closed');
-    // Return focus to the triggering element
-    requestAnimationFrame(() => {
-      triggerEl?.focus();
-      triggerEl = null;
-    });
+    const reducedMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const delay = reducedMotion ? 0 : CLOSE_DURATION;
+    setTimeout(() => {
+      closing = false;
+      closeDrawer();
+      // Return focus to the triggering element
+      requestAnimationFrame(() => {
+        triggerEl?.focus();
+        triggerEl = null;
+      });
+    }, delay);
   }
 
   function handleDocumentKeydown(event: KeyboardEvent) {
@@ -179,12 +196,18 @@
   }
 </script>
 
-{#if isOpen && data && colorValues}
-  <button class="drawer-backdrop" onclick={handleClose} aria-label="Close drawer" tabindex="-1"
+{#if (isOpen || closing) && data && colorValues}
+  <button
+    class="drawer-backdrop"
+    class:drawer-backdrop--closing={closing}
+    onclick={handleClose}
+    aria-label="Close drawer"
+    tabindex="-1"
   ></button>
 
   <div
     class="drawer"
+    class:drawer--closing={closing}
     role="dialog"
     aria-modal="true"
     aria-labelledby="drawer-title"
@@ -418,13 +441,46 @@
     }
   }
 
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  .drawer--closing {
+    animation: slideOut 200ms ease forwards;
+  }
+
+  .drawer-backdrop--closing {
+    animation: fadeOut 200ms ease forwards;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .drawer {
+      animation: none;
+    }
+    .drawer--closing {
       animation: none;
     }
     .drawer-backdrop {
       animation: none;
       opacity: 1;
+    }
+    .drawer-backdrop--closing {
+      animation: none;
+      opacity: 0;
     }
     .drawer-body {
       animation: none !important;
