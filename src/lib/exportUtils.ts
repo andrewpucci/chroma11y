@@ -137,16 +137,24 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
 }
 
 /**
- * Exports colors as CSS custom properties
+ * Exports colors as CSS custom properties.
+ * When displayNeutrals/displayPalettes are provided, those formatted values are used
+ * instead of the hex values (which are still used for palette naming).
  */
-export function exportAsCSS(neutrals: string[], palettes: string[][]): string {
+export function exportAsCSS(
+  neutrals: string[],
+  palettes: string[][],
+  displayNeutrals?: string[],
+  displayPalettes?: string[][]
+): string {
   let css = ':root {\n';
 
   // Export neutral colors
   css += '  /* Neutral Colors */\n';
   neutrals.forEach((color, index) => {
     const step = index * 10;
-    css += `  --color-gray-${step}: ${color};\n`;
+    const value = displayNeutrals?.[index] ?? color;
+    css += `  --color-gray-${step}: ${value};\n`;
   });
 
   // Export color palettes
@@ -156,7 +164,8 @@ export function exportAsCSS(neutrals: string[], palettes: string[][]): string {
 
     palette.forEach((color, index) => {
       const step = index * 10;
-      css += `  --color-${paletteName}-${step}: ${color};\n`;
+      const value = displayPalettes?.[paletteIndex]?.[index] ?? color;
+      css += `  --color-${paletteName}-${step}: ${value};\n`;
     });
   });
 
@@ -165,16 +174,24 @@ export function exportAsCSS(neutrals: string[], palettes: string[][]): string {
 }
 
 /**
- * Exports colors as SCSS variables
+ * Exports colors as SCSS variables.
+ * When displayNeutrals/displayPalettes are provided, those formatted values are used
+ * instead of the hex values (which are still used for palette naming).
  */
-export function exportAsSCSS(neutrals: string[], palettes: string[][]): string {
+export function exportAsSCSS(
+  neutrals: string[],
+  palettes: string[][],
+  displayNeutrals?: string[],
+  displayPalettes?: string[][]
+): string {
   let scss = '// Color Variables\n';
 
   // Export neutral colors
   scss += '// Neutral Colors\n';
   neutrals.forEach((color, index) => {
     const step = index * 10;
-    scss += `$color-gray-${step}: ${color};\n`;
+    const value = displayNeutrals?.[index] ?? color;
+    scss += `$color-gray-${step}: ${value};\n`;
   });
 
   // Export color palettes
@@ -184,7 +201,8 @@ export function exportAsSCSS(neutrals: string[], palettes: string[][]): string {
 
     palette.forEach((color, index) => {
       const step = index * 10;
-      scss += `$color-${paletteName}-${step}: ${color};\n`;
+      const value = displayPalettes?.[paletteIndex]?.[index] ?? color;
+      scss += `$color-${paletteName}-${step}: ${value};\n`;
     });
   });
 
@@ -252,15 +270,25 @@ export function downloadDesignTokens(neutrals: string[], palettes: string[][]) {
 /**
  * Exports and downloads CSS variables
  */
-export function downloadCSS(neutrals: string[], palettes: string[][]) {
-  const css = exportAsCSS(neutrals, palettes);
+export function downloadCSS(
+  neutrals: string[],
+  palettes: string[][],
+  displayNeutrals?: string[],
+  displayPalettes?: string[][]
+) {
+  const css = exportAsCSS(neutrals, palettes, displayNeutrals, displayPalettes);
   downloadFile(css, 'colors.css', 'text/css');
 }
 
 /**
  * Exports and downloads SCSS variables
  */
-export function downloadSCSS(neutrals: string[], palettes: string[][]) {
-  const scss = exportAsSCSS(neutrals, palettes);
+export function downloadSCSS(
+  neutrals: string[],
+  palettes: string[][],
+  displayNeutrals?: string[],
+  displayPalettes?: string[][]
+) {
+  const scss = exportAsSCSS(neutrals, palettes, displayNeutrals, displayPalettes);
   downloadFile(scss, 'colors.scss', 'text/plain');
 }

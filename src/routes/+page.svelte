@@ -383,7 +383,12 @@
       </Card>
 
       <Card title="Export" subtitle="Download tokens in common formats">
-        <ExportButtons neutrals={neutralsHexLocal} palettes={palettesHexLocal} />
+        <ExportButtons
+          neutrals={neutralsHexLocal}
+          palettes={palettesHexLocal}
+          displayNeutrals={neutralsDisplayLocal}
+          displayPalettes={palettesDisplayLocal}
+        />
       </Card>
     </Sidebar>
 
