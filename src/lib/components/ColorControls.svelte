@@ -175,10 +175,27 @@
     width: 56px;
     height: 44px;
     padding: 0;
-    border: 1px solid var(--border);
+    border: none;
     border-radius: 10px;
     background: transparent;
     cursor: pointer;
+    appearance: none;
+  }
+
+  .base-color-row input[type='color']::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+  }
+
+  .base-color-row input[type='color']::-webkit-color-swatch {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .base-color-row input[type='color']::-moz-color-swatch {
+    border: 1px solid var(--border);
+    border-radius: 10px;
   }
 
   .divider {
