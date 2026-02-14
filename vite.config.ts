@@ -3,9 +3,18 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { faviconPlugin } from './scripts/vite-plugin-favicons.js';
+import { browserslistToTargets } from 'lightningcss';
+import browserslist from 'browserslist';
 
 export default defineConfig({
   plugins: [sveltekit(), devtoolsJson(), faviconPlugin()],
+
+  css: {
+    transformer: 'lightningcss',
+    lightningcss: {
+      targets: browserslistToTargets(browserslist())
+    }
+  },
 
   test: {
     expect: { requireAssertions: true },

@@ -48,11 +48,10 @@
 }
 
 .neutral-palette .nudger-container {
-  border: none;
+  border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
   border-radius: 0;
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
-  border-top: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
 }
 
 /* Palette grid specific overrides */
