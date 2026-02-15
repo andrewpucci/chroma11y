@@ -368,62 +368,62 @@
 
   <div class="layout-container">
     <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
-    <Sidebar>
-      <Card title="Generation" subtitle="Control how colors are distributed across the palette">
-        <ColorControls
-          bind:baseColor={baseColorLocal}
-          bind:warmth={warmthLocal}
-          bind:chromaMultiplier={chromaMultiplierLocal}
-          bind:numColors={numColorsLocal}
-          bind:numPalettes={numPalettesLocal}
-          bind:x1={x1Local}
-          bind:y1={y1Local}
-          bind:x2={x2Local}
-          bind:y2={y2Local}
-          onRangeDragStart={freezeLayout}
-          onRangeDragEnd={unfreezeLayout}
-        />
-      </Card>
+      <Sidebar>
+        <Card title="Generation" subtitle="Control how colors are distributed across the palette">
+          <ColorControls
+            bind:baseColor={baseColorLocal}
+            bind:warmth={warmthLocal}
+            bind:chromaMultiplier={chromaMultiplierLocal}
+            bind:numColors={numColorsLocal}
+            bind:numPalettes={numPalettesLocal}
+            bind:x1={x1Local}
+            bind:y1={y1Local}
+            bind:x2={x2Local}
+            bind:y2={y2Local}
+            onRangeDragStart={freezeLayout}
+            onRangeDragEnd={unfreezeLayout}
+          />
+        </Card>
 
-      <Card title="Contrast" subtitle="Configure contrast reference points">
-        <ContrastControls />
-      </Card>
+        <Card title="Contrast" subtitle="Configure contrast reference points">
+          <ContrastControls />
+        </Card>
 
-      <Card title="Settings" subtitle="Display preferences and contrast options">
-        <DisplaySettings />
-      </Card>
+        <Card title="Settings" subtitle="Display preferences and contrast options">
+          <DisplaySettings />
+        </Card>
 
-      <Card title="Export" subtitle="Download tokens in common formats">
-        <ExportButtons
-          neutrals={neutralsHexLocal}
-          palettes={palettesHexLocal}
-          displayNeutrals={neutralsDisplayLocal}
-          displayPalettes={palettesDisplayLocal}
-        />
-      </Card>
-    </Sidebar>
+        <Card title="Export" subtitle="Download tokens in common formats">
+          <ExportButtons
+            neutrals={neutralsHexLocal}
+            palettes={palettesHexLocal}
+            displayNeutrals={neutralsDisplayLocal}
+            displayPalettes={palettesDisplayLocal}
+          />
+        </Card>
+      </Sidebar>
 
-    <main
-      class="content"
-      id="main-content"
-      aria-labelledby="main-heading"
-      data-testid="app-content"
-    >
-      <div class="content-inner">
-        <NeutralPalette
-          neutrals={neutralsLocal}
-          neutralsHex={neutralsHexLocal}
-          neutralsDisplay={neutralsDisplayLocal}
-          {lightnessNudgerValues}
-        />
-        <PaletteGrid
-          palettes={palettesLocal}
-          palettesHex={palettesHexLocal}
-          palettesDisplay={palettesDisplayLocal}
-          {hueNudgerValues}
-        />
-      </div>
-    </main>
+      <main
+        class="content"
+        id="main-content"
+        aria-labelledby="main-heading"
+        data-testid="app-content"
+      >
+        <div class="content-inner">
+          <NeutralPalette
+            neutrals={neutralsLocal}
+            neutralsHex={neutralsHexLocal}
+            neutralsDisplay={neutralsDisplayLocal}
+            {lightnessNudgerValues}
+          />
+          <PaletteGrid
+            palettes={palettesLocal}
+            palettesHex={palettesHexLocal}
+            palettesDisplay={palettesDisplayLocal}
+            {hueNudgerValues}
+          />
+        </div>
+      </main>
     </div>
   </div>
 </div>
