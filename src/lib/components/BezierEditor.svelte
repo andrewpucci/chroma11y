@@ -300,7 +300,6 @@
   .control-point {
     cursor: grab;
     stroke-width: 2;
-    outline: none;
     transition: r 120ms ease;
   }
 

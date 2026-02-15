@@ -202,8 +202,7 @@
   }
 
   .contrast-preview {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
+    padding-top: 0.9rem;
     border-top: 1px solid var(--border);
   }
 
@@ -217,7 +216,6 @@
   .color-samples {
     display: flex;
     gap: 1rem;
-    margin-bottom: 0.5rem;
     justify-content: space-between;
   }
 
@@ -232,12 +230,6 @@
     height: 24px;
     border-radius: 4px;
     border: 1px solid var(--border);
-  }
-
-  .label {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    font-family: var(--text-mono);
   }
 
   .manual-controls,

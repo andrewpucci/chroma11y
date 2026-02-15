@@ -109,7 +109,6 @@
     cursor: pointer;
     transition:
       transform 140ms ease,
-      box-shadow 140ms ease,
       border-color 140ms ease;
     width: var(--swatch-width, 96px);
     flex: 0 0 var(--swatch-width, 96px);
@@ -163,17 +162,11 @@
 
   .color-swatch:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
     border-color: color-mix(in oklab, var(--border) 40%, var(--accent));
   }
 
   .color-swatch:active {
     transform: translateY(-1px);
-  }
-
-  .color-swatch:focus-visible {
-    outline: none;
-    box-shadow: var(--ring);
   }
 
   .hex {
