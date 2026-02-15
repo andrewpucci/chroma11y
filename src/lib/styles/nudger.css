@@ -2,23 +2,23 @@
 .nudger-container {
   background: var(--bg-tertiary);
   border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
 .nudger-input {
   width: 100%;
-  padding: 0.35rem 0.45rem;
+  padding: var(--space-xs) var(--space-sm);
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: var(--font-size-sm);
   font-family: var(--text-mono);
   text-align: center;
   border-radius: 0;
   transition:
-    color 0.2s,
-    background-color 0.2s;
+    color var(--transition-normal),
+    background-color var(--transition-normal);
 }
 
 .nudger-input:focus-visible {
@@ -29,28 +29,28 @@
 /* Highlight input when value is not 0 */
 .nudger-input[data-nonzero] {
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Touch-friendly on mobile */
 @media (max-width: 768px) {
   .nudger-input {
-    min-height: 44px;
+    min-height: var(--touch-target-comfortable);
     touch-action: manipulation;
   }
 }
 
 /* Neutral palette specific overrides */
 .neutral-palette .nudger-input {
-  padding: 0.35rem 0.25rem;
-  font-size: 0.75rem;
+  padding: var(--space-xs) var(--space-xs);
+  font-size: var(--font-size-xs);
 }
 
 .neutral-palette .nudger-container {
   border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
   border-radius: 0;
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
 }
 
 /* Palette grid specific overrides */
@@ -64,7 +64,7 @@
   }
 
   .neutral-palette .nudger-input {
-    padding: 0.6rem 0.25rem;
-    font-size: 0.85rem;
+    padding: var(--space-sm) var(--space-xs);
+    font-size: var(--font-size-sm);
   }
 }
