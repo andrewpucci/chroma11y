@@ -93,7 +93,7 @@
         <input id="baseColor" type="color" bind:value={baseColor} aria-describedby="baseColorHex" />
         <input
           id="baseColorHex"
-          class="input mono"
+          class="input"
           type="text"
           bind:value={baseColor}
           placeholder="#1862E6"
@@ -104,38 +104,53 @@
 
     <div class="field">
       <label class="label" for="warmth">Warmth ({warmth})</label>
-      <input id="warmth" type="range" min="-50" max="50" bind:value={warmth} />
+      <div class="slider-wrapper">
+        <input id="warmth" type="range" min="-50" max="50" bind:value={warmth} />
+      </div>
     </div>
 
     <div class="field">
       <label class="label" for="saturation">Saturation ({chromaMultiplier.toFixed(2)})</label>
-      <input id="saturation" type="range" min="0" max="2" step="0.01" bind:value={chromaMultiplier} />
+      <div class="slider-wrapper">
+        <input
+          id="saturation"
+          type="range"
+          min="0"
+          max="2"
+          step="0.01"
+          bind:value={chromaMultiplier}
+        />
+      </div>
     </div>
 
     <div class="field">
       <label class="label" for="numColors">Number of Colors ({numColors})</label>
-      <input
-        id="numColors"
-        type="range"
-        min="2"
-        max="20"
-        bind:value={numColors}
-        onpointerdown={handlePointerDown}
-        oninput={handleKeyboardInput}
-      />
+      <div class="slider-wrapper">
+        <input
+          id="numColors"
+          type="range"
+          min="2"
+          max="20"
+          bind:value={numColors}
+          onpointerdown={handlePointerDown}
+          oninput={handleKeyboardInput}
+        />
+      </div>
     </div>
 
     <div class="field">
       <label class="label" for="numPalettes">Number of Palettes ({numPalettes})</label>
-      <input
-        id="numPalettes"
-        type="range"
-        min="1"
-        max="11"
-        bind:value={numPalettes}
-        onpointerdown={handlePointerDown}
-        oninput={handleKeyboardInput}
-      />
+      <div class="slider-wrapper">
+        <input
+          id="numPalettes"
+          type="range"
+          min="1"
+          max="11"
+          bind:value={numPalettes}
+          onpointerdown={handlePointerDown}
+          oninput={handleKeyboardInput}
+        />
+      </div>
     </div>
   </div>
 
@@ -161,7 +176,6 @@
 
   input[type='range'] {
     width: 100%;
-    margin-top: 0.25rem;
   }
 
   .base-color-row {
@@ -241,5 +255,25 @@
       height: 44px;
       touch-action: manipulation;
     }
+  }
+
+  .slider-wrapper:focus-within {
+    outline: 3px solid white;
+    box-shadow: 0 0 0 6px black;
+  }
+
+  .slider-wrapper input:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  .slider-wrapper {
+    width: 100%;
+    padding: 0 8px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 </style>

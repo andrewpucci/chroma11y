@@ -148,9 +148,7 @@
     border-radius: 12px;
     background: var(--bg-primary);
     box-shadow: var(--shadow-sm);
-    transition:
-      transform 140ms ease,
-      box-shadow 140ms ease;
+    transition: transform 140ms ease;
   }
 
   /* Ensure ColorSwatch fits nicely inside */
@@ -160,17 +158,14 @@
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     border-bottom: none;
-    box-shadow: none; /* Let parent handle shadow */
   }
 
   .neutral-item:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
   }
 
   .neutral-item:focus-within {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
   }
 
   .no-colors {

@@ -72,7 +72,6 @@
     --radius-lg: 16px;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.12);
-    --ring: 0 0 0 4px color-mix(in oklab, var(--accent) 25%, transparent);
     --swatch-width: 96px;
     --swatch-gap: 0.5rem;
     --layout-gap: 1rem;
@@ -88,14 +87,12 @@
       Menlo, Consolas, monospace;
   }
 
-  /* Global focus styles for accessibility */
-  :global(*:focus) {
-    outline: none;
-  }
-
+  /* Global focus styles for accessibility — universal double-outline pattern
+     per https://www.sarasoueidan.com/blog/focus-indicators/
+     White outline + black shadow guarantees ≥3:1 contrast against any background. */
   :global(*:focus-visible) {
-    outline: 2px solid var(--accent, #1862e6);
-    outline-offset: 2px;
+    outline: 3px solid white;
+    box-shadow: 0 0 0 6px black;
   }
 
   /* Skip link for keyboard users */
@@ -221,13 +218,11 @@
       transform 120ms ease,
       background-color 120ms ease,
       border-color 120ms ease,
-      box-shadow 120ms ease,
       color 120ms ease;
   }
 
   :global(.btn:hover:not(:disabled)) {
     transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
     border-color: color-mix(in oklab, var(--border) 40%, var(--accent));
   }
 
@@ -280,16 +275,7 @@
     border-radius: 10px;
     padding: 0.6rem 0.75rem;
     min-height: 44px;
-    outline: none;
-    transition:
-      border-color 120ms ease,
-      box-shadow 120ms ease;
-  }
-
-  :global(.input:focus-visible),
-  :global(.select:focus-visible) {
-    border-color: color-mix(in oklab, var(--accent) 60%, var(--border));
-    box-shadow: var(--ring);
+    transition: border-color 120ms ease;
   }
 
   :global(.mono) {

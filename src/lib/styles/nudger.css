@@ -21,8 +21,7 @@
     background-color 0.2s;
 }
 
-.nudger-input:focus {
-  outline: none;
+.nudger-input:focus-visible {
   background: var(--bg-primary);
   color: var(--text-primary);
 }
