@@ -218,18 +218,24 @@ test.describe('Design Tokens', () => {
 
     test('fluid typography adjusts with browser font size', async ({ page }) => {
       // Get baseline font size
-      const baselineSize = await page.locator('.card-title').first().evaluate((el) => {
-        return parseFloat(getComputedStyle(el).fontSize);
-      });
+      const baselineSize = await page
+        .locator('.card-title')
+        .first()
+        .evaluate((el) => {
+          return parseFloat(getComputedStyle(el).fontSize);
+        });
 
       // Increase browser base font size
       await page.addStyleTag({
         content: 'html { font-size: 20px !important; }'
       });
 
-      const increasedSize = await page.locator('.card-title').first().evaluate((el) => {
-        return parseFloat(getComputedStyle(el).fontSize);
-      });
+      const increasedSize = await page
+        .locator('.card-title')
+        .first()
+        .evaluate((el) => {
+          return parseFloat(getComputedStyle(el).fontSize);
+        });
 
       // Font size should increase proportionally
       expect(increasedSize).toBeGreaterThan(baselineSize);
