@@ -60,7 +60,6 @@
       'Atkinson Hyperlegible Next Variable', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
       sans-serif;
     line-height: var(--line-height-normal);
-    color-scheme: light dark;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -218,7 +217,6 @@
   }
 
   :global(.btn:hover:not(:disabled)) {
-    transform: translateY(-1px);
     border-color: color-mix(in oklab, var(--border) 40%, var(--accent));
   }
 
@@ -294,6 +292,7 @@
 
   /* Light theme */
   :global([data-theme='light']) {
+    color-scheme: light;
     --bg-primary: #ffffff;
     --bg-secondary: #f6f7f9;
     --bg-tertiary: #eef0f4;
@@ -306,6 +305,7 @@
 
   /* Dark theme */
   :global([data-theme='dark']) {
+    color-scheme: dark;
     --bg-primary: #0d1117;
     --bg-secondary: #121824;
     --bg-tertiary: #1a2231;
