@@ -147,12 +147,13 @@
 <style>
   .color-display {
     display: grid;
-    gap: 1rem;
+    gap: var(--space-lg);
+    container-type: inline-size;
   }
 
   .palette-block {
     display: grid;
-    gap: 0.5rem;
+    gap: var(--space-sm);
     padding: var(--palette-block-padding, 0.75rem);
     background: color-mix(in oklab, var(--bg-secondary) 88%, transparent);
     border: var(--palette-block-border-width, 1px) solid
@@ -164,26 +165,26 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--space-md);
   }
 
   .palette-title {
     margin: 0;
     color: var(--text-primary);
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
     text-transform: capitalize;
   }
 
   .hue-nudger {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-sm);
   }
 
   .hue-nudger-label {
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-secondary);
   }
 
@@ -197,6 +198,6 @@
     text-align: center;
     color: var(--text-secondary);
     font-style: italic;
-    padding: 2rem;
+    padding: var(--space-xl);
   }
 </style>

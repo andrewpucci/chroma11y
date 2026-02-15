@@ -23,7 +23,8 @@
     position: sticky;
     top: 86px;
     display: grid;
-    gap: 0.9rem;
+    gap: var(--space-md);
+    container-type: inline-size;
   }
 
   @media (max-height: 900px) {

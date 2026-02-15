@@ -139,16 +139,17 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--swatch-gap, 0.5rem);
+    container-type: inline-size;
   }
 
   .neutral-item {
     display: flex;
     flex-direction: column;
     width: var(--swatch-width, 96px);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--bg-primary);
     box-shadow: var(--shadow-sm);
-    transition: transform 140ms ease;
+    transition: transform var(--transition-fast);
   }
 
   /* Ensure ColorSwatch fits nicely inside */
@@ -172,7 +173,7 @@
     text-align: center;
     color: var(--text-secondary);
     font-style: italic;
-    padding: 2rem;
+    padding: var(--space-xl);
   }
 
   /* Touch-friendly on mobile */

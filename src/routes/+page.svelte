@@ -461,8 +461,9 @@
     display: grid;
     grid-template-columns: var(--control-width) 1fr;
     gap: var(--layout-gap);
-    padding: var(--layout-gap) var(--column-padding) 1.25rem var(--column-padding);
+    padding: var(--layout-gap) var(--column-padding) var(--space-xl) var(--column-padding);
     min-height: 0;
+    container-type: inline-size;
   }
 
   .content {
@@ -471,14 +472,14 @@
 
   .content-inner {
     display: grid;
-    gap: 1rem;
+    gap: var(--space-lg);
     min-height: 0;
   }
 
-  @media (max-width: 980px) {
+  @container (max-width: 980px) {
     .layout {
       grid-template-columns: 1fr;
-      padding: var(--layout-gap) 0.5rem 1.25rem 0.5rem;
+      padding: var(--layout-gap) var(--space-sm) var(--space-xl) var(--space-sm);
       max-width: none;
     }
   }

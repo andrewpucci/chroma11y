@@ -63,6 +63,6 @@
   .export-buttons {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-sm);
   }
 </style>

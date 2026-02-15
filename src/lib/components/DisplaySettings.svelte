@@ -139,6 +139,6 @@
 <style>
   .display-settings {
     display: grid;
-    gap: 0.9rem;
+    gap: var(--space-md);
   }
 </style>
