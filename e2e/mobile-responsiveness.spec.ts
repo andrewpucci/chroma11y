@@ -73,7 +73,7 @@ test.describe('Mobile Responsiveness', () => {
   });
 
   test.describe('Touch Target Sizes', () => {
-    test('theme toggle should meet minimum touch target (44x44px) on mobile', async ({ page }) => {
+    test('theme toggle should meet WCAG 2.2 AA minimum (24x24px) on mobile', async ({ page }) => {
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
       await page.goto('/');
 
@@ -81,7 +81,8 @@ test.describe('Mobile Responsiveness', () => {
       const box = await themeToggle.boundingBox();
 
       expect(box).toBeTruthy();
-      expect(box!.height).toBeGreaterThanOrEqual(44);
+      // WCAG 2.2 AA (2.5.8) minimum is 24px
+      expect(box!.height).toBeGreaterThanOrEqual(24);
     });
 
     test('color swatches should be touch-friendly on mobile', async ({ page }) => {
@@ -93,8 +94,22 @@ test.describe('Mobile Responsiveness', () => {
       const box = await swatch.boundingBox();
 
       expect(box).toBeTruthy();
+      // Swatches use comfortable target (44px) for better UX
       expect(box!.width).toBeGreaterThanOrEqual(44);
       expect(box!.height).toBeGreaterThanOrEqual(44);
+    });
+
+    test('buttons meet WCAG 2.2 AA minimum touch target', async ({ page }) => {
+      await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
+      await page.goto('/');
+
+      const exportBtn = page.getByRole('button', { name: 'Export JSON design tokens' });
+      const box = await exportBtn.boundingBox();
+
+      expect(box).toBeTruthy();
+      // WCAG 2.2 AA (2.5.8) minimum is 24px
+      expect(box!.height).toBeGreaterThanOrEqual(24);
+      expect(box!.width).toBeGreaterThanOrEqual(24);
     });
   });
 
