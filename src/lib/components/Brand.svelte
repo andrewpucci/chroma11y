@@ -24,7 +24,7 @@
   .brand {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--space-md);
   }
 
   .brand-logo {
@@ -35,23 +35,23 @@
 
   .brand-text {
     display: grid;
-    gap: 0.25rem;
+    gap: var(--space-xs);
   }
 
   .brand h1 {
-    font-size: 1.35rem;
-    font-weight: 750;
-    letter-spacing: -0.03em;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-tight);
   }
 
   .tagline {
-    font-size: 0.9rem;
+    font-size: var(--font-size-md);
     color: var(--text-secondary);
   }
 
   @media (max-width: 520px) {
     .brand h1 {
-      font-size: 1.2rem;
+      font-size: var(--font-size-lg);
     }
 
     .brand-logo {

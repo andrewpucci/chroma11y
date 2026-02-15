@@ -247,7 +247,7 @@
 <style>
   .bezier-editor {
     display: grid;
-    gap: 0.5rem;
+    gap: var(--space-sm);
   }
 
   .bezier-svg {
@@ -300,7 +300,7 @@
   .control-point {
     cursor: grab;
     stroke-width: 2;
-    transition: r 120ms ease;
+    transition: r var(--transition-fast);
   }
 
   .control-point:hover,
@@ -330,7 +330,7 @@
   .axis-label {
     fill: var(--text-secondary);
     font-size: 9px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     text-anchor: middle;
     dominant-baseline: auto;
   }
@@ -342,15 +342,15 @@
   .readout {
     display: flex;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--space-sm);
     font-family: var(--text-mono);
-    font-size: 0.78rem;
+    font-size: var(--font-size-xs);
     color: var(--text-secondary);
   }
 
   .point-label {
     font-size: 10px;
-    font-weight: 700;
+    font-weight: var(--font-weight-bold);
     text-anchor: middle;
     dominant-baseline: central;
     pointer-events: none;
