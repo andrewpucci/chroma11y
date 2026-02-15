@@ -11,7 +11,7 @@ export type ThemePreference = 'light' | 'dark' | 'auto';
 export type SwatchLabels = 'both' | 'step' | 'value' | 'none';
 
 /** Supported contrast algorithm identifiers */
-export type ContrastAlgorithm = 'WCAG21' | 'APCA';
+export type ContrastAlgorithm = 'WCAG' | 'APCA';
 
 /**
  * Serializable color state for URL and localStorage persistence.

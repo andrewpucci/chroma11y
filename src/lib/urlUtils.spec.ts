@@ -168,8 +168,8 @@ describe('urlUtils', () => {
       expect(encoded).toContain('ca=APCA');
     });
 
-    it('omits contrast algorithm when default (WCAG21)', () => {
-      const state: UrlColorState = { contrastAlgorithm: 'WCAG21' };
+    it('omits contrast algorithm when default (WCAG)', () => {
+      const state: UrlColorState = { contrastAlgorithm: 'WCAG' };
       const encoded = encodeStateToUrl(state);
       expect(encoded).not.toContain('ca=');
     });

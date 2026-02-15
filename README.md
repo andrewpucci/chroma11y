@@ -36,12 +36,14 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 
 ### Accessibility
 
-- **WCAG 2.1 & APCA contrast** - Choose between contrast algorithms
+- **WCAG 2.2 AA compliant** - 24px minimum touch targets, fluid typography, text zoom support
+- **WCAG 2.2 & APCA contrast** - Choose between contrast algorithms
 - **Auto/manual contrast modes** - Choose contrast colors automatically or manually
 - **Contrast ratio display** - See low/high contrast ratios for each color
 - **Keyboard navigation** - Full keyboard accessibility
 - **Screen reader support** - ARIA labels and announcements
-- **Touch-friendly controls** - Touch targets for mobile
+- **Touch-friendly controls** - Comfortable 44px touch targets
+- **Motion preferences** - Respects `prefers-reduced-motion`
 
 ### Customization
 
@@ -68,8 +70,9 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 
 ### Experience
 
+- **Design token system** - Fluid typography and spacing that scales with viewport
 - **Theme switching** - Light, dark, and auto (follows system preference)
-- **Responsive** - Optimized for all screen sizes
+- **Responsive** - Container queries and modern CSS for all screen sizes
 - **Fast performance** - All operations <200ms
 - **Intuitive controls** - Easy-to-use interface
 
@@ -224,7 +227,9 @@ Share your color configuration by copying the URL. All parameters are encoded in
 src/
 ├── lib/
 │   ├── components/              # UI components (controls, swatches, drawer, etc.)
-│   ├── styles/                  # Shared CSS
+│   ├── styles/
+│   │   ├── tokens.css           # Design token system (typography, spacing, motion)
+│   │   └── nudger.css           # Shared nudger input styles
 │   ├── colorUtils.ts            # Color generation algorithms
 │   ├── exportUtils.ts           # Export format generators
 │   ├── stores.ts                # Svelte stores (state)
@@ -245,7 +250,7 @@ src/
 - **Color Library**: colorjs.io (OKLCH, contrast, color conversion)
 - **Easing**: bezier-easing (lightness curves)
 - **Testing**: Playwright (E2E), Vitest (unit)
-- **Styling**: Scoped Svelte CSS
+- **Styling**: Scoped Svelte CSS with design token system (fluid typography, container queries)
 
 ### Key Algorithms
 
@@ -343,8 +348,9 @@ npx playwright test --ui
 **E2E Tests** (`e2e/`):
 
 - Algorithm validation, export formats, mobile responsiveness
+- Design token system (fluid typography, spacing, touch targets, motion preferences)
 - Performance benchmarks, URL/localStorage persistence, UI interactions
-- Bezier editor interaction
+- Bezier editor interaction, focus indicators
 
 **Unit & DOM Tests** (`src/`):
 

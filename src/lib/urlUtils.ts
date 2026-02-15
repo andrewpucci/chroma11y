@@ -56,7 +56,7 @@ export function encodeStateToUrl(state: UrlColorState): string {
     params.set('ds', state.displayColorSpace);
   if (state.gamutSpace && state.gamutSpace !== 'srgb') params.set('gs', state.gamutSpace);
   if (state.swatchLabels && state.swatchLabels !== 'both') params.set('sl', state.swatchLabels);
-  if (state.contrastAlgorithm && state.contrastAlgorithm !== 'WCAG21')
+  if (state.contrastAlgorithm && state.contrastAlgorithm !== 'WCAG')
     params.set('ca', state.contrastAlgorithm);
 
   return params.toString();
@@ -173,7 +173,7 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   const VALID_DISPLAY_SPACES: DisplayColorSpace[] = ['hex', 'rgb', 'oklch', 'hsl'];
   const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
   const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
-  const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG21', 'APCA'];
+  const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
 
   const ds = searchParams.get('ds');
   if (ds && VALID_DISPLAY_SPACES.includes(ds as DisplayColorSpace))

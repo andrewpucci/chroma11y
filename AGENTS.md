@@ -2,7 +2,9 @@
 
 Global instructions for Cascade. Directory-specific guidance lives in scoped `AGENTS.md` files (`src/lib/`, `src/lib/components/`, `e2e/`).
 
-Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG 2.1 and APCA contrast checking, configurable display color spaces, and multiple export formats. It is a single-page app (SPA) built with Svelte 5 and SvelteKit, deployed as a static site.
+Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG 2.2 and APCA contrast checking, configurable display color spaces, and multiple export formats. It is a single-page app (SPA) built with Svelte 5 and SvelteKit, deployed as a static site.
+
+The UI uses a comprehensive design token system for consistent spacing, typography, and motion, with fluid scaling and WCAG 2.2 AA compliance.
 
 ## Setup commands
 
@@ -73,7 +75,7 @@ npm run check      # svelte-check (type checking)
 - **Framework**: Svelte 5 with SvelteKit (static adapter, SPA mode with `index.html` fallback)
 - **Language**: TypeScript 5.9, strict mode
 - **Build**: Vite 7
-- **Color science**: `colorjs.io` (OKLCH, gamut mapping, WCAG 2.1 contrast, APCA contrast, CIEDE2000 delta)
+- **Color science**: `colorjs.io` (OKLCH, gamut mapping, WCAG 2.2 contrast, APCA contrast, CIEDE2000 delta)
 - **Easing**: `bezier-easing` (lightness curve control points)
 - **Color naming**: `color-name-list` (CIEDE2000 nearest-match)
 - **HTML sanitization**: `dompurify`
@@ -86,7 +88,10 @@ npm run check      # svelte-check (type checking)
 src/
 ├── lib/
 │   ├── components/          # Svelte 5 components (.svelte) + co-located DOM tests (.dom.spec.ts)
-│   ├── styles/              # Shared CSS files
+│   ├── styles/
+│   │   ├── tokens.css       # Design token system (typography, spacing, motion, etc.)
+│   │   ├── tokens.spec.ts   # Unit tests for token definitions
+│   │   └── nudger.css       # Shared nudger input styles
 │   ├── colorUtils.ts        # Core color generation algorithms (OKLCH, bezier, contrast, naming)
 │   ├── exportUtils.ts       # Export format generators (JSON design tokens, CSS, SCSS)
 │   ├── stores.ts            # Svelte writable/derived stores (central state)
@@ -97,10 +102,10 @@ src/
 │   └── types.ts             # Shared TypeScript interfaces
 ├── routes/
 │   ├── +page.svelte         # Main application page (single route)
-│   ├── +layout.svelte       # Root layout
+│   ├── +layout.svelte       # Root layout (imports tokens.css)
 │   └── +layout.ts           # Disables SSR (prerender + SPA)
 └── app.html                 # HTML shell
-e2e/                         # Playwright E2E test specs
+e2e/                         # Playwright E2E test specs (including design-tokens.spec.ts)
 scripts/                     # Build-time scripts (favicon generation)
 static/                      # Static assets (favicon, manifest, robots.txt)
 ```
@@ -108,6 +113,21 @@ static/                      # Static assets (favicon, manifest, robots.txt)
 ## Architecture & patterns
 
 Detailed store patterns, color generation pipeline, persistence, export formats, and component inventory are documented in the scoped `AGENTS.md` files under `src/lib/` and `src/lib/components/`.
+
+### Design Token System
+
+The UI uses a comprehensive design token system (`src/lib/styles/tokens.css`) for consistent spacing, typography, and motion:
+
+- **Fluid typography**: T-shirt sized (xs/sm/md/lg/xl) using `clamp()` for viewport-responsive scaling
+- **Fluid spacing**: T-shirt sized, visually consistent with typography scale
+- **Fluid border radii**: T-shirt sized, proportional to spacing tokens
+- **Motion tokens**: Built-in `prefers-reduced-motion` support (durations become 0ms when reduced)
+- **Touch targets**: WCAG 2.2 AA compliant (24px minimum, 44px comfortable)
+- **Variable fonts**: Smooth weight transitions using `font-variation-settings`
+- **Container queries**: Used for component-scoped responsive design where appropriate
+- **Modern CSS**: Logical properties, modern easing functions (`cubic-bezier`), `:has()` selector
+
+All hardcoded CSS values should use design tokens. Never add new static `px` values — use or extend the token system.
 
 ### Accessibility
 
@@ -117,7 +137,7 @@ This is an accessibility-focused project. Maintain these patterns globally:
 - **ARIA labels** on all interactive elements
 - **Keyboard navigation** support throughout
 - **Skip link** to main content
-- **Contrast ratios** displayed for every swatch (WCAG 2.1 AA 4.5:1 or APCA Lc 60 threshold, configurable)
+- **Contrast ratios** displayed for every swatch (WCAG 2.2 AA 4.5:1 or APCA Lc 60 threshold, configurable)
 - `role="application"` on the app shell
 - Never remove ARIA attributes, keyboard handlers, or screen reader announcements without replacement
 
