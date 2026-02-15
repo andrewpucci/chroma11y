@@ -366,7 +366,8 @@
 >
   <AppHeader bind:bindInner={topbarInnerEl} />
 
-  <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
+  <div class="layout-container">
+    <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
     <Sidebar>
       <Card title="Generation" subtitle="Control how colors are distributed across the palette">
         <ColorControls
@@ -423,6 +424,7 @@
         />
       </div>
     </main>
+    </div>
   </div>
 </div>
 
@@ -453,8 +455,12 @@
       var(--bg-primary);
   }
 
-  .layout {
+  .layout-container {
     flex: 1;
+    container-type: inline-size;
+  }
+
+  .layout {
     max-width: var(--container-max);
     margin: 0 auto;
     width: 100%;
@@ -463,7 +469,6 @@
     gap: var(--layout-gap);
     padding: var(--layout-gap) var(--column-padding) var(--space-xl) var(--column-padding);
     min-height: 0;
-    container-type: inline-size;
   }
 
   .content {
