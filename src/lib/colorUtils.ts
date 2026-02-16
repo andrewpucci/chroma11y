@@ -18,10 +18,15 @@ function oklchColor(l: number, c: number, h: number): Color {
   return new Color('oklch', [l, c, h]);
 }
 
-/** Gamut-map a Color to sRGB and return as hex string */
+/** Gamut-map a Color to sRGB and return as hex string (always 6 characters) */
 function toHex(color: Color): string {
   try {
-    return toGamut(color).to('srgb').toString({ format: 'hex' });
+    const hex = toGamut(color).to('srgb').toString({ format: 'hex' });
+    // Expand shortened hex codes (#fff -> #ffffff)
+    if (hex.length === 4 && hex[0] === '#') {
+      return '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+    }
+    return hex;
   } catch {
     return '#000000';
   }

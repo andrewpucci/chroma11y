@@ -5,6 +5,34 @@
  */
 
 /* ============================================================================
+   Color Tokens
+   ============================================================================ */
+
+/* Theme colors - default to light theme */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f7f9;
+  --bg-tertiary: #eef0f4;
+  --text-primary: #1a1a1a;
+  --text-secondary: #636a72;
+  --border: #dee2e6;
+  --accent: #1862e6;
+  --accent-hover: #1352c4;
+}
+
+/* Dark theme color overrides */
+[data-theme='dark'] {
+  --bg-primary: #0d1117;
+  --bg-secondary: #121824;
+  --bg-tertiary: #1a2231;
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --border: #30363d;
+  --accent: #58a6ff;
+  --accent-hover: #79b8ff;
+}
+
+/* ============================================================================
    Typography Tokens
    ============================================================================ */
 
@@ -100,6 +128,36 @@
   --transition-fast: var(--duration-fast) var(--ease-out);
   --transition-normal: var(--duration-normal) var(--ease-out);
   --transition-slow: var(--duration-slow) var(--ease-in-out);
+}
+
+/* ============================================================================
+   Border Width Tokens
+   ============================================================================ */
+
+/* Consistent border widths across the system */
+:root {
+  --border-width-none: 0;
+  --border-width-thin: 1px;
+  --border-width-medium: 2px;
+  --border-width-thick: 3px;
+}
+
+/* ============================================================================
+   Focus Outline Tokens
+   ============================================================================ */
+
+/* High-contrast focus indicators - default to light theme */
+:root {
+  --focus-outline-width: 3px;
+  --focus-outline-offset: 6px;
+  --focus-outline-inside: white; /* Inner ring (shadow) - closest to background */
+  --focus-outline-outside: black; /* Outer ring (outline) - high contrast */
+}
+
+/* Dark theme focus outline overrides */
+[data-theme='dark'] {
+  --focus-outline-inside: black;
+  --focus-outline-outside: white;
 }
 
 /* ============================================================================

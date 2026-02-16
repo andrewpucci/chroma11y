@@ -99,6 +99,8 @@
 
 <style>
   .color-swatch {
+    --swatch-width: 96px;
+
     position: relative;
     display: grid;
     gap: var(--space-xs);
@@ -110,8 +112,8 @@
     transition:
       transform var(--transition-fast),
       border-color var(--transition-fast);
-    width: var(--swatch-width, 96px);
-    flex: 0 0 var(--swatch-width, 96px);
+    width: var(--swatch-width);
+    flex: 0 0 var(--swatch-width);
     min-height: 64px;
     text-align: left;
     overflow: hidden;

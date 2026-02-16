@@ -35,6 +35,12 @@
   import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
   import { loadStateFromStorage, saveStateToStorage } from '$lib/storageUtils';
   import { announce } from '$lib/announce';
+  import type {
+    DisplayColorSpace,
+    GamutSpace,
+    SwatchLabels,
+    ContrastAlgorithm
+  } from '$lib/types';
 
   import { generatePalettes } from '$lib/colorUtils';
   import type { ColorGenParams } from '$lib/colorUtils';
@@ -118,6 +124,7 @@
   onMount(() => {
     const urlState = getUrlState();
     const storedState = loadStateFromStorage();
+    
     if (Object.keys(urlState).length > 0) {
       applyUrlState(urlState);
     } else if (storedState) {
@@ -293,7 +300,9 @@
 
     const stateUpdate: Record<string, unknown> = {};
 
-    if (urlState.baseColor) stateUpdate.baseColor = urlState.baseColor;
+    if (urlState.baseColor) {
+      stateUpdate.baseColor = urlState.baseColor;
+    }
     if (urlState.warmth !== undefined) stateUpdate.warmth = urlState.warmth;
     if (urlState.chromaMultiplier !== undefined)
       stateUpdate.chromaMultiplier = urlState.chromaMultiplier;
@@ -432,17 +441,6 @@
 
 <style>
   .app-shell {
-    --content-width: calc(
-      var(--control-width) + var(--layout-gap) + (var(--num-colors) * var(--swatch-width)) +
-        ((var(--num-colors) - 1) * var(--swatch-gap)) + (var(--card-padding) * 2) +
-        (var(--card-border-width) * 2) + (var(--column-padding) * 2) +
-        (var(--palette-block-padding) * 2) + (var(--palette-block-border-width) * 2)
-    );
-    --container-max: min(
-      var(--content-width),
-      min(var(--container-vw), var(--container-max-limit))
-    );
-
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -461,13 +459,13 @@
   }
 
   .layout {
-    max-width: var(--container-max);
+    max-width: min(92vw, 2400px);
     margin: 0 auto;
     width: 100%;
     display: grid;
-    grid-template-columns: var(--control-width) 1fr;
-    gap: var(--layout-gap);
-    padding: var(--layout-gap) var(--column-padding) var(--space-xl) var(--column-padding);
+    grid-template-columns: clamp(320px, 25vw, 440px) 1fr;
+    gap: var(--space-lg);
+    padding: var(--space-lg) var(--column-padding) var(--space-xl) var(--column-padding);
     min-height: 0;
   }
 
@@ -484,7 +482,7 @@
   @container (max-width: 980px) {
     .layout {
       grid-template-columns: 1fr;
-      padding: var(--layout-gap) var(--space-sm) var(--space-xl) var(--space-sm);
+      padding: var(--space-lg) var(--space-sm) var(--space-xl) var(--space-sm);
       max-width: none;
     }
   }

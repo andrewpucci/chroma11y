@@ -17,11 +17,14 @@
   } from '$lib/colorUtils';
   import { contrastColors } from '$lib/stores';
   import { announce } from '$lib/announce';
+  import Button from './Button.svelte';
+  import Icon from './Icon.svelte';
 
   const WCAG_AAA_RATIO = 7;
 
   const isOpen = $derived($drawerIsOpen);
   const data = $derived($drawerData);
+
   const contrastColorsLocal = $derived($contrastColors);
 
   // Computed color values from OKLCH source of truth
@@ -72,19 +75,25 @@
 
   // Focus management
   let drawerEl: HTMLElement | undefined = $state();
-  let closeButtonEl: HTMLButtonElement | undefined = $state();
+  let closeButtonEl: HTMLElement | undefined = $state();
   let triggerEl: HTMLElement | null = $state(null);
   let swapKey = $state(0);
   let closing = $state(false);
+  let mounted = $state(true);
   const CLOSE_DURATION = 200;
 
   // Track the triggering element and manage focus
   $effect(() => {
     if (isOpen && closeButtonEl) {
+      mounted = true;
       triggerEl = document.activeElement as HTMLElement;
       // Small delay to ensure the drawer is rendered before focusing
       requestAnimationFrame(() => {
-        closeButtonEl?.focus();
+        // Only focus if still mounted and open
+        if (mounted && isOpen && closeButtonEl) {
+          const button = closeButtonEl?.querySelector('button');
+          button?.focus();
+        }
       });
     }
   });
@@ -123,6 +132,7 @@
   function handleClose() {
     if (closing) return;
     closing = true;
+    mounted = false;
     announce('Color info drawer closed');
     const reducedMotion =
       typeof window.matchMedia === 'function' &&
@@ -229,21 +239,11 @@
   >
     <div class="drawer-header">
       <h2 id="drawer-title" class="drawer-title">{colorName}</h2>
-      <button
-        class="drawer-close btn btn-ghost"
-        bind:this={closeButtonEl}
-        onclick={handleClose}
-        aria-label="Close color info drawer"
-      >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path
-            d="M15 5L5 15M5 5l10 10"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
-      </button>
+      <div bind:this={closeButtonEl}>
+        <Button onclick={handleClose} ariaLabel="Close color info drawer" variant="secondary">
+          <Icon name="close" size={20} />
+        </Button>
+      </div>
     </div>
 
     {#key swapKey}
@@ -280,54 +280,20 @@
               <li class="color-value-row">
                 <span class="color-value-label">{label}</span>
                 <code class="color-value-code">{value}</code>
-                <button
-                  class="copy-btn btn btn-ghost"
+                <Button
                   onclick={() => handleCopyValue(label, value)}
-                  aria-label="Copy {label} value: {value}"
+                  ariaLabel="Copy {label} value: {value}"
+                  variant="secondary"
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <rect
-                      x="5"
-                      y="5"
-                      width="9"
-                      height="9"
-                      rx="1.5"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                    />
-                    <path
-                      d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                    />
-                  </svg>
-                </button>
+                  <Icon name="copy" />
+                </Button>
               </li>
             {/each}
           </ul>
-          <button
-            class="copy-all-btn btn"
-            onclick={handleCopyAll}
-            aria-label="Copy all color values to clipboard"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <rect
-                x="5"
-                y="5"
-                width="9"
-                height="9"
-                rx="1.5"
-                stroke="currentColor"
-                stroke-width="1.5"
-              />
-              <path
-                d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"
-                stroke="currentColor"
-                stroke-width="1.5"
-              />
-            </svg>
+          <Button onclick={handleCopyAll} ariaLabel="Copy all color values to clipboard">
+            <Icon name="copy" />
             Copy All
-          </button>
+          </Button>
         </div>
 
         <!-- Contrast ratios -->
@@ -562,13 +528,6 @@
     text-overflow: ellipsis;
   }
 
-  .drawer-close {
-    flex-shrink: 0;
-    padding: var(--space-xs);
-    min-height: var(--touch-target-min);
-    min-width: var(--touch-target-min);
-  }
-
   .drawer-body {
     flex: 1;
     overflow-y: auto;
@@ -688,24 +647,6 @@
     white-space: nowrap;
   }
 
-  .copy-btn {
-    flex-shrink: 0;
-    padding: var(--space-xs);
-    min-height: var(--touch-target-min);
-    min-width: var(--touch-target-min);
-    border-radius: var(--radius-sm);
-    color: var(--text-secondary);
-  }
-
-  .copy-btn:hover {
-    color: var(--accent);
-  }
-
-  .copy-all-btn {
-    align-self: stretch;
-    font-size: 0.85rem;
-  }
-
   .contrast-rows {
     display: flex;
     flex-direction: column;
@@ -785,7 +726,7 @@
     border: 1px solid color-mix(in oklab, #22c55e 30%, transparent);
   }
 
-  :global([data-theme='dark']) .badge--pass {
+  [data-theme='dark'] .badge--pass {
     background: color-mix(in oklab, #22c55e 15%, transparent);
     color: #4ade80;
     border-color: color-mix(in oklab, #22c55e 25%, transparent);
@@ -797,7 +738,7 @@
     border: 1px solid color-mix(in oklab, #ef4444 25%, transparent);
   }
 
-  :global([data-theme='dark']) .badge--fail {
+  [data-theme='dark'] .badge--fail {
     background: color-mix(in oklab, #ef4444 12%, transparent);
     color: #f87171;
     border-color: color-mix(in oklab, #ef4444 20%, transparent);

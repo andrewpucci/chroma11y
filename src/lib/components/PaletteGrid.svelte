@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getPaletteName } from '$lib/colorUtils';
   import { contrastColors, updateHueNudger } from '$lib/stores';
+  import Card from '$lib/components/Card.svelte';
   import ColorSwatch from './ColorSwatch.svelte';
   import '$lib/styles/nudger.css';
   import type Color from 'colorjs.io';
@@ -90,13 +91,12 @@
   }
 </script>
 
-<section class="card palette-grid" data-testid="generated-palettes">
-  <div class="card-header">
-    <h2 class="card-title">Generated Palettes</h2>
-    <div class="card-subtitle">Click any swatch to view color details</div>
-  </div>
-
-  <div class="card-body color-display">
+<Card
+  title="Generated Palettes"
+  subtitle="Click any swatch to view color details"
+  data-testid="generated-palettes"
+>
+  <div class="color-display">
     {#if palettesHex.length > 0}
       {#each palettesHex as palette, paletteIndex (paletteIndex)}
         <div class="palette-block">
@@ -142,9 +142,20 @@
       <p class="no-colors">No color palettes generated yet. Adjust the controls above.</p>
     {/if}
   </div>
-</section>
+</Card>
 
 <style>
+  /* Palette-grid specific nudger overrides */
+  .nudger-input {
+    width: 96px;
+  }
+
+  @media (max-width: 768px) {
+    .nudger-input {
+      width: 110px;
+    }
+  }
+
   .color-display {
     display: grid;
     gap: var(--space-lg);
@@ -154,10 +165,9 @@
   .palette-block {
     display: grid;
     gap: var(--space-sm);
-    padding: var(--palette-block-padding, 0.75rem);
+    padding: var(--space-md);
     background: color-mix(in oklab, var(--bg-secondary) 88%, transparent);
-    border: var(--palette-block-border-width, 1px) solid
-      color-mix(in oklab, var(--border) 65%, transparent);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 65%, transparent);
     border-radius: var(--radius-md);
   }
 
@@ -191,7 +201,7 @@
   .swatches {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--swatch-gap, 0.5rem);
+    gap: var(--space-sm);
   }
 
   .no-colors {

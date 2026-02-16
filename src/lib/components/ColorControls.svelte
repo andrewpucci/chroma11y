@@ -32,7 +32,7 @@
 
   let isDraggingCounts = $state(false);
   let activePointerId: number | null = $state(null);
-  let hasWindowListeners = $state(false);
+  let hasWindowListeners = false;
 
   function cleanupWindowListeners() {
     if (!hasWindowListeners) return;

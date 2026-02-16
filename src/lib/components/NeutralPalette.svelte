@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getPaletteName } from '$lib/colorUtils';
   import { contrastColors, updateLightnessNudger } from '$lib/stores';
+  import Card from '$lib/components/Card.svelte';
   import ColorSwatch from './ColorSwatch.svelte';
   import '$lib/styles/nudger.css';
   import type Color from 'colorjs.io';
@@ -59,101 +60,119 @@
   }
 </script>
 
-<section class="card neutral-palette" data-testid="neutral-palette">
-  <div class="card-header">
-    <h2 class="card-title">Neutral Palette</h2>
-    <div class="card-subtitle">Adjust nudgers to fine-tune each neutral step's lightness</div>
-  </div>
-
-  <div class="card-body">
-    {#if neutralsHex.length > 0}
-      <div class="neutral-grid">
-        {#each neutralsHex as color, index (index)}
-          <div class="neutral-item">
-            <ColorSwatch
-              {color}
-              displayValue={neutralsDisplay[index] ?? color}
-              label={String(index * 10)}
-              oklchColor={neutrals[index] ?? null}
-              paletteName={neutralName}
-              isNeutral={true}
+<Card
+  title="Neutral Palette"
+  subtitle="Adjust nudgers to fine-tune each neutral step's lightness"
+  data-testid="neutral-palette"
+>
+  {#if neutralsHex.length > 0}
+    <div class="neutral-grid">
+      {#each neutralsHex as color, index (index)}
+        <div class="neutral-item">
+          <ColorSwatch
+            {color}
+            displayValue={neutralsDisplay[index] ?? color}
+            label={String(index * 10)}
+            oklchColor={neutrals[index] ?? null}
+            paletteName={neutralName}
+            isNeutral={true}
+          />
+          <div class="nudger-container">
+            <label for="lightness-nudger-{index}" class="visually-hidden"
+              >Lightness adjustment for step {index}</label
+            >
+            <input
+              bind:this={inputEls[index]}
+              id="lightness-nudger-{index}"
+              type="number"
+              min="-0.5"
+              max="0.5"
+              step="0.01"
+              value={lightnessNudgerValues[index] ?? 0}
+              data-nonzero={(lightnessNudgerValues[index] ?? 0) !== 0 ? '' : undefined}
+              oninput={(e) => {
+                if (e && e.target) {
+                  const inputValue = (e.target as HTMLInputElement).value;
+                  // Allow empty string, "-", "." while typing (don't reset to 0)
+                  if (inputValue === '' || inputValue === '-' || inputValue === '.') {
+                    return;
+                  }
+                  const newValue = parseFloat(inputValue);
+                  // Validate before updating to prevent NaN propagation
+                  if (!isNaN(newValue) && isFinite(newValue)) {
+                    // Clamp to valid range
+                    const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
+                    // Only update the store, let the parent handle reactivity
+                    updateLightnessNudger(index, clampedValue);
+                  }
+                  // Don't reset on invalid - let the user continue typing
+                }
+              }}
+              onblur={(e) => {
+                // On blur, reset invalid values to 0
+                if (e && e.target) {
+                  const inputValue = (e.target as HTMLInputElement).value;
+                  const newValue = parseFloat(inputValue);
+                  if (isNaN(newValue) || !isFinite(newValue)) {
+                    (e.target as HTMLInputElement).value = '0';
+                    updateLightnessNudger(index, 0);
+                  }
+                }
+              }}
+              onkeydown={(e) => handleKeyDown(index, e)}
+              class="nudger-input"
+              aria-label="Lightness adjustment for step {index}"
             />
-            <div class="nudger-container">
-              <label for="lightness-nudger-{index}" class="sr-only"
-                >Lightness adjustment for step {index}</label
-              >
-              <input
-                bind:this={inputEls[index]}
-                id="lightness-nudger-{index}"
-                type="number"
-                min="-0.5"
-                max="0.5"
-                step="0.01"
-                value={lightnessNudgerValues[index] ?? 0}
-                data-nonzero={(lightnessNudgerValues[index] ?? 0) !== 0 ? '' : undefined}
-                oninput={(e) => {
-                  if (e && e.target) {
-                    const inputValue = (e.target as HTMLInputElement).value;
-                    // Allow empty string, "-", "." while typing (don't reset to 0)
-                    if (inputValue === '' || inputValue === '-' || inputValue === '.') {
-                      return;
-                    }
-                    const newValue = parseFloat(inputValue);
-                    // Validate before updating to prevent NaN propagation
-                    if (!isNaN(newValue) && isFinite(newValue)) {
-                      // Clamp to valid range
-                      const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
-                      // Only update the store, let the parent handle reactivity
-                      updateLightnessNudger(index, clampedValue);
-                    }
-                    // Don't reset on invalid - let the user continue typing
-                  }
-                }}
-                onblur={(e) => {
-                  // On blur, reset invalid values to 0
-                  if (e && e.target) {
-                    const inputValue = (e.target as HTMLInputElement).value;
-                    const newValue = parseFloat(inputValue);
-                    if (isNaN(newValue) || !isFinite(newValue)) {
-                      (e.target as HTMLInputElement).value = '0';
-                      updateLightnessNudger(index, 0);
-                    }
-                  }
-                }}
-                onkeydown={(e) => handleKeyDown(index, e)}
-                class="nudger-input"
-                aria-label="Lightness adjustment for step {index}"
-              />
-            </div>
           </div>
-        {/each}
-      </div>
-    {:else}
-      <p class="no-colors">No neutral colors generated yet. Adjust the controls above.</p>
-    {/if}
-  </div>
-</section>
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <p class="no-colors">No neutral colors generated yet. Adjust the controls above.</p>
+  {/if}
+</Card>
 
 <style>
+  /* Neutral-specific nudger overrides */
+  .nudger-input {
+    padding: var(--space-xs) var(--space-xs);
+    font-size: var(--font-size-xs);
+  }
+
+  .nudger-container {
+    border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+    border-radius: 0;
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+  }
+
+  @media (max-width: 768px) {
+    .nudger-input {
+      padding: var(--space-sm) var(--space-xs);
+      font-size: var(--font-size-sm);
+    }
+  }
+
   .neutral-grid {
+    --swatch-width: 96px;
+
     display: flex;
     flex-wrap: wrap;
-    gap: var(--swatch-gap, 0.5rem);
+    gap: var(--space-sm);
     container-type: inline-size;
   }
 
   .neutral-item {
     display: flex;
     flex-direction: column;
-    width: var(--swatch-width, 96px);
+    width: var(--swatch-width);
     border-radius: var(--radius-md);
     background: var(--bg-primary);
-    box-shadow: var(--shadow-sm);
     transition: transform var(--transition-fast);
   }
 
   /* Ensure ColorSwatch fits nicely inside */
-  .neutral-item :global(.color-swatch) {
+  .neutral-item .color-swatch {
     width: 100%;
     flex: 0 0 auto;
     border-bottom-left-radius: 0;
