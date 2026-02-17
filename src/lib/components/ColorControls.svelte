@@ -90,7 +90,13 @@
     <div class="field base-color">
       <label class="label" for="baseColor">Base Color</label>
       <div class="base-color-row">
-        <input id="baseColor" type="color" bind:value={baseColor} aria-describedby="baseColorHex" />
+        <input
+          id="baseColor"
+          type="color"
+          bind:value={baseColor}
+          aria-describedby="baseColorHex"
+          tabindex="0"
+        />
         <input
           id="baseColorHex"
           class="input"
@@ -105,7 +111,7 @@
     <div class="field">
       <label class="label" for="warmth">Warmth ({warmth})</label>
       <div class="slider-wrapper">
-        <input id="warmth" type="range" min="-50" max="50" bind:value={warmth} />
+        <input id="warmth" type="range" min="-50" max="50" bind:value={warmth} tabindex="0" />
       </div>
     </div>
 
@@ -119,6 +125,7 @@
           max="2"
           step="0.01"
           bind:value={chromaMultiplier}
+          tabindex="0"
         />
       </div>
     </div>
@@ -134,6 +141,7 @@
           bind:value={numColors}
           onpointerdown={handlePointerDown}
           oninput={handleKeyboardInput}
+          tabindex="0"
         />
       </div>
     </div>
@@ -149,6 +157,7 @@
           bind:value={numPalettes}
           onpointerdown={handlePointerDown}
           oninput={handleKeyboardInput}
+          tabindex="0"
         />
       </div>
     </div>
@@ -190,11 +199,11 @@
     width: 56px;
     height: var(--touch-target-comfortable);
     padding: 0;
-    border: none;
+    border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: transparent;
     cursor: pointer;
-    appearance: none;
+    /* Don't use appearance: none to maintain keyboard focusability in WebKit */
   }
 
   .base-color-row input[type='color']::-webkit-color-swatch-wrapper {

@@ -1,7 +1,6 @@
 <script lang="ts">
   import '@fontsource-variable/atkinson-hyperlegible-next';
   import '@fontsource-variable/atkinson-hyperlegible-mono';
-  import '$lib/styles/tokens.css';
   import { currentTheme } from '$lib/stores';
   import { browser } from '$app/environment';
   import { onMount } from 'svelte';
@@ -58,6 +57,7 @@
   :global {
     @import '$lib/styles/reset.css';
     @import '$lib/styles/utilities.css';
+    @import '$lib/styles/tokens.css';
   }
 
   /* App-specific font configuration */

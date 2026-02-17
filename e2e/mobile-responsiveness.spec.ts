@@ -36,8 +36,9 @@ test.describe('Mobile Responsiveness', () => {
         (el) => window.getComputedStyle(el).gridTemplateColumns
       );
 
-      // Desktop layout uses a fixed control width column + content column
-      expect(gridTemplateColumns).toContain('440px');
+      // Desktop layout uses a responsive control width column + content column
+      // At 1024px viewport: clamp(320px, 25vw, 440px) = clamp(320px, 256px, 440px) = 320px
+      expect(gridTemplateColumns).toContain('320px');
     });
 
     test('should make controls full-width on mobile', async ({ page }) => {
@@ -73,16 +74,17 @@ test.describe('Mobile Responsiveness', () => {
   });
 
   test.describe('Touch Target Sizes', () => {
-    test('theme toggle should meet WCAG 2.2 AA minimum (24x24px) on mobile', async ({ page }) => {
+    test('color picker should meet WCAG 2.2 AA minimum (24x24px) on mobile', async ({ page }) => {
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
       await page.goto('/');
 
-      const themeToggle = page.getByRole('button', { name: /Switch to (dark|light) mode/ });
-      const box = await themeToggle.boundingBox();
+      const colorPicker = page.locator('input[type="color"]');
+      const box = await colorPicker.boundingBox();
 
       expect(box).toBeTruthy();
       // WCAG 2.2 AA (2.5.8) minimum is 24px
       expect(box!.height).toBeGreaterThanOrEqual(24);
+      expect(box!.width).toBeGreaterThanOrEqual(24);
     });
 
     test('color swatches should be touch-friendly on mobile', async ({ page }) => {

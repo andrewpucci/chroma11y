@@ -35,16 +35,8 @@
   import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
   import { loadStateFromStorage, saveStateToStorage } from '$lib/storageUtils';
   import { announce } from '$lib/announce';
-  import type {
-    DisplayColorSpace,
-    GamutSpace,
-    SwatchLabels,
-    ContrastAlgorithm
-  } from '$lib/types';
-
   import { generatePalettes } from '$lib/colorUtils';
   import type { ColorGenParams } from '$lib/colorUtils';
-
   import ColorControls from '$lib/components/ColorControls.svelte';
   import ExportButtons from '$lib/components/ExportButtons.svelte';
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
@@ -124,17 +116,18 @@
   onMount(() => {
     const urlState = getUrlState();
     const storedState = loadStateFromStorage();
-    
+
     if (Object.keys(urlState).length > 0) {
       applyUrlState(urlState);
     } else if (storedState) {
       applyUrlState(storedState);
     }
 
-    // themePreference is only in localStorage, not the URL — always load it from storage
-    if (storedState?.themePreference) {
+    // Only load themePreference from localStorage if not already set by URL
+    if (!urlState.themePreference && storedState?.themePreference) {
       setThemePreference(storedState.themePreference);
     }
+
     urlStateLoaded = true;
 
     // Set up matchMedia listener for auto theme preference
@@ -243,7 +236,7 @@
   $effect(() => {
     if (!urlStateLoaded) return;
 
-    // Access all reactive values to track them
+    // themePreference is included in URL state when not auto (for shareable URLs)
     const state: UrlColorState = {
       baseColor: baseColorLocal,
       warmth: warmthLocal,
@@ -262,14 +255,14 @@
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
       swatchLabels: swatchLabelsLocal,
-      contrastAlgorithm: contrastAlgorithmLocal
+      contrastAlgorithm: contrastAlgorithmLocal,
+      themePreference: themePreferenceLocal
     };
 
-    // theme and themePreference are persisted to localStorage only, not the URL
+    // theme (resolved theme) is persisted to localStorage only, not the URL
     const storageState: UrlColorState = {
       ...state,
-      theme: currentThemeLocal,
-      themePreference: themePreferenceLocal
+      theme: currentThemeLocal
     };
 
     // Clear any existing timeout before setting new one
@@ -293,13 +286,14 @@
   });
 
   function applyUrlState(urlState: UrlColorState) {
-    // Apply theme preset first (sets generation params like bezier, contrast steps)
-    if (urlState.theme) {
-      setTheme(urlState.theme);
-    }
-
     const stateUpdate: Record<string, unknown> = {};
 
+    // Apply theme preference if present (sets the user's preference, not resolved theme)
+    if (urlState.themePreference) {
+      setThemePreference(urlState.themePreference);
+    }
+
+    // Apply all other state values
     if (urlState.baseColor) {
       stateUpdate.baseColor = urlState.baseColor;
     }
@@ -321,11 +315,13 @@
     if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
     if (urlState.swatchLabels) stateUpdate.swatchLabels = urlState.swatchLabels;
     if (urlState.contrastAlgorithm) stateUpdate.contrastAlgorithm = urlState.contrastAlgorithm;
-    // themePreference is loaded from localStorage, not URL
-    if (urlState.themePreference) stateUpdate.themePreference = urlState.themePreference;
 
+    // Apply stored values after theme preference to ensure they override any defaults
     if (Object.keys(stateUpdate).length > 0) {
-      updateColorState(stateUpdate);
+      // Use setTimeout to ensure this runs after setThemePreference's store update completes
+      setTimeout(() => {
+        updateColorState(stateUpdate);
+      }, 0);
     }
   }
 

@@ -9,7 +9,7 @@
 </script>
 
 <aside class="sidebar" aria-label="Controls" data-testid="app-sidebar">
-  <div class="sidebar-inner">
+  <div class="sidebar-inner" tabindex="-1">
     {@render children()}
   </div>
 </aside>
@@ -25,6 +25,8 @@
     display: grid;
     gap: var(--space-md);
     container-type: inline-size;
+    /* Prevent Firefox from making this focusable */
+    overflow: visible;
   }
 
   @media (max-height: 900px) {

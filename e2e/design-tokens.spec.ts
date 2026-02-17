@@ -144,9 +144,9 @@ test.describe('Design Tokens', () => {
         return getComputedStyle(document.documentElement).getPropertyValue('--duration-normal');
       });
 
-      // Motion tokens should be 0ms when reduced motion is preferred
-      expect(durationFast.trim()).toBe('0ms');
-      expect(durationNormal.trim()).toBe('0ms');
+      // Motion tokens should be 0s when reduced motion is preferred
+      expect(durationFast.trim()).toBe('0s');
+      expect(durationNormal.trim()).toBe('0s');
     });
 
     test('uses normal durations without reduced motion', async ({ page }) => {
@@ -163,32 +163,42 @@ test.describe('Design Tokens', () => {
         return getComputedStyle(document.documentElement).getPropertyValue('--duration-normal');
       });
 
-      // Motion tokens should have normal values
-      expect(durationFast.trim()).toBe('100ms');
-      expect(durationNormal.trim()).toBe('200ms');
+      // Motion tokens should have normal values (browser normalizes ms to s)
+      expect(durationFast.trim()).toMatch(/^0?\.1s$/);
+      expect(durationNormal.trim()).toMatch(/^0?\.2s$/);
     });
   });
 
   test.describe('Container Queries', () => {
     test('layout switches to single column at container breakpoint', async ({ page }) => {
-      await page.setViewportSize({ width: 900, height: 768 });
+      // Set viewport to ensure container width > 980px for two-column layout
+      // Container width = min(92vw, 2400px), so we need 92vw > 980px
+      // 980px / 0.92 = 1065px minimum viewport width
+      await page.setViewportSize({ width: 1100, height: 768 });
 
       const layout = page.getByTestId('app-layout');
       const gridColumns = await layout.evaluate((el) => {
         return getComputedStyle(el).gridTemplateColumns;
       });
 
-      // At 900px, should still be two columns
-      expect(gridColumns).toContain('440px');
+      // At 1100px viewport, container width = min(1012px, 2400px) = 1012px
+      // Since 1012px > 980px, should be two columns (first column uses clamp, second is 1fr)
+      // The grid should have two values separated by space
+      const columnCount = gridColumns.trim().split(' ').length;
+      expect(columnCount).toBe(2);
 
-      await page.setViewportSize({ width: 700, height: 768 });
+      // Set viewport to ensure container width < 980px for single column layout
+      // Container width at 900px viewport = min(828px, 2400px) = 828px
+      await page.setViewportSize({ width: 900, height: 768 });
 
       const gridColumnsMobile = await layout.evaluate((el) => {
         return getComputedStyle(el).gridTemplateColumns;
       });
 
       // Below 980px container query, should be single column
-      expect(gridColumnsMobile).not.toContain('440px');
+      // Computed value will be actual pixel width, not '1fr'
+      const columnCountMobile = gridColumnsMobile.trim().split(' ').length;
+      expect(columnCountMobile).toBe(1);
     });
   });
 
@@ -245,33 +255,36 @@ test.describe('Design Tokens', () => {
   test.describe('T-shirt Size Consistency', () => {
     test('spacing and typography maintain proportional relationships', async ({ page }) => {
       const spaceXs = await page.evaluate(() => {
-        return parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--space-xs')
-        );
+        return getComputedStyle(document.documentElement).getPropertyValue('--space-xs').trim();
       });
 
       const spaceSm = await page.evaluate(() => {
-        return parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--space-sm')
-        );
+        return getComputedStyle(document.documentElement).getPropertyValue('--space-sm').trim();
       });
 
       const spaceMd = await page.evaluate(() => {
-        return parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--space-md')
-        );
+        return getComputedStyle(document.documentElement).getPropertyValue('--space-md').trim();
       });
 
       const spaceLg = await page.evaluate(() => {
-        return parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--space-lg')
-        );
+        return getComputedStyle(document.documentElement).getPropertyValue('--space-lg').trim();
       });
 
-      // Each size should be larger than the previous
-      expect(spaceSm).toBeGreaterThan(spaceXs);
-      expect(spaceMd).toBeGreaterThan(spaceSm);
-      expect(spaceLg).toBeGreaterThan(spaceMd);
+      // Check that spacing tokens are defined and use clamp() for fluid scaling
+      expect(spaceXs).toMatch(/^clamp\(/);
+      expect(spaceSm).toMatch(/^clamp\(/);
+      expect(spaceMd).toMatch(/^clamp\(/);
+      expect(spaceLg).toMatch(/^clamp\(/);
+
+      // Check that each spacing token has progressively larger maximum values in clamp()
+      const getXsMax = parseFloat(spaceXs.match(/,\s*([\d.]+)rem\)/)?.[1] || '0');
+      const getSmMax = parseFloat(spaceSm.match(/,\s*([\d.]+)rem\)/)?.[1] || '0');
+      const getMdMax = parseFloat(spaceMd.match(/,\s*([\d.]+)rem\)/)?.[1] || '0');
+      const getLgMax = parseFloat(spaceLg.match(/,\s*([\d.]+)rem\)/)?.[1] || '0');
+
+      expect(getSmMax).toBeGreaterThan(getXsMax);
+      expect(getMdMax).toBeGreaterThan(getSmMax);
+      expect(getLgMax).toBeGreaterThan(getMdMax);
     });
   });
 });

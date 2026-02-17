@@ -18,7 +18,7 @@ test.describe('Local Storage Persistence', () => {
 
   test('saves state to localStorage and restores on fresh load', async ({ page }) => {
     // Change base color to purple
-    await page.locator('#baseColor').fill('#800080');
+    await page.locator('#baseColorHex').fill('#800080');
     await page.waitForTimeout(1000);
 
     // Verify localStorage was updated
@@ -28,30 +28,28 @@ test.describe('Local Storage Persistence', () => {
     expect(storedState).toBeTruthy();
     expect(storedState).toContain('800080');
 
-    // Navigate to clean URL
+    // Navigate to clean URL (don't clear localStorage)
     await page.goto('/');
     await waitForAppReady(page);
     await page.waitForTimeout(500);
 
     // Base color should be restored from localStorage
-    const baseColorValue = await page.locator('#baseColor').inputValue();
+    const baseColorValue = await page.locator('#baseColorHex').inputValue();
     expect(baseColorValue.toLowerCase()).toBe('#800080');
   });
 
   test('remembers theme preference across sessions', async ({ page }) => {
     // Toggle to dark mode
-    await page.getByRole('button', { name: /Switch to (dark|light) mode/ }).click();
+    await page.locator('#theme-preference').selectOption('dark');
     await page.waitForTimeout(1000);
 
-    // Navigate to fresh URL
+    // Navigate to fresh URL (don't clear localStorage)
     await page.goto('/');
     await waitForAppReady(page);
     await page.waitForTimeout(500);
 
     // Should still be in dark mode
-    await expect(page.getByRole('button', { name: /Switch to (dark|light) mode/ })).toContainText(
-      'Light Mode'
-    );
+    await expect(page.locator('#theme-preference')).toHaveValue('dark');
   });
 });
 
@@ -65,8 +63,8 @@ test.describe('URL State Persistence', () => {
   });
 
   test('persists state in URL and restores on navigation', async ({ page }) => {
-    // Change base color to green
-    await page.locator('#baseColor').fill('#00ff00');
+    // Change base color to green using the hex input
+    await page.locator('#baseColorHex').fill('#00ff00');
 
     // Wait for URL to update (debounced)
     await page.waitForFunction(() => window.location.href.includes('c=00ff00'), { timeout: 5000 });
@@ -81,7 +79,7 @@ test.describe('URL State Persistence', () => {
     await page.waitForTimeout(500);
 
     // Base color input should have the green value
-    const baseColorValue = await page.locator('#baseColor').inputValue();
+    const baseColorValue = await page.locator('#baseColorHex').inputValue();
     expect(baseColorValue.toLowerCase()).toBe('#00ff00');
   });
 
@@ -92,16 +90,14 @@ test.describe('URL State Persistence', () => {
     await page.waitForTimeout(500);
 
     // Verify base color is red
-    const baseColorValue = await page.locator('#baseColor').inputValue();
+    const baseColorValue = await page.locator('#baseColorHex').inputValue();
     expect(baseColorValue.toLowerCase()).toBe('#ff0000');
 
     // Verify warmth is 5
     await expect(page.locator('#warmth')).toHaveValue('5');
 
-    // Verify dark mode is active
-    await expect(page.getByRole('button', { name: /Switch to (dark|light) mode/ })).toContainText(
-      'Light Mode'
-    );
+    // Verify theme preference is dark
+    await expect(page.locator('#theme-preference')).toHaveValue('dark');
   });
 
   test('URL state takes precedence over localStorage', async ({ page }) => {
@@ -116,7 +112,7 @@ test.describe('URL State Persistence', () => {
     await page.waitForTimeout(500);
 
     // URL should win - base color should be red
-    const baseColorValue = await page.locator('#baseColor').inputValue();
+    const baseColorValue = await page.locator('#baseColorHex').inputValue();
     expect(baseColorValue.toLowerCase()).toBe('#ff0000');
   });
 });

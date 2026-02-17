@@ -297,7 +297,7 @@
       onblur={() => (p1FocusVisible = false)}
     />
 
-    <!-- Control point P2 (stroke) -->
+    <!-- Control point P2 (hollow) -->
     <circle
       cx={p2x}
       cy={p2y}

@@ -51,6 +51,10 @@ export function encodeStateToUrl(state: UrlColorState): string {
     if (nudgerStr) params.set('hn', nudgerStr);
   }
 
+  // Theme preference
+  if (state.themePreference && state.themePreference !== 'auto')
+    params.set('t', state.themePreference);
+
   // Display settings
   if (state.displayColorSpace && state.displayColorSpace !== 'hex')
     params.set('ds', state.displayColorSpace);
@@ -168,6 +172,10 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   if (hueNudgers) {
     state.hueNudgers = parseNudgers(hueNudgers, 11, -180, 180);
   }
+
+  // Theme preference
+  const theme = searchParams.get('t');
+  if (theme === 'light' || theme === 'dark' || theme === 'auto') state.themePreference = theme;
 
   // Display settings
   const VALID_DISPLAY_SPACES: DisplayColorSpace[] = ['hex', 'rgb', 'oklch', 'hsl'];
