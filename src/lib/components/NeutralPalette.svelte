@@ -172,7 +172,7 @@
   }
 
   /* Ensure ColorSwatch fits nicely inside */
-  .neutral-item .color-swatch {
+  .neutral-item :global(.color-swatch) {
     width: 100%;
     flex: 0 0 auto;
     border-bottom-left-radius: 0;
