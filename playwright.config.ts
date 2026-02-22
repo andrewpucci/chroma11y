@@ -1,13 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:4173';
+
 export default defineConfig({
-  webServer: { command: 'npm run build && npm run preview', port: 4173 },
+  webServer: process.env.PLAYWRIGHT_TEST_BASE_URL
+    ? undefined
+    : { command: 'npm run build && npm run preview', port: 4173 },
   testDir: 'e2e',
   timeout: 30000,
   expect: {
     timeout: 10000
   },
   use: {
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'
