@@ -17,11 +17,14 @@
   } from '$lib/colorUtils';
   import { contrastColors } from '$lib/stores';
   import { announce } from '$lib/announce';
+  import Button from './Button.svelte';
+  import Icon from './Icon.svelte';
 
   const WCAG_AAA_RATIO = 7;
 
   const isOpen = $derived($drawerIsOpen);
   const data = $derived($drawerData);
+
   const contrastColorsLocal = $derived($contrastColors);
 
   // Computed color values from OKLCH source of truth
@@ -72,19 +75,25 @@
 
   // Focus management
   let drawerEl: HTMLElement | undefined = $state();
-  let closeButtonEl: HTMLButtonElement | undefined = $state();
+  let closeButtonEl: HTMLElement | undefined = $state();
   let triggerEl: HTMLElement | null = $state(null);
   let swapKey = $state(0);
   let closing = $state(false);
+  let mounted = $state(true);
   const CLOSE_DURATION = 200;
 
   // Track the triggering element and manage focus
   $effect(() => {
     if (isOpen && closeButtonEl) {
+      mounted = true;
       triggerEl = document.activeElement as HTMLElement;
       // Small delay to ensure the drawer is rendered before focusing
       requestAnimationFrame(() => {
-        closeButtonEl?.focus();
+        // Only focus if still mounted and open
+        if (mounted && isOpen && closeButtonEl) {
+          const button = closeButtonEl?.querySelector('button');
+          button?.focus();
+        }
       });
     }
   });
@@ -123,6 +132,7 @@
   function handleClose() {
     if (closing) return;
     closing = true;
+    mounted = false;
     announce('Color info drawer closed');
     const reducedMotion =
       typeof window.matchMedia === 'function' &&
@@ -229,21 +239,11 @@
   >
     <div class="drawer-header">
       <h2 id="drawer-title" class="drawer-title">{colorName}</h2>
-      <button
-        class="drawer-close btn btn-ghost"
-        bind:this={closeButtonEl}
-        onclick={handleClose}
-        aria-label="Close color info drawer"
-      >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path
-            d="M15 5L5 15M5 5l10 10"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-          />
-        </svg>
-      </button>
+      <div bind:this={closeButtonEl}>
+        <Button onclick={handleClose} ariaLabel="Close color info drawer" variant="secondary">
+          <Icon name="close" size={20} />
+        </Button>
+      </div>
     </div>
 
     {#key swapKey}
@@ -280,54 +280,20 @@
               <li class="color-value-row">
                 <span class="color-value-label">{label}</span>
                 <code class="color-value-code">{value}</code>
-                <button
-                  class="copy-btn btn btn-ghost"
+                <Button
                   onclick={() => handleCopyValue(label, value)}
-                  aria-label="Copy {label} value: {value}"
+                  ariaLabel="Copy {label} value: {value}"
+                  variant="secondary"
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <rect
-                      x="5"
-                      y="5"
-                      width="9"
-                      height="9"
-                      rx="1.5"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                    />
-                    <path
-                      d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                    />
-                  </svg>
-                </button>
+                  <Icon name="copy" />
+                </Button>
               </li>
             {/each}
           </ul>
-          <button
-            class="copy-all-btn btn"
-            onclick={handleCopyAll}
-            aria-label="Copy all color values to clipboard"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <rect
-                x="5"
-                y="5"
-                width="9"
-                height="9"
-                rx="1.5"
-                stroke="currentColor"
-                stroke-width="1.5"
-              />
-              <path
-                d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5"
-                stroke="currentColor"
-                stroke-width="1.5"
-              />
-            </svg>
+          <Button onclick={handleCopyAll} ariaLabel="Copy all color values to clipboard">
+            <Icon name="copy" />
             Copy All
-          </button>
+          </Button>
         </div>
 
         <!-- Contrast ratios -->
@@ -547,14 +513,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.875rem 1rem;
+    padding: var(--space-md) var(--space-lg);
     border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
     flex-shrink: 0;
   }
 
   .drawer-title {
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
     margin: 0;
     text-transform: capitalize;
     white-space: nowrap;
@@ -562,21 +528,14 @@
     text-overflow: ellipsis;
   }
 
-  .drawer-close {
-    flex-shrink: 0;
-    padding: 0.4rem;
-    min-height: 36px;
-    min-width: 36px;
-  }
-
   .drawer-body {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem;
+    padding: var(--space-lg);
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-    animation: swapIn 180ms ease;
+    gap: var(--space-xl);
+    animation: swapIn var(--transition-normal) var(--ease-out);
   }
 
   @keyframes swapIn {
@@ -599,29 +558,29 @@
 
   .meta-row {
     display: flex;
-    gap: 1rem;
+    gap: var(--space-lg);
     flex-wrap: wrap;
   }
 
   .meta-item {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: var(--space-xs);
     flex: 1;
     min-width: 80px;
   }
 
   .meta-label {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--letter-spacing-wide);
   }
 
   .meta-value {
-    font-size: 0.95rem;
-    font-weight: 600;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
     text-transform: capitalize;
   }
@@ -633,15 +592,15 @@
   .section {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: var(--space-sm);
   }
 
   .section-title {
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--letter-spacing-wide);
     margin: 0;
   }
 
@@ -660,8 +619,8 @@
   .color-value-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.65rem;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-sm);
     background: var(--bg-primary);
   }
 
@@ -670,15 +629,15 @@
   }
 
   .color-value-label {
-    font-size: 0.78rem;
-    font-weight: 650;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-secondary);
     width: 48px;
     flex-shrink: 0;
   }
 
   .color-value-code {
-    font-size: 0.82rem;
+    font-size: var(--font-size-sm);
     font-family: var(--text-mono);
     color: var(--text-primary);
     flex: 1;
@@ -688,35 +647,17 @@
     white-space: nowrap;
   }
 
-  .copy-btn {
-    flex-shrink: 0;
-    padding: 0.3rem;
-    min-height: 32px;
-    min-width: 32px;
-    border-radius: 8px;
-    color: var(--text-secondary);
-  }
-
-  .copy-btn:hover {
-    color: var(--accent);
-  }
-
-  .copy-all-btn {
-    align-self: stretch;
-    font-size: 0.85rem;
-  }
-
   .contrast-rows {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-md);
   }
 
   .contrast-row {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.6rem 0.75rem;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
     background: var(--bg-primary);
     border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
     border-radius: var(--radius-md);
@@ -729,53 +670,53 @@
   }
 
   .contrast-label {
-    font-size: 0.82rem;
-    font-weight: 650;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
   }
 
   .contrast-swatch-pair {
     display: flex;
-    gap: 2px;
+    gap: var(--space-xs);
   }
 
   .contrast-mini-swatch {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: var(--radius-xs);
     border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
   }
 
   .contrast-detail {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-sm);
     flex-wrap: wrap;
   }
 
   .contrast-algo-label {
-    font-size: 0.7rem;
-    font-weight: 600;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    min-width: 52px;
+    letter-spacing: var(--letter-spacing-wide);
+    min-width: 3.25rem;
   }
 
   .contrast-ratio {
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
     color: var(--text-primary);
-    min-width: 56px;
+    min-width: 3.5rem;
   }
 
   .badge {
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 0.15rem 0.45rem;
-    border-radius: 6px;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: var(--letter-spacing-wide);
     white-space: nowrap;
   }
 

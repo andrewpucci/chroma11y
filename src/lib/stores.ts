@@ -98,7 +98,7 @@ const DEFAULT_STATE = {
   displayColorSpace: 'hex' as DisplayColorSpace,
   gamutSpace: 'srgb' as GamutSpace,
   swatchLabels: 'both' as SwatchLabels,
-  contrastAlgorithm: 'WCAG21' as ContrastAlgorithm
+  contrastAlgorithm: 'WCAG' as ContrastAlgorithm
 };
 
 // Create the main color store

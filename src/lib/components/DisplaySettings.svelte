@@ -54,7 +54,7 @@
   function handleContrastAlgorithmChange(event: Event) {
     const value = (event.target as HTMLSelectElement).value as ContrastAlgorithm;
     updateColorState({ contrastAlgorithm: value });
-    announce(`Contrast algorithm changed to ${value === 'WCAG21' ? 'WCAG 2.1' : 'APCA'}`);
+    announce(`Contrast algorithm changed to ${value === 'WCAG' ? 'WCAG 2.1' : 'APCA'}`);
   }
 </script>
 
@@ -130,7 +130,7 @@
       onchange={handleContrastAlgorithmChange}
       aria-label="Contrast algorithm"
     >
-      <option value="WCAG21">WCAG 2.1</option>
+      <option value="WCAG">WCAG 2.1</option>
       <option value="APCA">APCA</option>
     </select>
   </div>
@@ -139,6 +139,6 @@
 <style>
   .display-settings {
     display: grid;
-    gap: 0.9rem;
+    gap: var(--space-md);
   }
 </style>

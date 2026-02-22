@@ -99,19 +99,21 @@
 
 <style>
   .color-swatch {
+    --swatch-width: 96px;
+
     position: relative;
     display: grid;
-    gap: 0.25rem;
+    gap: var(--space-xs);
     align-content: end;
-    padding: 0.45rem 0.5rem;
+    padding: var(--space-xs) var(--space-sm);
     border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     cursor: pointer;
     transition:
-      transform 140ms ease,
-      border-color 140ms ease;
-    width: var(--swatch-width, 96px);
-    flex: 0 0 var(--swatch-width, 96px);
+      transform var(--transition-fast),
+      border-color var(--transition-fast);
+    width: var(--swatch-width);
+    flex: 0 0 var(--swatch-width);
     min-height: 64px;
     text-align: left;
     overflow: hidden;
@@ -148,15 +150,15 @@
     }
 
     .hex {
-      font-size: 0.72rem;
+      font-size: var(--font-size-xs);
     }
 
     .step {
-      font-size: 0.7rem;
+      font-size: var(--font-size-xs);
     }
 
     .contrast-info {
-      font-size: 0.72rem;
+      font-size: var(--font-size-xs);
     }
   }
 
@@ -171,9 +173,9 @@
 
   .hex {
     position: relative;
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-normal);
     font-family: var(--text-mono);
     white-space: nowrap;
     overflow: hidden;
@@ -184,9 +186,9 @@
 
   .step {
     position: relative;
-    font-size: 0.74rem;
+    font-size: var(--font-size-xs);
     opacity: 0.9;
-    font-weight: 650;
+    font-weight: var(--font-weight-semibold);
     font-family: var(--text-mono);
     flex: 0 0 auto;
   }
@@ -195,7 +197,7 @@
     position: relative;
     display: flex;
     justify-content: space-between;
-    font-size: 0.72rem;
+    font-size: var(--font-size-xs);
     opacity: 0.65;
     font-family: var(--text-mono);
     white-space: nowrap;

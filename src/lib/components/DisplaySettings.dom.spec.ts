@@ -25,7 +25,7 @@ describe('DisplaySettings', () => {
       displayColorSpace: 'hex',
       gamutSpace: 'srgb',
       swatchLabels: 'both',
-      contrastAlgorithm: 'WCAG21'
+      contrastAlgorithm: 'WCAG'
     });
     setThemePreference('auto');
     vi.mocked(announce).mockClear();

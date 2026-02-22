@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getPaletteName } from '$lib/colorUtils';
   import { contrastColors, updateHueNudger } from '$lib/stores';
+  import Card from '$lib/components/Card.svelte';
   import ColorSwatch from './ColorSwatch.svelte';
   import '$lib/styles/nudger.css';
   import type Color from 'colorjs.io';
@@ -90,13 +91,12 @@
   }
 </script>
 
-<section class="card palette-grid" data-testid="generated-palettes">
-  <div class="card-header">
-    <h2 class="card-title">Generated Palettes</h2>
-    <div class="card-subtitle">Click any swatch to view color details</div>
-  </div>
-
-  <div class="card-body color-display">
+<Card
+  title="Generated Palettes"
+  subtitle="Click any swatch to view color details"
+  data-testid="generated-palettes"
+>
+  <div class="color-display">
     {#if palettesHex.length > 0}
       {#each palettesHex as palette, paletteIndex (paletteIndex)}
         <div class="palette-block">
@@ -142,21 +142,32 @@
       <p class="no-colors">No color palettes generated yet. Adjust the controls above.</p>
     {/if}
   </div>
-</section>
+</Card>
 
 <style>
+  /* Palette-grid specific nudger overrides */
+  .nudger-input {
+    width: 96px;
+  }
+
+  @media (max-width: 768px) {
+    .nudger-input {
+      width: 110px;
+    }
+  }
+
   .color-display {
     display: grid;
-    gap: 1rem;
+    gap: var(--space-lg);
+    container-type: inline-size;
   }
 
   .palette-block {
     display: grid;
-    gap: 0.5rem;
-    padding: var(--palette-block-padding, 0.75rem);
+    gap: var(--space-sm);
+    padding: var(--space-md);
     background: color-mix(in oklab, var(--bg-secondary) 88%, transparent);
-    border: var(--palette-block-border-width, 1px) solid
-      color-mix(in oklab, var(--border) 65%, transparent);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 65%, transparent);
     border-radius: var(--radius-md);
   }
 
@@ -164,39 +175,39 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--space-md);
   }
 
   .palette-title {
     margin: 0;
     color: var(--text-primary);
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
     text-transform: capitalize;
   }
 
   .hue-nudger {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-sm);
   }
 
   .hue-nudger-label {
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-secondary);
   }
 
   .swatches {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--swatch-gap, 0.5rem);
+    gap: var(--space-sm);
   }
 
   .no-colors {
     text-align: center;
     color: var(--text-secondary);
     font-style: italic;
-    padding: 2rem;
+    padding: var(--space-xl);
   }
 </style>

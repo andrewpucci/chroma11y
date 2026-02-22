@@ -1,6 +1,8 @@
 <script lang="ts">
   import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/exportUtils';
   import { announce } from '$lib/announce';
+  import Button from './Button.svelte';
+  import Icon from './Icon.svelte';
 
   interface Props {
     neutrals?: string[];
@@ -33,36 +35,36 @@
 </script>
 
 <div class="export-buttons">
-  <button
-    class="btn"
+  <Button
     onclick={exportJSON}
     disabled={neutrals.length === 0 && palettes.length === 0}
-    aria-label="Export JSON design tokens"
+    ariaLabel="Export JSON design tokens"
   >
-    <span aria-hidden="true">📄</span> Export JSON
-  </button>
-  <button
-    class="btn"
+    <Icon name="json" />
+    Export JSON
+  </Button>
+  <Button
     onclick={exportCSS}
     disabled={neutrals.length === 0 && palettes.length === 0}
-    aria-label="Export CSS custom properties"
+    ariaLabel="Export CSS custom properties"
   >
-    <span aria-hidden="true">🎨</span> Export CSS
-  </button>
-  <button
-    class="btn"
+    <Icon name="css" />
+    Export CSS
+  </Button>
+  <Button
     onclick={exportSCSS}
     disabled={neutrals.length === 0 && palettes.length === 0}
-    aria-label="Export SCSS variables"
+    ariaLabel="Export SCSS variables"
   >
-    <span aria-hidden="true">📝</span> Export SCSS
-  </button>
+    <Icon name="scss" />
+    Export SCSS
+  </Button>
 </div>
 
 <style>
   .export-buttons {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-sm);
   }
 </style>

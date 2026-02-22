@@ -20,7 +20,7 @@ const VALID_DISPLAY_SPACES: DisplayColorSpace[] = ['hex', 'rgb', 'oklch', 'hsl']
 const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
 const VALID_THEME_PREFS: ThemePreference[] = ['light', 'dark', 'auto'];
 const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
-const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG21', 'APCA'];
+const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
 
 /**
  * Saves state to localStorage

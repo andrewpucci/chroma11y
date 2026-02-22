@@ -35,10 +35,8 @@
   import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
   import { loadStateFromStorage, saveStateToStorage } from '$lib/storageUtils';
   import { announce } from '$lib/announce';
-
   import { generatePalettes } from '$lib/colorUtils';
   import type { ColorGenParams } from '$lib/colorUtils';
-
   import ColorControls from '$lib/components/ColorControls.svelte';
   import ExportButtons from '$lib/components/ExportButtons.svelte';
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
@@ -118,16 +116,18 @@
   onMount(() => {
     const urlState = getUrlState();
     const storedState = loadStateFromStorage();
+
     if (Object.keys(urlState).length > 0) {
       applyUrlState(urlState);
     } else if (storedState) {
       applyUrlState(storedState);
     }
 
-    // themePreference is only in localStorage, not the URL — always load it from storage
-    if (storedState?.themePreference) {
+    // Only load themePreference from localStorage if not already set by URL
+    if (!urlState.themePreference && storedState?.themePreference) {
       setThemePreference(storedState.themePreference);
     }
+
     urlStateLoaded = true;
 
     // Set up matchMedia listener for auto theme preference
@@ -236,7 +236,7 @@
   $effect(() => {
     if (!urlStateLoaded) return;
 
-    // Access all reactive values to track them
+    // themePreference is included in URL state when not auto (for shareable URLs)
     const state: UrlColorState = {
       baseColor: baseColorLocal,
       warmth: warmthLocal,
@@ -255,14 +255,14 @@
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
       swatchLabels: swatchLabelsLocal,
-      contrastAlgorithm: contrastAlgorithmLocal
+      contrastAlgorithm: contrastAlgorithmLocal,
+      themePreference: themePreferenceLocal
     };
 
-    // theme and themePreference are persisted to localStorage only, not the URL
+    // theme (resolved theme) is persisted to localStorage only, not the URL
     const storageState: UrlColorState = {
       ...state,
-      theme: currentThemeLocal,
-      themePreference: themePreferenceLocal
+      theme: currentThemeLocal
     };
 
     // Clear any existing timeout before setting new one
@@ -286,14 +286,17 @@
   });
 
   function applyUrlState(urlState: UrlColorState) {
-    // Apply theme preset first (sets generation params like bezier, contrast steps)
-    if (urlState.theme) {
-      setTheme(urlState.theme);
-    }
-
     const stateUpdate: Record<string, unknown> = {};
 
-    if (urlState.baseColor) stateUpdate.baseColor = urlState.baseColor;
+    // Apply theme preference if present (sets the user's preference, not resolved theme)
+    if (urlState.themePreference) {
+      setThemePreference(urlState.themePreference);
+    }
+
+    // Apply all other state values
+    if (urlState.baseColor) {
+      stateUpdate.baseColor = urlState.baseColor;
+    }
     if (urlState.warmth !== undefined) stateUpdate.warmth = urlState.warmth;
     if (urlState.chromaMultiplier !== undefined)
       stateUpdate.chromaMultiplier = urlState.chromaMultiplier;
@@ -312,11 +315,13 @@
     if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
     if (urlState.swatchLabels) stateUpdate.swatchLabels = urlState.swatchLabels;
     if (urlState.contrastAlgorithm) stateUpdate.contrastAlgorithm = urlState.contrastAlgorithm;
-    // themePreference is loaded from localStorage, not URL
-    if (urlState.themePreference) stateUpdate.themePreference = urlState.themePreference;
 
+    // Apply stored values after theme preference to ensure they override any defaults
     if (Object.keys(stateUpdate).length > 0) {
-      updateColorState(stateUpdate);
+      // Use setTimeout to ensure this runs after setThemePreference's store update completes
+      setTimeout(() => {
+        updateColorState(stateUpdate);
+      }, 0);
     }
   }
 
@@ -366,63 +371,65 @@
 >
   <AppHeader bind:bindInner={topbarInnerEl} />
 
-  <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
-    <Sidebar>
-      <Card title="Generation" subtitle="Control how colors are distributed across the palette">
-        <ColorControls
-          bind:baseColor={baseColorLocal}
-          bind:warmth={warmthLocal}
-          bind:chromaMultiplier={chromaMultiplierLocal}
-          bind:numColors={numColorsLocal}
-          bind:numPalettes={numPalettesLocal}
-          bind:x1={x1Local}
-          bind:y1={y1Local}
-          bind:x2={x2Local}
-          bind:y2={y2Local}
-          onRangeDragStart={freezeLayout}
-          onRangeDragEnd={unfreezeLayout}
-        />
-      </Card>
+  <div class="layout-container">
+    <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
+      <Sidebar>
+        <Card title="Generation" subtitle="Control how colors are distributed across the palette">
+          <ColorControls
+            bind:baseColor={baseColorLocal}
+            bind:warmth={warmthLocal}
+            bind:chromaMultiplier={chromaMultiplierLocal}
+            bind:numColors={numColorsLocal}
+            bind:numPalettes={numPalettesLocal}
+            bind:x1={x1Local}
+            bind:y1={y1Local}
+            bind:x2={x2Local}
+            bind:y2={y2Local}
+            onRangeDragStart={freezeLayout}
+            onRangeDragEnd={unfreezeLayout}
+          />
+        </Card>
 
-      <Card title="Contrast" subtitle="Configure contrast reference points">
-        <ContrastControls />
-      </Card>
+        <Card title="Contrast" subtitle="Configure contrast reference points">
+          <ContrastControls />
+        </Card>
 
-      <Card title="Settings" subtitle="Display preferences and contrast options">
-        <DisplaySettings />
-      </Card>
+        <Card title="Settings" subtitle="Display preferences and contrast options">
+          <DisplaySettings />
+        </Card>
 
-      <Card title="Export" subtitle="Download tokens in common formats">
-        <ExportButtons
-          neutrals={neutralsHexLocal}
-          palettes={palettesHexLocal}
-          displayNeutrals={neutralsDisplayLocal}
-          displayPalettes={palettesDisplayLocal}
-        />
-      </Card>
-    </Sidebar>
+        <Card title="Export" subtitle="Download tokens in common formats">
+          <ExportButtons
+            neutrals={neutralsHexLocal}
+            palettes={palettesHexLocal}
+            displayNeutrals={neutralsDisplayLocal}
+            displayPalettes={palettesDisplayLocal}
+          />
+        </Card>
+      </Sidebar>
 
-    <main
-      class="content"
-      id="main-content"
-      aria-labelledby="main-heading"
-      data-testid="app-content"
-    >
-      <div class="content-inner">
-        <NeutralPalette
-          neutrals={neutralsLocal}
-          neutralsHex={neutralsHexLocal}
-          neutralsDisplay={neutralsDisplayLocal}
-          {lightnessNudgerValues}
-        />
-        <PaletteGrid
-          palettes={palettesLocal}
-          palettesHex={palettesHexLocal}
-          palettesDisplay={palettesDisplayLocal}
-          {hueNudgerValues}
-        />
-      </div>
-    </main>
+      <main
+        class="content"
+        id="main-content"
+        aria-labelledby="main-heading"
+        data-testid="app-content"
+      >
+        <div class="content-inner">
+          <NeutralPalette
+            neutrals={neutralsLocal}
+            neutralsHex={neutralsHexLocal}
+            neutralsDisplay={neutralsDisplayLocal}
+            {lightnessNudgerValues}
+          />
+          <PaletteGrid
+            palettes={palettesLocal}
+            palettesHex={palettesHexLocal}
+            palettesDisplay={palettesDisplayLocal}
+            {hueNudgerValues}
+          />
+        </div>
+      </main>
+    </div>
   </div>
 </div>
 
@@ -430,17 +437,6 @@
 
 <style>
   .app-shell {
-    --content-width: calc(
-      var(--control-width) + var(--layout-gap) + (var(--num-colors) * var(--swatch-width)) +
-        ((var(--num-colors) - 1) * var(--swatch-gap)) + (var(--card-padding) * 2) +
-        (var(--card-border-width) * 2) + (var(--column-padding) * 2) +
-        (var(--palette-block-padding) * 2) + (var(--palette-block-border-width) * 2)
-    );
-    --container-max: min(
-      var(--content-width),
-      min(var(--container-vw), var(--container-max-limit))
-    );
-
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -453,15 +449,19 @@
       var(--bg-primary);
   }
 
-  .layout {
+  .layout-container {
     flex: 1;
-    max-width: var(--container-max);
+    container-type: inline-size;
+  }
+
+  .layout {
+    max-width: min(92vw, 2400px);
     margin: 0 auto;
     width: 100%;
     display: grid;
-    grid-template-columns: var(--control-width) 1fr;
-    gap: var(--layout-gap);
-    padding: var(--layout-gap) var(--column-padding) 1.25rem var(--column-padding);
+    grid-template-columns: clamp(320px, 25vw, 440px) 1fr;
+    gap: var(--space-lg);
+    padding: var(--space-lg) var(--column-padding) var(--space-xl) var(--column-padding);
     min-height: 0;
   }
 
@@ -471,14 +471,14 @@
 
   .content-inner {
     display: grid;
-    gap: 1rem;
+    gap: var(--space-lg);
     min-height: 0;
   }
 
-  @media (max-width: 980px) {
+  @container (max-width: 980px) {
     .layout {
       grid-template-columns: 1fr;
-      padding: var(--layout-gap) 0.5rem 1.25rem 0.5rem;
+      padding: var(--space-lg) var(--space-sm) var(--space-xl) var(--space-sm);
       max-width: none;
     }
   }

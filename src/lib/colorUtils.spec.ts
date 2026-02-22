@@ -433,8 +433,8 @@ describe('colorUtils', () => {
   });
 
   describe('getContrastForAlgorithm', () => {
-    it('dispatches to WCAG21 when algorithm is WCAG21 (bgColor, fgColor)', () => {
-      const result = getContrastForAlgorithm('#ffffff', '#000000', 'WCAG21');
+    it('dispatches to WCAG when algorithm is WCAG (bgColor, fgColor)', () => {
+      const result = getContrastForAlgorithm('#ffffff', '#000000', 'WCAG');
       expect(result).toBeCloseTo(21, 0);
     });
 
@@ -524,8 +524,8 @@ describe('colorUtils', () => {
   });
 
   describe('getPrintableContrastForAlgorithm', () => {
-    it('returns rounded value for WCAG21 (bgColor, fgColor)', () => {
-      const result = getPrintableContrastForAlgorithm('#ffffff', '#000000', 'WCAG21');
+    it('returns rounded value for WCAG (bgColor, fgColor)', () => {
+      const result = getPrintableContrastForAlgorithm('#ffffff', '#000000', 'WCAG');
       expect(result).toBe(21);
     });
 

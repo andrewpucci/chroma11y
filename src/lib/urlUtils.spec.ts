@@ -28,8 +28,14 @@ describe('urlUtils', () => {
       expect(encoded).toContain('y2=0.38');
     });
 
-    it('does not encode theme (localStorage only)', () => {
-      const state: UrlColorState = { theme: 'dark' };
+    it('encodes theme preference', () => {
+      const state: UrlColorState = { themePreference: 'dark' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('t=dark');
+    });
+
+    it('does not encode auto theme preference (default)', () => {
+      const state: UrlColorState = { themePreference: 'auto' };
       const encoded = encodeStateToUrl(state);
       expect(encoded).not.toContain('t=');
     });
@@ -94,10 +100,10 @@ describe('urlUtils', () => {
       expect(state.contrastMode).toBe('manual');
     });
 
-    it('ignores t param (theme is localStorage only)', () => {
+    it('decodes theme preference parameter', () => {
       const params = new URLSearchParams('t=dark');
       const state = decodeStateFromUrl(params);
-      expect(state.theme).toBeUndefined();
+      expect(state.themePreference).toBe('dark');
     });
 
     it('decodes lightness nudgers from index:value format', () => {
@@ -168,8 +174,8 @@ describe('urlUtils', () => {
       expect(encoded).toContain('ca=APCA');
     });
 
-    it('omits contrast algorithm when default (WCAG21)', () => {
-      const state: UrlColorState = { contrastAlgorithm: 'WCAG21' };
+    it('omits contrast algorithm when default (WCAG)', () => {
+      const state: UrlColorState = { contrastAlgorithm: 'WCAG' };
       const encoded = encodeStateToUrl(state);
       expect(encoded).not.toContain('ca=');
     });

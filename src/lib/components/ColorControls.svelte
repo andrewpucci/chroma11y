@@ -32,7 +32,7 @@
 
   let isDraggingCounts = $state(false);
   let activePointerId: number | null = $state(null);
-  let hasWindowListeners = $state(false);
+  let hasWindowListeners = false;
 
   function cleanupWindowListeners() {
     if (!hasWindowListeners) return;
@@ -90,7 +90,13 @@
     <div class="field base-color">
       <label class="label" for="baseColor">Base Color</label>
       <div class="base-color-row">
-        <input id="baseColor" type="color" bind:value={baseColor} aria-describedby="baseColorHex" />
+        <input
+          id="baseColor"
+          type="color"
+          bind:value={baseColor}
+          aria-describedby="baseColorHex"
+          tabindex="0"
+        />
         <input
           id="baseColorHex"
           class="input"
@@ -105,7 +111,7 @@
     <div class="field">
       <label class="label" for="warmth">Warmth ({warmth})</label>
       <div class="slider-wrapper">
-        <input id="warmth" type="range" min="-50" max="50" bind:value={warmth} />
+        <input id="warmth" type="range" min="-50" max="50" bind:value={warmth} tabindex="0" />
       </div>
     </div>
 
@@ -119,6 +125,7 @@
           max="2"
           step="0.01"
           bind:value={chromaMultiplier}
+          tabindex="0"
         />
       </div>
     </div>
@@ -134,6 +141,7 @@
           bind:value={numColors}
           onpointerdown={handlePointerDown}
           oninput={handleKeyboardInput}
+          tabindex="0"
         />
       </div>
     </div>
@@ -149,6 +157,7 @@
           bind:value={numPalettes}
           onpointerdown={handlePointerDown}
           oninput={handleKeyboardInput}
+          tabindex="0"
         />
       </div>
     </div>
@@ -165,13 +174,14 @@
 <style>
   .generator-controls {
     display: grid;
-    gap: 0.9rem;
+    gap: var(--space-md);
+    container-type: inline-size;
   }
 
   .control-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.9rem;
+    gap: var(--space-md);
   }
 
   input[type='range'] {
@@ -181,50 +191,50 @@
   .base-color-row {
     display: grid;
     grid-template-columns: 56px 1fr;
-    gap: 0.6rem;
+    gap: var(--space-sm);
     align-items: center;
   }
 
   .base-color-row input[type='color'] {
     width: 56px;
-    height: 44px;
+    height: var(--touch-target-comfortable);
     padding: 0;
-    border: none;
-    border-radius: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     background: transparent;
     cursor: pointer;
-    appearance: none;
+    /* Don't use appearance: none to maintain keyboard focusability in WebKit */
   }
 
   .base-color-row input[type='color']::-webkit-color-swatch-wrapper {
     padding: 0;
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
   }
 
   .base-color-row input[type='color']::-webkit-color-swatch {
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
   }
 
   .base-color-row input[type='color']::-moz-color-swatch {
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
   }
 
   .divider {
     height: 1px;
     background: color-mix(in oklab, var(--border) 60%, transparent);
-    margin: 0.25rem 0;
+    margin: var(--space-xs) 0;
   }
 
   .bezier-title {
-    font-size: 0.95rem;
-    font-weight: 650;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
   }
 
-  @media (max-width: 980px) and (min-width: 770px) {
+  @container (max-width: 980px) and (min-width: 770px) {
     .generator-controls {
       grid-template-columns: 1fr 1fr;
       align-items: start;
@@ -246,13 +256,13 @@
 
   .bezier-section {
     display: grid;
-    gap: 0.5rem;
+    gap: var(--space-sm);
   }
 
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
     input[type='range'] {
-      height: 44px;
+      height: var(--touch-target-comfortable);
       touch-action: manipulation;
     }
   }
@@ -269,9 +279,9 @@
 
   .slider-wrapper {
     width: 100%;
-    padding: 0 8px;
+    padding: 0 var(--space-sm);
     box-sizing: border-box;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;

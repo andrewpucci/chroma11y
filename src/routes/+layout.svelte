@@ -1,6 +1,9 @@
 <script lang="ts">
   import '@fontsource-variable/atkinson-hyperlegible-next';
   import '@fontsource-variable/atkinson-hyperlegible-mono';
+  import '$lib/styles/reset.css';
+  import '$lib/styles/utilities.css';
+  import '$lib/styles/tokens.css';
   import { currentTheme } from '$lib/stores';
   import { browser } from '$app/environment';
   import { onMount } from 'svelte';
@@ -49,39 +52,22 @@
 </div>
 
 <!-- Screen reader announcements -->
-<div role="status" aria-live="polite" aria-atomic="true" class="sr-only">
+<div role="status" aria-live="polite" aria-atomic="true" class="visually-hidden">
   {announceMessage}
 </div>
 
 <style>
+  /* App-specific font configuration */
   :global(html) {
     font-family:
       'Atkinson Hyperlegible Next Variable', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
       sans-serif;
-    line-height: 1.5;
-    color-scheme: light dark;
+    line-height: var(--line-height-normal);
     text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
 
   :global(:root) {
-    --column-padding: 1rem;
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.12);
-    --swatch-width: 96px;
-    --swatch-gap: 0.5rem;
-    --layout-gap: 1rem;
-    --control-width: 440px;
-    --card-padding: 1rem;
-    --card-border-width: 1px;
-    --palette-block-padding: 0.75rem;
-    --palette-block-border-width: 1px;
-    --container-max-limit: 2400px;
-    --container-vw: 92vw;
+    --column-padding: var(--space-lg);
     --text-mono:
       'Atkinson Hyperlegible Mono Variable', ui-monospace, 'Cascadia Code', 'Source Code Pro',
       Menlo, Consolas, monospace;
@@ -89,68 +75,28 @@
 
   /* Global focus styles for accessibility — universal double-outline pattern
      per https://www.sarasoueidan.com/blog/focus-indicators/
-     White outline + black shadow guarantees ≥3:1 contrast against any background. */
+     Theme-aware outline + shadow guarantees ≥3:1 contrast against any background. */
   :global(*:focus-visible) {
-    outline: 3px solid white;
-    box-shadow: 0 0 0 6px black;
+    outline: var(--focus-outline-width) solid var(--focus-outline-inside);
+    box-shadow: 0 0 0 var(--focus-outline-offset) var(--focus-outline-outside);
   }
 
-  /* Skip link for keyboard users */
-  :global(.skip-link) {
-    position: absolute;
-    top: -100%;
-    left: 0;
-    background: var(--accent);
-    color: white;
-    padding: 0.5rem 1rem;
-    z-index: 1000;
-    text-decoration: none;
-    font-weight: 500;
-  }
-
-  :global(.skip-link:focus) {
-    top: 0;
-  }
-
-  /* Reduced motion preference */
+  /* Reduced motion preference - handled by design tokens */
   @media (prefers-reduced-motion: reduce) {
     :global(*),
     :global(*::before),
     :global(*::after) {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
   }
 
-  /* Screen reader only utility */
-  :global(.sr-only) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
+  /* App-specific global styles */
   :global(body) {
-    margin: 0;
-    padding: 0;
     background: var(--bg-primary, #ffffff);
     color: var(--text-primary, #1a1a1a);
     transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
-  }
-
-  :global(*),
-  :global(*::before),
-  :global(*::after) {
-    box-sizing: border-box;
+      background-color var(--transition-slow),
+      color var(--transition-slow);
   }
 
   :global(a) {
@@ -158,127 +104,11 @@
   }
 
   :global(h1, h2, h3) {
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-    margin: 0;
-  }
-
-  :global(p) {
-    margin: 0;
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
   }
 
   :global(code, kbd, samp, pre) {
-    font-family: var(--text-mono);
-  }
-
-  :global(.card) {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-  }
-
-  :global(.card-header) {
-    padding: 0.875rem 1rem 0.75rem 1rem;
-    border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  :global(.card-title) {
-    font-size: 0.95rem;
-    font-weight: 650;
-  }
-
-  :global(.card-subtitle) {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-  }
-
-  :global(.card-body) {
-    padding: var(--card-padding);
-  }
-
-  :global(.btn) {
-    appearance: none;
-    border: 1px solid var(--border);
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border-radius: 10px;
-    padding: 0.65rem 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    transition:
-      transform 120ms ease,
-      background-color 120ms ease,
-      border-color 120ms ease,
-      color 120ms ease;
-  }
-
-  :global(.btn:hover:not(:disabled)) {
-    transform: translateY(-1px);
-    border-color: color-mix(in oklab, var(--border) 40%, var(--accent));
-  }
-
-  :global(.btn:active:not(:disabled)) {
-    transform: translateY(0);
-  }
-
-  :global(.btn:disabled) {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-
-  :global(.btn-primary) {
-    background: color-mix(in oklab, var(--accent) 90%, black);
-    color: white;
-    border-color: color-mix(in oklab, var(--accent) 70%, black);
-  }
-
-  :global(.btn-primary:hover:not(:disabled)) {
-    background: color-mix(in oklab, var(--accent-hover) 90%, black);
-    border-color: color-mix(in oklab, var(--accent-hover) 70%, black);
-  }
-
-  :global(.btn-ghost) {
-    background: transparent;
-  }
-
-  :global(.field) {
-    display: grid;
-    gap: 0.4rem;
-  }
-
-  :global(.label) {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  :global(.help) {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-  }
-
-  :global(.input),
-  :global(.select) {
-    width: 100%;
-    border: 1px solid var(--border);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border-radius: 10px;
-    padding: 0.6rem 0.75rem;
-    min-height: 44px;
-    transition: border-color 120ms ease;
-  }
-
-  :global(.mono) {
     font-family: var(--text-mono);
   }
 
@@ -292,31 +122,16 @@
     flex: 1;
     margin: 0 auto;
     width: 100%;
-    box-sizing: border-box;
     overflow: hidden;
   }
 
   /* Light theme */
   :global([data-theme='light']) {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f6f7f9;
-    --bg-tertiary: #eef0f4;
-    --text-primary: #1a1a1a;
-    --text-secondary: #636a72;
-    --border: #dee2e6;
-    --accent: #1862e6;
-    --accent-hover: #1352c4;
+    color-scheme: light;
   }
 
   /* Dark theme */
   :global([data-theme='dark']) {
-    --bg-primary: #0d1117;
-    --bg-secondary: #121824;
-    --bg-tertiary: #1a2231;
-    --text-primary: #f0f6fc;
-    --text-secondary: #8b949e;
-    --border: #30363d;
-    --accent: #58a6ff;
-    --accent-hover: #79b8ff;
+    color-scheme: dark;
   }
 </style>

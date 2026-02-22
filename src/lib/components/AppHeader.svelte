@@ -27,14 +27,15 @@
   .topbar-inner {
     max-width: var(--container-max);
     margin: 0 auto;
-    padding: 1rem var(--column-padding);
+    padding: var(--space-lg) var(--column-padding);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-lg);
+    container-type: inline-size;
   }
 
-  @media (max-width: 520px) {
+  @container (max-width: 520px) {
     .topbar-inner {
       flex-direction: column;
       align-items: flex-start;

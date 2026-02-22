@@ -57,8 +57,10 @@ export async function getSwatchColor(page: Page, index: number = 0): Promise<str
  * Toggle theme and wait for transition
  */
 export async function toggleTheme(page: Page): Promise<void> {
-  const themeToggle = page.getByRole('button', { name: /Switch to (dark|light) mode/ });
-  await themeToggle.click();
+  const themeSelect = page.locator('#theme-preference');
+  const currentValue = await themeSelect.inputValue();
+  const newValue = currentValue === 'dark' ? 'light' : 'dark';
+  await themeSelect.selectOption(newValue);
   await page.waitForTimeout(1000); // Wait for theme transition
 }
 
