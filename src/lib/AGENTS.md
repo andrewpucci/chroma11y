@@ -51,5 +51,32 @@ Palette names are auto-detected via CIEDE2000 nearest color matching, with fallb
 ## Testing conventions
 
 - Pure logic tests: `*.spec.ts` alongside source (e.g., `colorUtils.spec.ts`)
+- DOM-dependent tests: `*.dom.spec.ts` (jsdom environment)
 - Run with `npm run test:unit` (Vitest, server project for Node environment)
 - `expect.requireAssertions` is enabled globally — every test must contain at least one assertion
+
+### What to test
+
+- **Test**: Your wrapper functions' input/output behavior, error handling, edge cases
+- **Don't test**: That `colorjs.io` calculates contrast correctly — that's the library's job
+- **Test**: Store mutations produce expected state changes
+- **Don't test**: The same logic in multiple places unless testing different integration points
+
+### Documenting untestable code
+
+Some code paths are intentionally not unit tested. When adding defensive code that can't be reliably tested, add a JSDoc comment explaining:
+
+1. What the code guards against
+2. Why it can't be unit tested
+3. How it's covered (E2E test, manual testing, or truly defensive)
+
+Example:
+
+```typescript
+/**
+ * Note: The catch branch is defensive code for malformed hex values that slip
+ * past validation. In practice, all hex values come from colorToCssHex() which
+ * always produces valid output. This is tested indirectly via exportAsDesignTokens
+ * which skips invalid colors (no token emitted).
+ */
+```

@@ -38,3 +38,71 @@ This is an accessibility-focused project. Every component must maintain:
 - Use `$state()` / `$derived()` / `$effect()` for local reactivity
 - Use `{#snippet}` and `{@render}` instead of slots where applicable
 - Use `bind:` for two-way bindings
+
+## Testing guidelines
+
+### What to test in component DOM tests
+
+- **Rendering**: Component renders with expected structure, ARIA attributes present
+- **User events**: Click, input, keyboard interactions update state correctly
+- **Store integration**: Component reads from and writes to stores as expected
+- **Accessibility**: ARIA labels, roles, keyboard navigation work correctly
+
+### What NOT to test in component DOM tests
+
+- **Pointer capture / drag interactions** — jsdom doesn't support `getBoundingClientRect` or pointer capture; use E2E tests
+- **SVG coordinate transforms** — Require actual rendering; use E2E tests
+- **CSS styling / visual appearance** — Use E2E visual regression tests
+- **Internal implementation details** — Test behavior, not implementation
+
+### Documenting untestable code
+
+When component code can't be reliably unit tested, add a JSDoc comment in the source file explaining:
+
+1. What the code does
+2. Why it can't be unit tested (jsdom limitation, requires real rendering, etc.)
+3. Where it IS tested (reference the E2E test file)
+
+Example from `BezierEditor.svelte`:
+
+```typescript
+/**
+ * Note: This function and the pointer event handlers below are not covered
+ * by unit tests because:
+ * - getBoundingClientRect() returns zeros in jsdom
+ * - Pointer capture APIs are mocked/stubbed and don't behave realistically
+ *
+ * These interactions are tested via E2E tests in e2e/bezier-editor.spec.ts
+ */
+```
+
+### Test file structure
+
+```typescript
+import { render, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+
+import ComponentName from './ComponentName.svelte';
+
+describe('ComponentName', () => {
+  describe('Rendering', () => {
+    it('renders with expected structure', () => {
+      // ...
+    });
+  });
+
+  describe('User Interactions', () => {
+    it('handles click events', async () => {
+      const user = userEvent.setup();
+      // ...
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('has proper ARIA attributes', () => {
+      // ...
+    });
+  });
+});
+```
