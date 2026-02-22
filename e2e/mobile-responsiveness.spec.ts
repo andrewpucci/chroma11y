@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
+import { maybeCaptureArgosVisual } from './visual';
 
 const MOBILE_VIEWPORTS = {
   iPhone_SE: { width: 375, height: 667 },
@@ -11,19 +12,31 @@ const MOBILE_VIEWPORTS = {
 
 test.describe('Mobile Responsiveness', () => {
   test.describe('Visual regression', () => {
-    test('mobile layout appearance (iPhone SE)', async ({ page }) => {
+    test('mobile layout appearance (iPhone SE)', async ({ page }, testInfo) => {
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
       await page.goto('/');
       await waitForAppReady(page);
+      await maybeCaptureArgosVisual({
+        page,
+        testInfo,
+        name: 'mobile-layout-iphone-se',
+        fullPage: true
+      });
       await expect(page).toHaveScreenshot('mobile-layout-iphone-se.png', {
         fullPage: true
       });
     });
 
-    test('mobile layout appearance (small phone 320px)', async ({ page }) => {
+    test('mobile layout appearance (small phone 320px)', async ({ page }, testInfo) => {
       await page.setViewportSize(MOBILE_VIEWPORTS.Small_Phone);
       await page.goto('/');
       await waitForAppReady(page);
+      await maybeCaptureArgosVisual({
+        page,
+        testInfo,
+        name: 'mobile-layout-320px',
+        fullPage: true
+      });
       await expect(page).toHaveScreenshot('mobile-layout-320px.png', {
         fullPage: true
       });

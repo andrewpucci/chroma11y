@@ -2,6 +2,11 @@
 
 Playwright end-to-end tests that run against a production build. **All E2E tests run in Docker** to ensure consistency between local development and CI.
 
+CI uses two pipelines:
+
+- `e2e.yml`: deterministic visual gate against local production preview
+- `netlify-smoke.yml`: deploy-preview functional smoke checks (no visual baselines)
+
 ## Setup
 
 Run E2E tests in Docker (recommended):
@@ -20,6 +25,12 @@ Run locally for debugging (results may differ from CI):
 
 ```sh
 npm run test:e2e:local
+```
+
+Run deploy-preview smoke tests only:
+
+```sh
+npm run test:e2e:netlify-smoke
 ```
 
 See `docs/visual-testing.md` for full Docker workflow documentation.
@@ -92,7 +103,13 @@ Prefer these selector strategies in order:
 
 ## Visual comparisons (snapshots)
 
-Visual regression tests use Playwright's `toHaveScreenshot()` API. Snapshots are stored in `{test-file}.spec.ts-snapshots/` directories and **must be committed** to version control.
+Visual regression tests use Playwright's `toHaveScreenshot()` API. Snapshots are stored in `{test-file}.spec.ts-snapshots/` directories and **must be committed** to version control during phase A.
+
+Argos capture is also enabled in phase A through `e2e/visual.ts`:
+
+- Upload is gated by `ARGOS_UPLOAD=true`
+- Capture is restricted to Chromium
+- Fork PRs run tests but skip Argos upload
 
 ### Generating snapshots
 
@@ -109,6 +126,7 @@ npm run test:e2e:update
 - Snapshots include browser suffix automatically: `palette-grid-chromium.png`, `palette-grid-firefox.png`, `palette-grid-webkit.png`
 - All snapshots are Linux-generated for consistency across local dev and CI
 - Use `stylePath` option to hide dynamic content (timestamps, animations)
+- For new visual tests in phase A, call `maybeCaptureArgosVisual(...)` before `toHaveScreenshot(...)`
 
 ### Current coverage
 
@@ -138,5 +156,6 @@ When adding a new E2E test file:
 - **`export-validation.spec.ts`** — Export format correctness
 - **`focus-indicators.spec.ts`** — Focus ring visibility, behavior + visual regression
 - **`mobile-responsiveness.spec.ts`** — Responsive layout testing + visual regression
+- **`netlify-smoke.spec.ts`** — Deploy-preview functional smoke checks (no visual assertions)
 - **`persistence.spec.ts`** — URL and localStorage state persistence
 - **`ui-interactions.spec.ts`** — General UI interaction flows + visual regression (themes, palettes)
