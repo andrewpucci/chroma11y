@@ -10,7 +10,6 @@ test.describe('Algorithm Validation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
   });
 
   test('changing one lightness nudger affects only its corresponding neutral swatch', async ({
@@ -25,7 +24,17 @@ test.describe('Algorithm Validation', () => {
 
     const nudgerInputs = page.locator('.nudger-input');
     await nudgerInputs.nth(1).fill('0.1');
-    await page.waitForTimeout(500);
+
+    // Wait for color to update
+    await page.waitForFunction(
+      (before) => {
+        const hex = document.querySelectorAll('[data-testid="neutral-palette"] .hex')[1]
+          ?.textContent;
+        return hex !== before;
+      },
+      color1Before,
+      { timeout: 5000 }
+    );
 
     const color0After = await hexElements.nth(0).textContent();
     const color1After = await hexElements.nth(1).textContent();
@@ -51,7 +60,18 @@ test.describe('Algorithm Validation', () => {
     const hueNudger = page.locator('.palette-block').first().locator('.nudger-input');
     await expect(hueNudger).toBeVisible();
     await hueNudger.fill('60');
-    await page.waitForTimeout(500);
+
+    // Wait for palette color to update
+    await page.waitForFunction(
+      (before) => {
+        const hex = document.querySelector(
+          '[data-testid="generated-palettes"] .swatches .hex:nth-child(6)'
+        )?.textContent;
+        return hex !== before;
+      },
+      paletteBefore,
+      { timeout: 5000 }
+    );
 
     for (let i = 0; i < 3; i++) {
       expect(await neutralHexes.nth(i).textContent()).toBe(neutralsBefore[i]);

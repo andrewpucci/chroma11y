@@ -13,13 +13,16 @@ test.describe('Local Storage Persistence', () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
   });
 
   test('saves state to localStorage and restores on fresh load', async ({ page }) => {
     // Change base color to purple
     await page.locator('#baseColorHex').fill('#800080');
-    await page.waitForTimeout(1000);
+
+    // Wait for localStorage to be updated (debounced)
+    await page.waitForFunction(() => localStorage.getItem('chroma11y-state')?.includes('800080'), {
+      timeout: 5000
+    });
 
     // Verify localStorage was updated
     const storedState = await page.evaluate(() => {
@@ -31,7 +34,6 @@ test.describe('Local Storage Persistence', () => {
     // Navigate to clean URL (don't clear localStorage)
     await page.goto('/');
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
 
     // Base color should be restored from localStorage
     const baseColorValue = await page.locator('#baseColorHex').inputValue();
@@ -41,12 +43,16 @@ test.describe('Local Storage Persistence', () => {
   test('remembers theme preference across sessions', async ({ page }) => {
     // Toggle to dark mode
     await page.locator('#theme-preference').selectOption('dark');
-    await page.waitForTimeout(1000);
+
+    // Wait for theme preference to be saved to localStorage
+    await page.waitForFunction(
+      () => localStorage.getItem('chroma11y-state')?.includes('"themePreference":"dark"'),
+      { timeout: 5000 }
+    );
 
     // Navigate to fresh URL (don't clear localStorage)
     await page.goto('/');
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
 
     // Should still be in dark mode
     await expect(page.locator('#theme-preference')).toHaveValue('dark');
@@ -59,7 +65,6 @@ test.describe('URL State Persistence', () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
   });
 
   test('persists state in URL and restores on navigation', async ({ page }) => {
@@ -76,7 +81,6 @@ test.describe('URL State Persistence', () => {
     // Navigate to the URL directly
     await page.goto(url);
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
 
     // Base color input should have the green value
     const baseColorValue = await page.locator('#baseColorHex').inputValue();
@@ -87,7 +91,6 @@ test.describe('URL State Persistence', () => {
     // Navigate with URL parameters
     await page.goto('/?c=ff0000&w=5&t=dark');
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
 
     // Verify base color is red
     const baseColorValue = await page.locator('#baseColorHex').inputValue();
@@ -109,7 +112,6 @@ test.describe('URL State Persistence', () => {
     // Navigate with URL parameter for red
     await page.goto('/?c=ff0000');
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
 
     // URL should win - base color should be red
     const baseColorValue = await page.locator('#baseColorHex').inputValue();
