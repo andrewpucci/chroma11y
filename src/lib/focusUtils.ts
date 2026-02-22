@@ -7,6 +7,10 @@ let globalListenersAttached = false;
 let lastInteractionWasKeyboard = false;
 const focusVisibleCallbacks = new Set<(visible: boolean) => void>();
 
+// Store handler references for proper cleanup
+let handleKeyDown: ((e: KeyboardEvent) => void) | null = null;
+let handleMouseDown: (() => void) | null = null;
+
 /**
  * Register a callback to be notified when focus-visible state changes
  */
@@ -28,7 +32,7 @@ export function getLastInteractionWasKeyboard(): boolean {
 export function initializeGlobalFocusListeners(): void {
   if (globalListenersAttached) return;
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Tab') {
       lastInteractionWasKeyboard = true;
       // Notify all callbacks that keyboard interaction is happening
@@ -36,7 +40,7 @@ export function initializeGlobalFocusListeners(): void {
     }
   };
 
-  const handleMouseDown = () => {
+  handleMouseDown = () => {
     lastInteractionWasKeyboard = false;
     // Notify all callbacks that mouse interaction is happening
     focusVisibleCallbacks.forEach(callback => callback(false));
@@ -53,10 +57,14 @@ export function initializeGlobalFocusListeners(): void {
 export function cleanupGlobalFocusListeners(): void {
   if (!globalListenersAttached) return;
 
-  // Remove the specific listeners we added
-  // Note: We need to store references to remove them properly
-  document.removeEventListener('keydown', () => {}, true);
-  document.removeEventListener('mousedown', () => {}, true);
+  if (handleKeyDown) {
+    document.removeEventListener('keydown', handleKeyDown, true);
+    handleKeyDown = null;
+  }
+  if (handleMouseDown) {
+    document.removeEventListener('mousedown', handleMouseDown, true);
+    handleMouseDown = null;
+  }
   globalListenersAttached = false;
   focusVisibleCallbacks.clear();
 }

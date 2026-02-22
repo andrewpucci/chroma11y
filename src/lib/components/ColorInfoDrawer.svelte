@@ -650,14 +650,14 @@
   .contrast-rows {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--space-md);
   }
 
   .contrast-row {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.6rem 0.75rem;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
     background: var(--bg-primary);
     border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
     border-radius: var(--radius-md);
@@ -670,53 +670,53 @@
   }
 
   .contrast-label {
-    font-size: 0.82rem;
-    font-weight: 650;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-primary);
   }
 
   .contrast-swatch-pair {
     display: flex;
-    gap: 2px;
+    gap: var(--space-xs);
   }
 
   .contrast-mini-swatch {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: var(--radius-xs);
     border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
   }
 
   .contrast-detail {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-sm);
     flex-wrap: wrap;
   }
 
   .contrast-algo-label {
-    font-size: 0.7rem;
-    font-weight: 600;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    min-width: 52px;
+    letter-spacing: var(--letter-spacing-wide);
+    min-width: 3.25rem;
   }
 
   .contrast-ratio {
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
     color: var(--text-primary);
-    min-width: 56px;
+    min-width: 3.5rem;
   }
 
   .badge {
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 0.15rem 0.45rem;
-    border-radius: 6px;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: var(--letter-spacing-wide);
     white-space: nowrap;
   }
 

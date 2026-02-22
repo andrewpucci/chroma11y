@@ -163,9 +163,9 @@ test.describe('Design Tokens', () => {
         return getComputedStyle(document.documentElement).getPropertyValue('--duration-normal');
       });
 
-      // Motion tokens should have normal values (browser normalizes ms to s)
-      expect(durationFast.trim()).toMatch(/^0?\.1s$/);
-      expect(durationNormal.trim()).toMatch(/^0?\.2s$/);
+      // Motion tokens should have normal values (browser may return ms or s)
+      expect(durationFast.trim()).toMatch(/^(0?\.1s|100ms)$/);
+      expect(durationNormal.trim()).toMatch(/^(0?\.2s|200ms)$/);
     });
   });
 

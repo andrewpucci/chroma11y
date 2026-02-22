@@ -58,7 +58,7 @@
   let capturedPointerId: number | null = $state(null);
   let capturedElement: Element | null = $state(null);
 
-  import { registerFocusVisibleCallback, getLastInteractionWasKeyboard, initializeGlobalFocusListeners } from '$lib/focusUtils';
+  import { getLastInteractionWasKeyboard, initializeGlobalFocusListeners } from '$lib/focusUtils';
 
   // Focus state for showing focus rings (only on keyboard navigation, like :focus-visible)
   let p1FocusVisible = $state(false);
@@ -67,15 +67,6 @@
   // Initialize global focus listeners once
   $effect(() => {
     initializeGlobalFocusListeners();
-  });
-
-  // Register for focus-visible state changes
-  $effect(() => {
-    const unregister = registerFocusVisibleCallback((visible: boolean) => {
-      // Update focus state based on global keyboard interaction
-      // Note: This is a simplified approach - individual components might need more granular control
-    });
-    return unregister;
   });
 
   function getSvgPoint(e: PointerEvent): { x: number; y: number } | null {

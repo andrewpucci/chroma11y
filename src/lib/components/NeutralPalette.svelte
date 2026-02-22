@@ -198,13 +198,13 @@
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
     .neutral-item {
-      width: var(--swatch-width-md, 96px);
+      width: 96px;
     }
   }
 
   @media (max-width: 575px) {
     .neutral-item {
-      width: var(--swatch-width-sm, 92px);
+      width: 92px;
     }
   }
 </style>
