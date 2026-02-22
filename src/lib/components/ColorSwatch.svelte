@@ -126,12 +126,20 @@
     cursor: pointer;
     transition:
       transform var(--transition-fast),
-      border-color var(--transition-fast);
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
     width: var(--swatch-width, 96px);
     flex: var(--swatch-flex, 0 0 96px);
     min-height: 64px;
     text-align: left;
     overflow: hidden;
+    /* Subtle inset shadow for better swatch visibility against backgrounds */
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, white 8%, transparent);
+  }
+
+  /* Enhanced visibility in dark mode - subtle light border helps dark swatches stand out */
+  :global([data-theme='dark']) .color-swatch {
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, white 12%, transparent);
   }
 
   .color-swatch::before {

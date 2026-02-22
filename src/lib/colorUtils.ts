@@ -502,6 +502,9 @@ export function colorToCssRgb(color: Color): string {
 /**
  * Converts any Color object to a CSS oklch() string (CSS Color 4 syntax).
  * e.g. "oklch(55% 0.19 264)"
+ *
+ * Values are rounded to 2 decimal places for readability on swatches.
+ * Full precision is available in the color info drawer and exports.
  */
 export function colorToCssOklch(color: Color, gamut: GamutSpace = 'srgb'): string {
   try {
@@ -521,10 +524,10 @@ export function colorToCssOklch(color: Color, gamut: GamutSpace = 'srgb'): strin
     const c = oklch.oklch.c ?? 0;
     const h = oklch.oklch.h;
     const safeH = h == null || isNaN(h) ? 0 : h;
-    // Round to 6 decimal places; snap near-zero values to 0
-    const lPct = parseFloat((l * 100).toFixed(6));
-    const cRound = c < 1e-6 ? 0 : parseFloat(c.toFixed(6));
-    const hRound = parseFloat(safeH.toFixed(6));
+    // Round to 2 decimal places for readability; snap near-zero values to 0
+    const lPct = parseFloat((l * 100).toFixed(2));
+    const cRound = c < 1e-6 ? 0 : parseFloat(c.toFixed(2));
+    const hRound = parseFloat(safeH.toFixed(2));
     return `oklch(${lPct}% ${cRound} ${hRound})`;
   } catch {
     return 'oklch(0% 0 0)';

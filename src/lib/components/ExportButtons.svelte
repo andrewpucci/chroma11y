@@ -1,5 +1,6 @@
 <script lang="ts">
   import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/exportUtils';
+  import { copyToClipboard } from '$lib/colorUtils';
   import { announce } from '$lib/announce';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
@@ -32,9 +33,23 @@
     downloadSCSS(neutrals, palettes, displayNeutrals, displayPalettes);
     announce('Downloaded SCSS variables');
   }
+
+  /**
+   * Copies the current URL (with all state parameters) to the clipboard.
+   * This allows users to share their palette configuration with others.
+   */
+  function shareURL() {
+    const url = window.location.href;
+    copyToClipboard(url);
+    announce('Copied shareable URL to clipboard');
+  }
 </script>
 
 <div class="export-buttons">
+  <Button onclick={shareURL} ariaLabel="Copy shareable URL to clipboard">
+    <Icon name="share" />
+    Share URL
+  </Button>
   <Button
     onclick={exportJSON}
     disabled={neutrals.length === 0 && palettes.length === 0}
