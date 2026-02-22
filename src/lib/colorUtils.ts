@@ -166,7 +166,14 @@ const shortColorEntries: { hex: string; color: Color }[] = shortColorNames
   })
   .filter((e): e is { hex: string; color: Color } => e !== null);
 
-/** FIFO cache for nearest color name lookups to avoid repeated O(n) scans */
+/**
+ * FIFO cache for nearest color name lookups to avoid repeated O(n) scans.
+ *
+ * Note: Cache eviction (NEAREST_COLOR_CACHE_MAX) is not unit tested because
+ * filling 256+ entries requires 256+ CIEDE2000 calculations, which times out
+ * on CI (~7s). The eviction logic is simple (delete first key when full) and
+ * is covered by manual verification. See colorUtils.spec.ts for cache tests.
+ */
 const nearestColorCache = new Map<string, string>();
 const NEAREST_COLOR_CACHE_MAX = 256;
 

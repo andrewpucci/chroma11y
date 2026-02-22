@@ -1,0 +1,76 @@
+/**
+ * Global Styles
+ * App-wide styles that apply to elements outside of Svelte components.
+ * These are imported directly and not processed through Svelte's scoped CSS.
+ */
+
+/* App-specific font configuration */
+html {
+  font-family:
+    'Atkinson Hyperlegible Next Variable', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  line-height: var(--line-height-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:root {
+  --column-padding: var(--space-lg);
+  --text-mono:
+    'Atkinson Hyperlegible Mono Variable', ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo,
+    Monaco, Consolas, monospace;
+}
+
+/* Global focus styles for accessibility — universal double-outline pattern
+   per https://www.sarasoueidan.com/blog/focus-indicators/
+   Theme-aware outline + shadow guarantees ≥3:1 contrast against any background. */
+*:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-inside);
+  box-shadow: 0 0 0 var(--focus-outline-offset) var(--focus-outline-outside);
+}
+
+/* Reduced motion preference - handled by design tokens */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* App-specific global styles */
+body {
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #1a1a1a);
+  transition:
+    background-color var(--transition-slow),
+    color var(--transition-slow);
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--text-mono);
+}
+
+/* Light theme */
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* Dark theme */
+[data-theme='dark'] {
+  color-scheme: dark;
+}

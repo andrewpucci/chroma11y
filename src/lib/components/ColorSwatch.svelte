@@ -110,21 +110,25 @@
 
 <style>
   .color-swatch {
-    --swatch-width: 96px;
-
     position: relative;
     display: grid;
     gap: var(--space-xs);
     align-content: end;
     padding: var(--space-xs) var(--space-sm);
     border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    border-bottom: var(
+      --swatch-border-bottom,
+      1px solid color-mix(in oklab, var(--border) 70%, transparent)
+    );
     border-radius: var(--radius-md);
+    border-bottom-left-radius: var(--swatch-border-bottom-left-radius, var(--radius-md));
+    border-bottom-right-radius: var(--swatch-border-bottom-right-radius, var(--radius-md));
     cursor: pointer;
     transition:
       transform var(--transition-fast),
       border-color var(--transition-fast);
-    width: var(--swatch-width);
-    flex: 0 0 var(--swatch-width);
+    width: var(--swatch-width, 96px);
+    flex: var(--swatch-flex, 0 0 96px);
     min-height: 64px;
     text-align: left;
     overflow: hidden;
@@ -146,8 +150,8 @@
   /* Touch-friendly tap targets on mobile (44x44px minimum) */
   @media (max-width: 768px) {
     .color-swatch {
-      width: var(--swatch-width-md, 96px);
-      flex-basis: var(--swatch-width-md, 96px);
+      width: var(--swatch-width, 96px);
+      flex-basis: var(--swatch-width, 96px);
       min-height: 72px;
       touch-action: manipulation;
     }
@@ -155,8 +159,8 @@
 
   @media (max-width: 575px) {
     .color-swatch {
-      width: var(--swatch-width-sm, 92px);
-      flex-basis: var(--swatch-width-sm, 92px);
+      width: var(--swatch-width, 92px);
+      flex-basis: var(--swatch-width, 92px);
       min-height: 64px;
     }
 

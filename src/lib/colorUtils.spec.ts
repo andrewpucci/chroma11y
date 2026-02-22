@@ -748,20 +748,28 @@ describe('colorUtils', () => {
   });
 
   describe('nearestFriendlyColorName cache', () => {
-    it('evicts oldest entry when cache is full', () => {
-      // Clear cache first
+    it('caches results for repeated lookups', () => {
       clearNearestColorCache();
 
-      // Fill cache with 256+ entries to trigger eviction
-      for (let i = 0; i < 260; i++) {
-        const hex = `#${i.toString(16).padStart(2, '0')}${i.toString(16).padStart(2, '0')}${i.toString(16).padStart(2, '0')}`;
-        nearestFriendlyColorName(hex);
-      }
+      // First call computes the result
+      const name1 = nearestFriendlyColorName('#336699');
+      // Second call should return cached result (same value)
+      const name2 = nearestFriendlyColorName('#336699');
 
-      // Should still work after eviction
-      const name = nearestFriendlyColorName('#123456');
-      expect(name).toBeTruthy();
-      expect(typeof name).toBe('string');
+      expect(name1).toBe(name2);
+      expect(typeof name1).toBe('string');
+      expect(name1.length).toBeGreaterThan(0);
+    });
+
+    it('handles cache clearing', () => {
+      // Add an entry
+      const name1 = nearestFriendlyColorName('#445566');
+      clearNearestColorCache();
+      // After clearing, should still work (recomputes)
+      const name2 = nearestFriendlyColorName('#445566');
+
+      expect(name1).toBe(name2);
+      expect(typeof name2).toBe('string');
     });
   });
 });

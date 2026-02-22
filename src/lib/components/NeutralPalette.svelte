@@ -68,7 +68,10 @@
   {#if neutralsHex.length > 0}
     <div class="neutral-grid">
       {#each neutralsHex as color, index (index)}
-        <div class="neutral-item">
+        <div
+          class="neutral-item"
+          style="--swatch-width: 100%; --swatch-flex: 0 0 auto; --swatch-border-bottom-left-radius: 0; --swatch-border-bottom-right-radius: 0; --swatch-border-bottom: none;"
+        >
           <ColorSwatch
             {color}
             displayValue={neutralsDisplay[index] ?? color}
@@ -154,8 +157,6 @@
   }
 
   .neutral-grid {
-    --swatch-width: 96px;
-
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-sm);
@@ -165,19 +166,10 @@
   .neutral-item {
     display: flex;
     flex-direction: column;
-    width: var(--swatch-width);
+    width: var(--neutral-item-width, 96px);
     border-radius: var(--radius-md);
     background: var(--bg-primary);
     transition: transform var(--transition-fast);
-  }
-
-  /* Ensure ColorSwatch fits nicely inside */
-  .neutral-item :global(.color-swatch) {
-    width: 100%;
-    flex: 0 0 auto;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    border-bottom: none;
   }
 
   .neutral-item:hover {
@@ -198,13 +190,13 @@
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
     .neutral-item {
-      width: 96px;
+      --neutral-item-width: 96px;
     }
   }
 
   @media (max-width: 575px) {
     .neutral-item {
-      width: 92px;
+      --neutral-item-width: 92px;
     }
   }
 </style>

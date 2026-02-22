@@ -721,26 +721,14 @@
   }
 
   .badge--pass {
-    background: color-mix(in oklab, #22c55e 18%, transparent);
-    color: #16a34a;
-    border: 1px solid color-mix(in oklab, #22c55e 30%, transparent);
-  }
-
-  :global([data-theme='dark']) .badge--pass {
-    background: color-mix(in oklab, #22c55e 15%, transparent);
-    color: #4ade80;
-    border-color: color-mix(in oklab, #22c55e 25%, transparent);
+    background: var(--badge-pass-bg);
+    color: var(--badge-pass-text);
+    border: 1px solid var(--badge-pass-border);
   }
 
   .badge--fail {
-    background: color-mix(in oklab, #ef4444 14%, transparent);
-    color: #dc2626;
-    border: 1px solid color-mix(in oklab, #ef4444 25%, transparent);
-  }
-
-  :global([data-theme='dark']) .badge--fail {
-    background: color-mix(in oklab, #ef4444 12%, transparent);
-    color: #f87171;
-    border-color: color-mix(in oklab, #ef4444 20%, transparent);
+    background: var(--badge-fail-bg);
+    color: var(--badge-fail-text);
+    border: 1px solid var(--badge-fail-border);
   }
 </style>
