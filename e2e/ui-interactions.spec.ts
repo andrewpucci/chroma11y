@@ -13,8 +13,6 @@ test.describe('UI Interactions', () => {
   });
 
   test.describe('Visual regression', () => {
-    test.skip(({ browserName }) => browserName !== 'chromium', 'Visual tests only run on Chromium');
-
     test('app appearance in light theme', async ({ page }) => {
       await expect(page).toHaveScreenshot('app-light-theme.png', {
         fullPage: true

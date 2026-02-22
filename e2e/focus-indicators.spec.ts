@@ -10,8 +10,6 @@ import { waitForAppReady } from './test-utils';
 
 test.describe('Focus Indicators', () => {
   test.describe('Visual regression', () => {
-    test.skip(({ browserName }) => browserName !== 'chromium', 'Visual tests only run on Chromium');
-
     test.beforeEach(async ({ page }) => {
       await page.goto('/');
       await waitForAppReady(page);

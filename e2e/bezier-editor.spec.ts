@@ -44,8 +44,6 @@ test.describe('Bezier Editor', () => {
   });
 
   test.describe('Visual regression', () => {
-    test.skip(({ browserName }) => browserName !== 'chromium', 'Visual tests only run on Chromium');
-
     test('bezier curve visual appearance', async ({ page }) => {
       const bezierEditor = page.locator('.bezier-editor');
       await expect(bezierEditor).toHaveScreenshot('bezier-editor-default.png');
