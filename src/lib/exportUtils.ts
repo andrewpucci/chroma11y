@@ -248,7 +248,8 @@ export function downloadFile(content: string, filename: string, mimeType: string
     blob = new Blob([content], { type: mimeType });
   } catch (error) {
     throw new Error(
-      `Failed to create blob: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to create blob: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      { cause: error }
     );
   }
 
@@ -256,7 +257,8 @@ export function downloadFile(content: string, filename: string, mimeType: string
     url = URL.createObjectURL(blob);
   } catch (error) {
     throw new Error(
-      `Failed to create object URL: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to create object URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      { cause: error }
     );
   }
 
@@ -268,7 +270,8 @@ export function downloadFile(content: string, filename: string, mimeType: string
     link.click();
   } catch (error) {
     throw new Error(
-      `Failed to trigger download: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to trigger download: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      { cause: error }
     );
   } finally {
     // Ensure link is removed even if click() throws
