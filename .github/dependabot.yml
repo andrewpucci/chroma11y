@@ -9,11 +9,71 @@ updates:
     directory: '/'
     schedule:
       interval: 'daily'
+    security-updates: true
     open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'security'
     reviewers:
-      - 'pucciar'
+      - 'andrewpucci'
     assignees:
-      - 'pucciar'
+      - 'andrewpucci'
+    rebase-strategy: 'auto'
     commit-message:
-      prefix: 'deps'
       include: 'scope'
+    groups:
+      lint-and-format:
+        patterns:
+          - 'eslint*'
+          - '@typescript-eslint*'
+          - 'prettier'
+          - 'prettier-plugin-svelte'
+          - 'eslint-config-prettier'
+          - 'eslint-plugin-svelte'
+          - 'globals'
+          - 'browserslist'
+        update-types:
+          - 'minor'
+          - 'patch'
+      test-and-qa:
+        patterns:
+          - 'vitest*'
+          - '@vitest*'
+          - '@testing-library*'
+          - 'playwright*'
+          - '@playwright*'
+          - 'jsdom'
+        update-types:
+          - 'minor'
+          - 'patch'
+      svelte-and-vite:
+        patterns:
+          - 'svelte*'
+          - '@sveltejs*'
+          - 'vite*'
+          - '@vitejs*'
+          - 'lightningcss'
+          - 'vite-plugin-*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      types:
+        patterns:
+          - '@types/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'ci'
+    reviewers:
+      - 'andrewpucci'
+    assignees:
+      - 'andrewpucci'
+    rebase-strategy: 'auto'
