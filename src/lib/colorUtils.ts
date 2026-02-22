@@ -250,7 +250,7 @@ function calculateDarkModeStartColor(targetColor: string = '#ffffff'): string {
 // ===== CONTRAST FUNCTIONS =====
 
 /**
- * Calculates the contrast ratio between two colors using WCAG 2.2 formula
+ * Calculates the contrast ratio between two colors using WCAG 2.1 formula
  * @param color1 - First color (hex string)
  * @param color2 - Second color (hex string)
  * @returns Contrast ratio between 1 and 21
@@ -654,7 +654,7 @@ export function getPrintableContrastAPCA(textColor: string, bgColor: string): nu
 /**
  * Unified contrast function that dispatches to the correct algorithm.
  * Callers pass (bgColor, fgColor) — the background color first, then the foreground/text color.
- * WCAG 2.2 is symmetric so order doesn't matter; APCA is asymmetric and
+ * WCAG 2.1 is symmetric so order doesn't matter; APCA is asymmetric and
  * requires (textColor, bgColor), so this function swaps internally for APCA.
  */
 export function getContrastForAlgorithm(

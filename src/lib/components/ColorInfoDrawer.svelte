@@ -313,7 +313,7 @@
                 </div>
               </div>
               <div class="contrast-detail">
-                <span class="contrast-algo-label">WCAG 2.2</span>
+                <span class="contrast-algo-label">WCAG 2.1</span>
                 <span class="contrast-ratio mono">{lowContrast.wcag}:1</span>
                 <span
                   class="badge"
@@ -363,7 +363,7 @@
                 </div>
               </div>
               <div class="contrast-detail">
-                <span class="contrast-algo-label">WCAG 2.2</span>
+                <span class="contrast-algo-label">WCAG 2.1</span>
                 <span class="contrast-ratio mono">{highContrast.wcag}:1</span>
                 <span
                   class="badge"

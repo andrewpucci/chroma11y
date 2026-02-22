@@ -58,39 +58,24 @@
   let capturedPointerId: number | null = $state(null);
   let capturedElement: Element | null = $state(null);
 
+  import { registerFocusVisibleCallback, getLastInteractionWasKeyboard, initializeGlobalFocusListeners } from '$lib/focusUtils';
+
   // Focus state for showing focus rings (only on keyboard navigation, like :focus-visible)
   let p1FocusVisible = $state(false);
   let p2FocusVisible = $state(false);
 
-  // Track if last interaction was keyboard (for focus-visible behavior)
-  let lastInteractionWasKeyboard = $state(false);
-
-  // Set up document-level listeners to detect keyboard vs mouse interaction
-  // Use a ref to track if listeners are attached to avoid effect loops
-  let listenersAttached = false;
-
+  // Initialize global focus listeners once
   $effect(() => {
-    if (listenersAttached) return;
+    initializeGlobalFocusListeners();
+  });
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Tab') {
-        lastInteractionWasKeyboard = true;
-      }
-    };
-
-    const handleMouseDown = () => {
-      lastInteractionWasKeyboard = false;
-    };
-
-    document.addEventListener('keydown', handleKeyDown, true);
-    document.addEventListener('mousedown', handleMouseDown, true);
-    listenersAttached = true;
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown, true);
-      document.removeEventListener('mousedown', handleMouseDown, true);
-      listenersAttached = false;
-    };
+  // Register for focus-visible state changes
+  $effect(() => {
+    const unregister = registerFocusVisibleCallback((visible: boolean) => {
+      // Update focus state based on global keyboard interaction
+      // Note: This is a simplified approach - individual components might need more granular control
+    });
+    return unregister;
   });
 
   function getSvgPoint(e: PointerEvent): { x: number; y: number } | null {
@@ -109,7 +94,8 @@
     const el = e.currentTarget as Element;
 
     // Mark that last interaction was NOT keyboard (pointer/mouse)
-    lastInteractionWasKeyboard = false;
+    // This will be handled by the global mouse listener
+    // lastInteractionWasKeyboard = false;
 
     // Set focus on the control point for keyboard navigation after drag
     if ('focus' in el && typeof el.focus === 'function') {
@@ -168,7 +154,8 @@
 
   function onKeyDown(point: 'p1' | 'p2', e: KeyboardEvent) {
     // Mark that last interaction was keyboard
-    lastInteractionWasKeyboard = true;
+    // This will be handled by the global keyboard listener
+    // lastInteractionWasKeyboard = true;
 
     const step = e.shiftKey ? 0.05 : 0.01;
     let dx = 0;
@@ -293,7 +280,7 @@
       aria-valuetext="x={x1.toFixed(2)}, y={y1.toFixed(2)}"
       onpointerdown={(e) => onPointerDown('p1', e)}
       onkeydown={(e) => onKeyDown('p1', e)}
-      onfocus={() => (p1FocusVisible = lastInteractionWasKeyboard)}
+      onfocus={() => (p1FocusVisible = getLastInteractionWasKeyboard())}
       onblur={() => (p1FocusVisible = false)}
     />
 
@@ -313,7 +300,7 @@
       aria-valuetext="x={x2.toFixed(2)}, y={y2.toFixed(2)}"
       onpointerdown={(e) => onPointerDown('p2', e)}
       onkeydown={(e) => onKeyDown('p2', e)}
-      onfocus={() => (p2FocusVisible = lastInteractionWasKeyboard)}
+      onfocus={() => (p2FocusVisible = getLastInteractionWasKeyboard())}
       onblur={() => (p2FocusVisible = false)}
     />
 

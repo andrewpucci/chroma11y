@@ -161,6 +161,17 @@
 }
 
 /* ============================================================================
+   Container Query Tokens
+   ============================================================================ */
+
+/* Container query breakpoints for responsive layouts */
+:root {
+  --container-sidebar-breakpoint: 980px;
+  --container-header-breakpoint: 520px;
+  --container-two-col-min-viewport: 1065px; /* 980px / 0.92 */
+}
+
+/* ============================================================================
    Touch Target Tokens
    ============================================================================ */
 

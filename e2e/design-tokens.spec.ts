@@ -173,6 +173,7 @@ test.describe('Design Tokens', () => {
     test('layout switches to single column at container breakpoint', async ({ page }) => {
       // Set viewport to ensure container width > 980px for two-column layout
       // Container width = min(92vw, 2400px), so we need 92vw > 980px
+      // Use the CSS custom property --container-sidebar-breakpoint: 980px
       // 980px / 0.92 = 1065px minimum viewport width
       await page.setViewportSize({ width: 1100, height: 768 });
 
@@ -182,12 +183,12 @@ test.describe('Design Tokens', () => {
       });
 
       // At 1100px viewport, container width = min(1012px, 2400px) = 1012px
-      // Since 1012px > 980px, should be two columns (first column uses clamp, second is 1fr)
+      // Since 1012px > --container-sidebar-breakpoint (980px), should be two columns (first column uses clamp, second is 1fr)
       // The grid should have two values separated by space
       const columnCount = gridColumns.trim().split(' ').length;
       expect(columnCount).toBe(2);
 
-      // Set viewport to ensure container width < 980px for single column layout
+      // Set viewport to ensure container width < --container-sidebar-breakpoint (980px) for single column layout
       // Container width at 900px viewport = min(828px, 2400px) = 828px
       await page.setViewportSize({ width: 900, height: 768 });
 
@@ -195,7 +196,7 @@ test.describe('Design Tokens', () => {
         return getComputedStyle(el).gridTemplateColumns;
       });
 
-      // Below 980px container query, should be single column
+      // Below --container-sidebar-breakpoint (980px) container query, should be single column
       // Computed value will be actual pixel width, not '1fr'
       const columnCountMobile = gridColumnsMobile.trim().split(' ').length;
       expect(columnCountMobile).toBe(1);
