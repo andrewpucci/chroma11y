@@ -10,7 +10,6 @@ test.describe('Bezier Editor', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
   });
 
   test.describe('Visual Rendering', () => {
@@ -63,7 +62,13 @@ test.describe('Bezier Editor', () => {
 
       // Move with arrow key
       await page.keyboard.press('ArrowRight');
-      await page.waitForTimeout(100);
+
+      // Wait for readout to update
+      await page.waitForFunction(
+        (before) => document.querySelector('.readout')?.textContent !== before,
+        initialText,
+        { timeout: 5000 }
+      );
 
       const newText = await readout.textContent();
       expect(newText).not.toBe(initialText);
@@ -83,7 +88,13 @@ test.describe('Bezier Editor', () => {
 
       // Move with Shift+Arrow (should move by 0.05)
       await page.keyboard.press('Shift+ArrowRight');
-      await page.waitForTimeout(100);
+
+      // Wait for readout to update
+      await page.waitForFunction(
+        (before) => document.querySelector('.readout')?.textContent !== before,
+        initialText,
+        { timeout: 5000 }
+      );
 
       const newText = await readout.textContent();
       const newMatch = newText?.match(/P1\(([\d.]+),/);
@@ -112,7 +123,19 @@ test.describe('Bezier Editor', () => {
       for (let i = 0; i < 10; i++) {
         await page.keyboard.press('Shift+ArrowRight');
       }
-      await page.waitForTimeout(500);
+
+      // Wait for palette to update - use querySelectorAll to match Playwright's nth(5)
+      await page.waitForFunction(
+        (before) => {
+          const hexElements = document.querySelectorAll(
+            '[data-testid="generated-palettes"] .swatches .hex'
+          );
+          const hex = hexElements[5]?.textContent;
+          return hex !== before;
+        },
+        initialHex,
+        { timeout: 5000 }
+      );
 
       // Palette should update
       const newHex = await paletteHexes.nth(5).textContent();
@@ -127,7 +150,9 @@ test.describe('Bezier Editor', () => {
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('ArrowRight');
-      await page.waitForTimeout(600);
+
+      // Wait for URL to update (debounced)
+      await page.waitForFunction(() => window.location.href.includes('x1='), { timeout: 5000 });
 
       // URL should contain bezier parameters
       const url = page.url();
@@ -184,13 +209,29 @@ test.describe('Bezier Editor', () => {
     test('clamps values at boundaries', async ({ page }) => {
       const readout = page.locator('.readout');
       const p1 = page.locator('.bezier-editor circle[role="slider"]').first();
+
+      // Get initial value
+      const initialText = await readout.textContent();
+      const initialMatch = initialText?.match(/P1\(([\d.]+),/);
+      const initialX = parseFloat(initialMatch?.[1] || '0');
+
       await p1.focus();
 
       // Try to move beyond maximum
       for (let i = 0; i < 50; i++) {
         await page.keyboard.press('ArrowRight');
       }
-      await page.waitForTimeout(100);
+
+      // Wait for readout to change from initial value
+      await page.waitForFunction(
+        (initial) => {
+          const text = document.querySelector('.readout')?.textContent;
+          const match = text?.match(/P1\(([\d.]+),/);
+          return match && parseFloat(match[1]) !== initial;
+        },
+        initialX,
+        { timeout: 5000 }
+      );
 
       const text = await readout.textContent();
       const match = text?.match(/P1\(([\d.]+),/);
@@ -215,7 +256,16 @@ test.describe('Bezier Editor', () => {
         await page.keyboard.press('ArrowLeft');
         await page.keyboard.press('ArrowUp');
       }
-      await page.waitForTimeout(100);
+
+      // Wait for readout to show boundary values
+      await page.waitForFunction(
+        () => {
+          const text = document.querySelector('.readout')?.textContent;
+          const match = text?.match(/P1\(([\d.]+),\s*([\d.]+)\)/);
+          return match && parseFloat(match[1]) === 0 && parseFloat(match[2]) === 1;
+        },
+        { timeout: 5000 }
+      );
 
       const minText = await readout.textContent();
       const minMatch = minText?.match(/P1\(([\d.]+),\s*([\d.]+)\)/);
@@ -233,7 +283,16 @@ test.describe('Bezier Editor', () => {
         await page.keyboard.press('ArrowRight');
         await page.keyboard.press('ArrowDown');
       }
-      await page.waitForTimeout(100);
+
+      // Wait for readout to show boundary values
+      await page.waitForFunction(
+        () => {
+          const text = document.querySelector('.readout')?.textContent;
+          const match = text?.match(/P1\(([\d.]+),\s*([\d.]+)\)/);
+          return match && parseFloat(match[1]) === 1 && parseFloat(match[2]) === 0;
+        },
+        { timeout: 5000 }
+      );
 
       const maxText = await readout.textContent();
       const maxMatch = maxText?.match(/P1\(([\d.]+),\s*([\d.]+)\)/);

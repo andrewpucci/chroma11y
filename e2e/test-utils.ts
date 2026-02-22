@@ -4,9 +4,11 @@ import { Page, expect } from '@playwright/test';
  * Wait for the Chroma11y app to be fully loaded
  */
 export async function waitForAppReady(page: Page): Promise<void> {
-  await expect(page.locator('#main-heading')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('#baseColor')).toBeVisible();
-  await expect(page.locator('.color-swatch').first()).toBeVisible();
+  // Wait for critical UI elements to be visible
+  await expect(page.locator('#main-heading')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#baseColor')).toBeVisible({ timeout: 5000 });
+  // Wait for color generation to complete
+  await expect(page.locator('.color-swatch').first()).toBeVisible({ timeout: 10000 });
 }
 
 /**
@@ -61,7 +63,12 @@ export async function toggleTheme(page: Page): Promise<void> {
   const currentValue = await themeSelect.inputValue();
   const newValue = currentValue === 'dark' ? 'light' : 'dark';
   await themeSelect.selectOption(newValue);
-  await page.waitForTimeout(1000); // Wait for theme transition
+  // Wait for theme to be applied
+  await page.waitForFunction(
+    (theme) => document.documentElement.getAttribute('data-theme') === theme,
+    newValue,
+    { timeout: 5000 }
+  );
 }
 
 /**

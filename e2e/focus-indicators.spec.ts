@@ -12,7 +12,6 @@ test.describe('Focus Indicators', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
   });
 
   test.describe('Keyboard navigation', () => {
@@ -69,7 +68,12 @@ test.describe('Focus Indicators', () => {
     test('focus indicator adapts to dark mode', async ({ page }) => {
       // Switch to dark theme
       await page.locator('#theme-preference').selectOption('dark');
-      await page.waitForTimeout(300);
+
+      // Wait for theme to be applied
+      await page.waitForFunction(
+        () => document.documentElement.getAttribute('data-theme') === 'dark',
+        { timeout: 5000 }
+      );
 
       // Use keyboard navigation to trigger :focus-visible
       const hexInput = page.locator('#baseColorHex');

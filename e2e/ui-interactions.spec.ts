@@ -10,7 +10,6 @@ test.describe('UI Interactions', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);
-    await page.waitForTimeout(500);
   });
 
   test.describe('App Loading', () => {
@@ -42,7 +41,18 @@ test.describe('UI Interactions', () => {
 
       // Change base color to green
       await page.locator('#baseColor').fill('#00ff00');
-      await page.waitForTimeout(500);
+
+      // Wait for palette color to update
+      await page.waitForFunction(
+        (before) => {
+          const hex = document.querySelector(
+            '[data-testid="generated-palettes"] .swatches .hex:nth-child(6)'
+          )?.textContent;
+          return hex !== before;
+        },
+        initialHex,
+        { timeout: 5000 }
+      );
 
       // Palette color should change
       const newHex = await paletteHexes.nth(5).textContent();

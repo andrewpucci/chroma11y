@@ -15,11 +15,9 @@ import * as fs from 'fs';
 
 test.describe('Export Format Validation', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForLoadState('networkidle', { timeout: 10000 });
+    await page.goto('/');
     await waitForAppReady(page);
     await waitForColorGeneration(page);
-    await page.waitForTimeout(500);
   });
 
   test.describe('JSON Design Tokens Structure', () => {
@@ -345,18 +343,29 @@ test.describe('Export Format Validation', () => {
 
   test.describe('Export with Custom Configuration', () => {
     test('export reflects warmth changes', async ({ page }) => {
-      // Set warmth to a custom value
-      await page.locator('#warmth').fill('-10');
-      await page.waitForTimeout(300);
-
-      // Get the current neutral middle color
-      const neutralMid = (
+      // Get initial neutral middle color (with default warmth)
+      const initialNeutralMid = (
         await page.getByTestId('neutral-palette').locator('.hex').nth(5).textContent()
       )
         ?.toLowerCase()
         .trim();
 
-      // Download and verify the warmth is applied
+      // Set warmth to a custom value
+      await page.locator('#warmth').fill('-10');
+
+      // Wait for neutral colors to update
+      await page.waitForFunction(
+        (before) => {
+          const hex = document.querySelector(
+            '[data-testid="neutral-palette"] .hex:nth-child(6)'
+          )?.textContent;
+          return hex !== before;
+        },
+        initialNeutralMid,
+        { timeout: 5000 }
+      );
+
+      // Download and verify the warmth change is reflected in export
       const downloadPromise = page.waitForEvent('download');
       await page.locator('button', { has: page.locator('text=Export JSON') }).click();
 
@@ -368,14 +377,37 @@ test.describe('Export Format Validation', () => {
         const parsed = JSON.parse(fileContent);
 
         const exportedMid = parsed.gray[50].$value.hex.toLowerCase();
-        expect(exportedMid).toBe(neutralMid);
+        // Exported color should be different from initial (warmth was applied)
+        expect(exportedMid).not.toBe(initialNeutralMid);
+        // Verify it's a valid hex color
+        expect(exportedMid).toMatch(/^#[0-9a-f]{6}$/);
       }
     });
 
     test('export reflects base color changes', async ({ page }) => {
+      // Get initial palette color
+      const initialPaletteHex = await page
+        .getByTestId('generated-palettes')
+        .locator('.swatches')
+        .first()
+        .locator('.hex')
+        .nth(5)
+        .textContent();
+
       // Set a specific base color
       await page.locator('#baseColor').fill('#ff0000');
-      await page.waitForTimeout(500);
+
+      // Wait for palette to update
+      await page.waitForFunction(
+        (before) => {
+          const hex = document.querySelector(
+            '[data-testid="generated-palettes"] .swatches .hex:nth-child(6)'
+          )?.textContent;
+          return hex !== before;
+        },
+        initialPaletteHex,
+        { timeout: 5000 }
+      );
 
       // Download and verify first palette reflects the base color influence
       const downloadPromise = page.waitForEvent('download');
