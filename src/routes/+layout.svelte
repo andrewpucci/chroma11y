@@ -4,6 +4,7 @@
   import '$lib/styles/reset.css';
   import '$lib/styles/utilities.css';
   import '$lib/styles/tokens.css';
+  import '$lib/styles/global.css';
   import { currentTheme } from '$lib/stores';
   import { browser } from '$app/environment';
   import { onMount } from 'svelte';
@@ -57,61 +58,6 @@
 </div>
 
 <style>
-  /* App-specific font configuration */
-  :global(html) {
-    font-family:
-      'Atkinson Hyperlegible Next Variable', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-      sans-serif;
-    line-height: var(--line-height-normal);
-    text-rendering: optimizeLegibility;
-  }
-
-  :global(:root) {
-    --column-padding: var(--space-lg);
-    --text-mono:
-      'Atkinson Hyperlegible Mono Variable', ui-monospace, 'Cascadia Code', 'Source Code Pro',
-      Menlo, Consolas, monospace;
-  }
-
-  /* Global focus styles for accessibility — universal double-outline pattern
-     per https://www.sarasoueidan.com/blog/focus-indicators/
-     Theme-aware outline + shadow guarantees ≥3:1 contrast against any background. */
-  :global(*:focus-visible) {
-    outline: var(--focus-outline-width) solid var(--focus-outline-inside);
-    box-shadow: 0 0 0 var(--focus-outline-offset) var(--focus-outline-outside);
-  }
-
-  /* Reduced motion preference - handled by design tokens */
-  @media (prefers-reduced-motion: reduce) {
-    :global(*),
-    :global(*::before),
-    :global(*::after) {
-      scroll-behavior: auto !important;
-    }
-  }
-
-  /* App-specific global styles */
-  :global(body) {
-    background: var(--bg-primary, #ffffff);
-    color: var(--text-primary, #1a1a1a);
-    transition:
-      background-color var(--transition-slow),
-      color var(--transition-slow);
-  }
-
-  :global(a) {
-    color: inherit;
-  }
-
-  :global(h1, h2, h3) {
-    line-height: var(--line-height-tight);
-    letter-spacing: var(--letter-spacing-tight);
-  }
-
-  :global(code, kbd, samp, pre) {
-    font-family: var(--text-mono);
-  }
-
   .app {
     min-height: 100vh;
     display: flex;
@@ -123,15 +69,5 @@
     margin: 0 auto;
     width: 100%;
     overflow: hidden;
-  }
-
-  /* Light theme */
-  :global([data-theme='light']) {
-    color-scheme: light;
-  }
-
-  /* Dark theme */
-  :global([data-theme='dark']) {
-    color-scheme: dark;
   }
 </style>

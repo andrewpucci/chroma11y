@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import ColorControls from '$lib/components/ColorControls.svelte';
 
@@ -44,5 +44,63 @@ describe('ColorControls', () => {
 
     expect(warmthSlider.value).toBe('10');
     expect(screen.getByText(/warmth \(10\)/i)).toBeInTheDocument();
+  });
+
+  it('calls onRangeDragStart on pointerdown and onRangeDragEnd on pointerup', async () => {
+    const onRangeDragStart = vi.fn();
+    const onRangeDragEnd = vi.fn();
+
+    render(ColorControls, {
+      props: {
+        numColors: 11,
+        onRangeDragStart,
+        onRangeDragEnd
+      }
+    });
+
+    const numColorsSlider = screen.getByLabelText(/number of colors/i);
+
+    await fireEvent.pointerDown(numColorsSlider, { pointerId: 1 });
+    expect(onRangeDragStart).toHaveBeenCalledTimes(1);
+
+    await fireEvent.pointerUp(window, { pointerId: 1 });
+
+    // onRangeDragEnd is called in requestAnimationFrame, so we need to flush it
+    await vi.waitFor(
+      () => {
+        expect(onRangeDragEnd).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 100 }
+    );
+  });
+
+  it('updates saturation slider value on input', async () => {
+    render(ColorControls, {
+      props: {
+        chromaMultiplier: 1
+      }
+    });
+
+    const saturationSlider = screen.getByLabelText(/saturation/i) as HTMLInputElement;
+    expect(saturationSlider.value).toBe('1');
+
+    await fireEvent.input(saturationSlider, { target: { value: '1.5' } });
+
+    expect(saturationSlider.value).toBe('1.5');
+  });
+
+  it('updates number of palettes slider value on input', async () => {
+    render(ColorControls, {
+      props: {
+        numPalettes: 5
+      }
+    });
+
+    const palettesSlider = screen.getByLabelText(/number of palettes/i) as HTMLInputElement;
+    expect(palettesSlider.value).toBe('5');
+
+    await fireEvent.input(palettesSlider, { target: { value: '8' } });
+
+    expect(palettesSlider.value).toBe('8');
   });
 });

@@ -31,6 +31,7 @@
     "lint": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
     "test:unit": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test": "npm run test:unit -- --run && npm run test:e2e",
     "test:e2e": "playwright test",
     "test:lighthouse": "rm -rf lighthouse-report .lighthouseci && lhci autorun; open $(node -e \"const m=require('./lighthouse-report/manifest.json');console.log(m.find(r=>r.isRepresentativeRun).htmlPath)\")"

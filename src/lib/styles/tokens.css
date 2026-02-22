@@ -18,6 +18,14 @@
   --border: #dee2e6;
   --accent: #1862e6;
   --accent-hover: #1352c4;
+
+  /* Status badge colors */
+  --badge-pass-bg: color-mix(in oklab, #22c55e 18%, transparent);
+  --badge-pass-text: #16a34a;
+  --badge-pass-border: color-mix(in oklab, #22c55e 30%, transparent);
+  --badge-fail-bg: color-mix(in oklab, #ef4444 14%, transparent);
+  --badge-fail-text: #dc2626;
+  --badge-fail-border: color-mix(in oklab, #ef4444 25%, transparent);
 }
 
 /* Dark theme color overrides */
@@ -30,6 +38,14 @@
   --border: #30363d;
   --accent: #58a6ff;
   --accent-hover: #79b8ff;
+
+  /* Status badge colors - dark theme */
+  --badge-pass-bg: color-mix(in oklab, #22c55e 15%, transparent);
+  --badge-pass-text: #4ade80;
+  --badge-pass-border: color-mix(in oklab, #22c55e 25%, transparent);
+  --badge-fail-bg: color-mix(in oklab, #ef4444 12%, transparent);
+  --badge-fail-text: #f87171;
+  --badge-fail-border: color-mix(in oklab, #ef4444 20%, transparent);
 }
 
 /* ============================================================================

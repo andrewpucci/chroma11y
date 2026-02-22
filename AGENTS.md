@@ -22,6 +22,7 @@ This project has three test layers. **All tests must pass before any commit.**
 ```sh
 npm run test:unit        # watch mode
 npm run test:unit -- --run  # single run
+npm run test:unit -- --run --coverage  # with coverage report
 ```
 
 - Pure logic tests live alongside source: `src/lib/*.spec.ts`
@@ -56,6 +57,34 @@ npm test
 ```
 
 This runs unit tests (single run) followed by E2E tests.
+
+### Testing principles
+
+When writing or modifying tests, follow these principles:
+
+1. **Test your own code, not dependencies** — Don't test that `colorjs.io` calculates contrast correctly; test that your wrapper functions handle inputs/outputs as expected
+2. **Avoid duplicate coverage** — Don't test the same logic in multiple places unless testing different integration points
+3. **Document intentional coverage gaps** — If code can't be reliably unit tested (e.g., pointer drag interactions in jsdom), add a JSDoc comment explaining why and reference the E2E test that covers it
+4. **Prefer integration over isolation** — Component tests that verify real user interactions are more valuable than mocking every dependency
+5. **Keep tests focused** — Each test should verify one behavior; use descriptive `it()` names
+
+### What belongs in each test layer
+
+| Layer             | Test                                                                      | Don't Test                                                          |
+| ----------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Unit (server)** | Pure functions, algorithms, data transformations, store logic             | DOM interactions, browser APIs                                      |
+| **Unit (dom)**    | Component rendering, user events, ARIA attributes, store integration      | Pointer capture, SVG coordinate transforms, `getBoundingClientRect` |
+| **E2E**           | Full user flows, visual output, cross-browser behavior, drag interactions | Internal implementation details                                     |
+
+### Coverage gaps that are intentional
+
+Some code paths are intentionally not covered by unit tests:
+
+- **Pointer/drag interactions** in `BezierEditor.svelte` — jsdom doesn't support `getBoundingClientRect` or pointer capture realistically; tested via E2E
+- **Defensive error handling** — Try/catch blocks for truly exceptional conditions (out of memory, malformed data from external sources) are documented inline
+- **Browser environment guards** — SSR checks like `typeof window !== 'undefined'` can't be meaningfully unit tested
+
+When adding defensive code, include a JSDoc comment explaining why it's not unit tested.
 
 ## Linting & formatting
 

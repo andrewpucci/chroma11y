@@ -69,6 +69,18 @@
     initializeGlobalFocusListeners();
   });
 
+  /**
+   * Converts a PointerEvent's client coordinates to SVG viewBox coordinates.
+   *
+   * Note: This function and the pointer event handlers below (onPointerDown,
+   * onPointerMove, onPointerUp) are not covered by unit tests because:
+   * - getBoundingClientRect() returns zeros in jsdom
+   * - Pointer capture APIs are mocked/stubbed and don't behave realistically
+   * - SVG coordinate transformations depend on actual DOM rendering
+   *
+   * These interactions are tested via E2E tests in e2e/bezier-editor.spec.ts
+   * which run in real browsers with proper rendering.
+   */
   function getSvgPoint(e: PointerEvent): { x: number; y: number } | null {
     const rect = dragRect ?? svgEl?.getBoundingClientRect();
     if (!rect) return null;

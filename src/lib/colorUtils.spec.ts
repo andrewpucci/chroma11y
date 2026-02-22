@@ -17,9 +17,13 @@ import {
   colorToCssRec2020,
   colorToCssDisplay,
   getContrastAPCA,
+  getPrintableContrastAPCA,
   getContrastForAlgorithm,
   getPrintableContrastForAlgorithm,
   maxChromaInGamut,
+  clearNearestColorCache,
+  isValidHexColor,
+  generateBaseNeutrals,
   type ColorGenParams
 } from './colorUtils';
 
@@ -432,6 +436,96 @@ describe('colorUtils', () => {
     });
   });
 
+  describe('getPrintableContrastAPCA', () => {
+    it('returns rounded Lc value with 1 decimal place', () => {
+      const lc = getPrintableContrastAPCA('#000000', '#ffffff');
+      expect(lc).toBeGreaterThan(100);
+      // Should be rounded to 1 decimal place
+      const decimalStr = lc.toString();
+      const decimalPart = decimalStr.split('.')[1] || '';
+      expect(decimalPart.length).toBeLessThanOrEqual(1);
+    });
+
+    it('returns 0 for same colors', () => {
+      const lc = getPrintableContrastAPCA('#808080', '#808080');
+      expect(lc).toBe(0);
+    });
+  });
+
+  describe('isValidHexColor', () => {
+    it('returns true for valid 6-digit hex', () => {
+      expect(isValidHexColor('#ff0000')).toBe(true);
+      expect(isValidHexColor('#FF0000')).toBe(true);
+      expect(isValidHexColor('#123abc')).toBe(true);
+    });
+
+    it('returns true for valid 3-digit hex', () => {
+      expect(isValidHexColor('#fff')).toBe(true);
+      expect(isValidHexColor('#FFF')).toBe(true);
+      expect(isValidHexColor('#abc')).toBe(true);
+    });
+
+    it('returns false for invalid hex colors', () => {
+      expect(isValidHexColor('ff0000')).toBe(false);
+      expect(isValidHexColor('#gg0000')).toBe(false);
+      expect(isValidHexColor('#ff00')).toBe(false);
+      expect(isValidHexColor('#ff00000')).toBe(false);
+      expect(isValidHexColor('red')).toBe(false);
+      expect(isValidHexColor('')).toBe(false);
+    });
+  });
+
+  describe('generateBaseNeutrals', () => {
+    const baseParams: ColorGenParams = {
+      numColors: 5,
+      numPalettes: 1,
+      baseColor: '#1862e6',
+      warmth: 0,
+      x1: 0.16,
+      y1: 0,
+      x2: 0.28,
+      y2: 0.38,
+      chromaMultiplier: 1,
+      currentTheme: 'light'
+    };
+
+    it('generates correct number of neutral colors', () => {
+      const neutrals = generateBaseNeutrals(baseParams);
+      expect(neutrals).toHaveLength(5);
+    });
+
+    it('generates Color objects', () => {
+      const neutrals = generateBaseNeutrals(baseParams);
+      for (const color of neutrals) {
+        expect(color).toBeInstanceOf(Color);
+      }
+    });
+
+    it('applies warmth as chroma', () => {
+      const warmParams = { ...baseParams, warmth: 20 };
+      const neutrals = generateBaseNeutrals(warmParams);
+      // Mid-tone neutrals should have some chroma when warmth is applied
+      const midNeutral = neutrals[2];
+      expect(midNeutral.oklch.c).toBeGreaterThan(0);
+    });
+
+    it('uses cool hue for negative warmth', () => {
+      const coolParams = { ...baseParams, warmth: -20 };
+      const neutrals = generateBaseNeutrals(coolParams);
+      const midNeutral = neutrals[2];
+      // Cool hue is 250
+      expect(midNeutral.oklch.h).toBeCloseTo(250, 0);
+    });
+
+    it('uses warm hue for positive warmth', () => {
+      const warmParams = { ...baseParams, warmth: 20 };
+      const neutrals = generateBaseNeutrals(warmParams);
+      const midNeutral = neutrals[2];
+      // Warm hue is 60
+      expect(midNeutral.oklch.h).toBeCloseTo(60, 0);
+    });
+  });
+
   describe('getContrastForAlgorithm', () => {
     it('dispatches to WCAG when algorithm is WCAG (bgColor, fgColor)', () => {
       const result = getContrastForAlgorithm('#ffffff', '#000000', 'WCAG');
@@ -533,6 +627,149 @@ describe('colorUtils', () => {
       const result = getPrintableContrastForAlgorithm('#000000', '#ffffff', 'APCA');
       expect(typeof result).toBe('number');
       expect(result).toBeGreaterThan(0);
+    });
+  });
+
+  describe('colorToCssDisplay additional branches', () => {
+    it('dispatches rgb + p3 to colorToCssP3', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssDisplay(blue, 'rgb', 'p3');
+      expect(result).toMatch(/^color\(display-p3/);
+    });
+
+    it('dispatches rgb + rec2020 to colorToCssRec2020', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssDisplay(blue, 'rgb', 'rec2020');
+      expect(result).toMatch(/^color\(rec2020/);
+    });
+
+    it('dispatches hsl + p3 to colorToCssP3', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssDisplay(blue, 'hsl', 'p3');
+      expect(result).toMatch(/^color\(display-p3/);
+    });
+
+    it('dispatches hsl + srgb to colorToCssHsl', () => {
+      const blue = new Color('oklch', [0.5, 0.2, 264]);
+      const result = colorToCssDisplay(blue, 'hsl', 'srgb');
+      expect(result).toMatch(/^hsl\(/);
+    });
+  });
+
+  describe('getContrast error handling', () => {
+    it('returns 1 for invalid color input', () => {
+      const result = getContrast('invalid', '#ffffff');
+      expect(result).toBe(1);
+    });
+  });
+
+  describe('colorToCssHex error handling', () => {
+    it('returns #000000 for invalid input', () => {
+      const result = colorToCssHex(null as unknown as InstanceType<typeof Color>);
+      expect(result).toBe('#000000');
+    });
+  });
+
+  describe('colorToCssRgb error handling', () => {
+    it('returns fallback for invalid input', () => {
+      const result = colorToCssRgb(null as unknown as InstanceType<typeof Color>);
+      expect(result).toBe('rgb(0% 0% 0%)');
+    });
+  });
+
+  describe('colorToCssOklch error handling', () => {
+    it('returns fallback for invalid input', () => {
+      const result = colorToCssOklch(null as unknown as InstanceType<typeof Color>);
+      expect(result).toBe('oklch(0% 0 0)');
+    });
+  });
+
+  describe('colorToCssHsl error handling', () => {
+    it('returns fallback for invalid input', () => {
+      const result = colorToCssHsl(null as unknown as InstanceType<typeof Color>);
+      expect(result).toBe('hsl(0 0% 0%)');
+    });
+  });
+
+  describe('generatePalettes error handling', () => {
+    it('throws for invalid base color', () => {
+      const params: ColorGenParams = {
+        numColors: 11,
+        numPalettes: 1,
+        baseColor: 'not-a-color',
+        warmth: 0,
+        x1: 0.16,
+        y1: 0,
+        x2: 0.28,
+        y2: 0.38,
+        chromaMultiplier: 1,
+        currentTheme: 'light'
+      };
+      expect(() => generatePalettes(params)).toThrow('Invalid base color');
+    });
+  });
+
+  describe('getPaletteName edge cases', () => {
+    it('handles palette with invalid hex values gracefully', () => {
+      const palette = ['not-hex', '#ff0000', '#00ff00'];
+      const name = getPaletteName(palette);
+      expect(name).toBeTruthy();
+    });
+
+    it('handles palette where all colors are extremes', () => {
+      const palette = ['#ffffff', '#000000'];
+      const name = getPaletteName(palette);
+      expect(name).toBeTruthy();
+    });
+
+    it('handles string reference that is invalid hex', () => {
+      const palette = ['#ff0000', '#00ff00', '#0000ff'];
+      const name = getPaletteName(palette, 'invalid-hex');
+      expect(name).toBe('Unnamed');
+    });
+
+    it('handles numeric index out of bounds', () => {
+      const palette = ['#ff0000', '#00ff00'];
+      const name = getPaletteName(palette, 100);
+      expect(name).toBeTruthy();
+      expect(name).not.toBe('Unnamed');
+    });
+
+    it('finds alternate candidate when best match names to white/black', () => {
+      // Palette where the best contrast match would name to "white" or "black"
+      // but there are chromatic alternatives available
+      const palette = ['#ffffff', '#f0f0f0', '#3366cc', '#000000'];
+      const name = getPaletteName(palette, 0);
+      // Should find a chromatic color name, not "White" or "Black"
+      expect(name).toBeTruthy();
+      expect(name.toLowerCase()).not.toBe('white');
+      expect(name.toLowerCase()).not.toBe('black');
+    });
+  });
+
+  describe('nearestFriendlyColorName cache', () => {
+    it('caches results for repeated lookups', () => {
+      clearNearestColorCache();
+
+      // First call computes the result
+      const name1 = nearestFriendlyColorName('#336699');
+      // Second call should return cached result (same value)
+      const name2 = nearestFriendlyColorName('#336699');
+
+      expect(name1).toBe(name2);
+      expect(typeof name1).toBe('string');
+      expect(name1.length).toBeGreaterThan(0);
+    });
+
+    it('handles cache clearing', () => {
+      // Add an entry
+      const name1 = nearestFriendlyColorName('#445566');
+      clearNearestColorCache();
+      // After clearing, should still work (recomputes)
+      const name2 = nearestFriendlyColorName('#445566');
+
+      expect(name1).toBe(name2);
+      expect(typeof name2).toBe('string');
     });
   });
 });

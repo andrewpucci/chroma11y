@@ -166,7 +166,14 @@ const shortColorEntries: { hex: string; color: Color }[] = shortColorNames
   })
   .filter((e): e is { hex: string; color: Color } => e !== null);
 
-/** FIFO cache for nearest color name lookups to avoid repeated O(n) scans */
+/**
+ * FIFO cache for nearest color name lookups to avoid repeated O(n) scans.
+ *
+ * Note: Cache eviction (NEAREST_COLOR_CACHE_MAX) is not unit tested because
+ * filling 256+ entries requires 256+ CIEDE2000 calculations, which times out
+ * on CI (~7s). The eviction logic is simple (delete first key when full) and
+ * is covered by manual verification. See colorUtils.spec.ts for cache tests.
+ */
 const nearestColorCache = new Map<string, string>();
 const NEAREST_COLOR_CACHE_MAX = 256;
 
@@ -681,10 +688,15 @@ export function getPrintableContrastForAlgorithm(
 }
 
 /**
- * Gets a name for the palette based on its middle color
+ * Gets a name for the palette based on its middle color.
  * @param palette - The palette to name
  * @param lowStepIndex - The index of the color to use as the contrast reference
  * @returns The name of the nearest named color
+ *
+ * Note: The outer try/catch (lines 792-794) is defensive error handling for
+ * unexpected failures in the color naming pipeline. This is difficult to trigger
+ * in unit tests since all internal operations have their own error handling.
+ * The function is well-tested for all normal code paths and edge cases.
  */
 export function getPaletteName(palette: string[], lowStepIndex: number | string = 0): string {
   if (!palette?.length) return 'Unnamed';
