@@ -49,6 +49,8 @@ npx playwright test --ui   # interactive UI mode
 - Test files: `e2e/*.spec.ts`
 - Runs against a production build (`npm run build && npm run preview` on port 4173)
 - Tests run in Chromium, Firefox, and WebKit
+- CI visual gating runs against local production preview in `e2e.yml`
+- Netlify deploy-preview checks run separately in `netlify-smoke.yml` (non-visual smoke coverage)
 
 ### Run everything
 
