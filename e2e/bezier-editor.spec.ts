@@ -26,11 +26,6 @@ test.describe('Bezier Editor', () => {
       await expect(controlPoints).toHaveCount(2);
     });
 
-    test('bezier curve visual appearance', async ({ page }) => {
-      const bezierEditor = page.locator('.bezier-editor');
-      await expect(bezierEditor).toHaveScreenshot('bezier-editor-default.png');
-    });
-
     test('displays coordinate readout', async ({ page }) => {
       const bezierEditor = page.locator('.bezier-editor');
       const readout = bezierEditor.locator('.readout');
@@ -45,6 +40,15 @@ test.describe('Bezier Editor', () => {
       const svg = page.locator('.bezier-editor svg');
       await expect(svg.locator('text:has-text("Step")')).toBeVisible();
       await expect(svg.locator('text:has-text("Lightness")')).toBeVisible();
+    });
+  });
+
+  test.describe('Visual regression', () => {
+    test.skip(({ browserName }) => browserName !== 'chromium', 'Visual tests only run on Chromium');
+
+    test('bezier curve visual appearance', async ({ page }) => {
+      const bezierEditor = page.locator('.bezier-editor');
+      await expect(bezierEditor).toHaveScreenshot('bezier-editor-default.png');
     });
   });
 

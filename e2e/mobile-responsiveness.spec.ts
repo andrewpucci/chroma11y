@@ -11,6 +11,8 @@ const MOBILE_VIEWPORTS = {
 
 test.describe('Mobile Responsiveness', () => {
   test.describe('Visual regression', () => {
+    test.skip(({ browserName }) => browserName !== 'chromium', 'Visual tests only run on Chromium');
+
     test('mobile layout appearance (iPhone SE)', async ({ page }) => {
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
       await page.goto('/');
