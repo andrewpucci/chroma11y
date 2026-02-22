@@ -18,7 +18,8 @@ export default defineConfig({
   },
   use: {
     baseURL,
-    navigationTimeout: process.env.CI ? 45000 : 15000,
+    navigationTimeout:
+      process.env.CI || process.env.PLAYWRIGHT_TEST_BASE_URL ? 60000 : 15000,
     actionTimeout: 10000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
