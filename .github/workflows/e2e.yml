@@ -3,6 +3,13 @@ name: E2E Tests
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      argos_upload:
+        description: 'Upload screenshots to Argos during manual runs'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   test:
@@ -27,19 +34,19 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Wait for Netlify preview deployment
-        uses: jakepartusch/wait-for-netlify-action@v1.4
-        id: netlify
-        with:
-          site_name: 'chroma11y'
-          max_timeout: 600
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run Playwright tests against Netlify preview
+      - name: Run Playwright tests (local production preview)
+        if: github.event_name == 'pull_request'
         run: npx playwright test
         env:
-          PLAYWRIGHT_TEST_BASE_URL: ${{ steps.netlify.outputs.url }}
+          ARGOS_UPLOAD: ${{ github.event.pull_request.head.repo.fork == false && 'true' || 'false' }}
+          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
+
+      - name: Run Playwright tests (manual baseline reseed)
+        if: github.event_name == 'workflow_dispatch'
+        run: npx playwright test
+        env:
+          ARGOS_UPLOAD: ${{ github.event.inputs.argos_upload == 'true' && 'true' || 'false' }}
+          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
