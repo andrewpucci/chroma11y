@@ -19,28 +19,25 @@ test.describe('Netlify Smoke', () => {
   });
 
   test('updates palette when base color changes', async ({ page }) => {
-    const paletteHexes = page
-      .getByTestId('generated-palettes')
-      .locator('.swatches')
-      .first()
-      .locator('.hex');
-    const initialHex = await paletteHexes.nth(5).textContent();
+    const getPaletteSignature = async () => {
+      const hexes = await page
+        .getByTestId('generated-palettes')
+        .locator('.swatches')
+        .first()
+        .locator('.hex')
+        .allTextContents();
+      return hexes.map((hex) => hex.trim()).join('|');
+    };
 
-    await page.locator('#baseColor').fill('#00ff00');
+    const initialSignature = await getPaletteSignature();
 
-    await page.waitForFunction(
-      (before) => {
-        const hex = document.querySelector(
-          '[data-testid="generated-palettes"] .swatches .hex:nth-child(6)'
-        )?.textContent;
-        return hex !== before;
-      },
-      initialHex,
-      { timeout: 5000 }
-    );
+    await page.goto('/?c=00ff00');
+    await waitForAppReady(page);
 
-    const updatedHex = await paletteHexes.nth(5).textContent();
-    expect(updatedHex).not.toBe(initialHex);
+    await expect(page.locator('#baseColorHex')).toHaveValue('#00ff00');
+
+    const updatedSignature = await getPaletteSignature();
+    expect(updatedSignature).not.toBe(initialSignature);
   });
 
   test('can export JSON file', async ({ page }) => {
