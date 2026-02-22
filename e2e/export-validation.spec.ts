@@ -15,7 +15,8 @@ import * as fs from 'fs';
 
 test.describe('Export Format Validation', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForLoadState('networkidle', { timeout: 10000 });
     await waitForAppReady(page);
     await waitForColorGeneration(page);
     await page.waitForTimeout(500);
