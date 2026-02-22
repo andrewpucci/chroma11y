@@ -1,5 +1,6 @@
 [build]
-  command = "npm run test:unit -- --run && npm run build"
+  # Run server/dom unit tests here; browser (client) tests run in GitHub Actions
+  command = "npm run test:unit -- --run --project=server --project=dom && npm run build"
   publish = "build"
   node_version = "24"
 

@@ -36,14 +36,14 @@ export function initializeGlobalFocusListeners(): void {
     if (e.key === 'Tab') {
       lastInteractionWasKeyboard = true;
       // Notify all callbacks that keyboard interaction is happening
-      focusVisibleCallbacks.forEach(callback => callback(true));
+      focusVisibleCallbacks.forEach((callback) => callback(true));
     }
   };
 
   handleMouseDown = () => {
     lastInteractionWasKeyboard = false;
     // Notify all callbacks that mouse interaction is happening
-    focusVisibleCallbacks.forEach(callback => callback(false));
+    focusVisibleCallbacks.forEach((callback) => callback(false));
   };
 
   document.addEventListener('keydown', handleKeyDown, true);
