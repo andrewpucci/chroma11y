@@ -43,6 +43,13 @@ test.describe('Bezier Editor', () => {
     });
   });
 
+  test.describe('Visual regression', () => {
+    test('bezier curve visual appearance', async ({ page }) => {
+      const bezierEditor = page.locator('.bezier-editor');
+      await expect(bezierEditor).toHaveScreenshot('bezier-editor-default.png');
+    });
+  });
+
   test.describe('Keyboard Navigation', () => {
     test('can focus control points', async ({ page }) => {
       const p1 = page.locator('.bezier-editor circle[role="slider"]').first();

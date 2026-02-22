@@ -5,6 +5,14 @@ Accessible color palette generator powered by OKLCH, with WCAG contrast checking
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Svelte 5](https://img.shields.io/badge/Svelte-5-orange.svg)](https://svelte.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
+[![CI](https://github.com/andrewpucci/chroma11y/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/andrewpucci/chroma11y/actions/workflows/unit-tests.yml)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://chroma11y.netlify.app)
+
+<p align="center">
+  <img src="docs/screenshot.png" alt="Chroma11y screenshot showing color palette generator" width="800">
+</p>
+
+**[Try the Live Demo →](https://chroma11y.netlify.app)**
 
 ---
 
@@ -20,6 +28,20 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 - **Predictable color relationships** for better palette cohesiveness
 - **Better accessibility** with accurate contrast calculations
 - **Wider gamut support** for modern displays
+
+<details>
+<summary>📑 Table of Contents</summary>
+
+- [Features](#features)
+- [Installation & Setup](#installation--setup)
+- [Usage Guide](#usage-guide)
+- [Technical Details](#technical-details)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+- [Credits](#credits)
+
+</details>
 
 ---
 
@@ -76,6 +98,18 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 - **Fast performance** - All operations <200ms
 - **Intuitive controls** - Easy-to-use interface
 
+<p align="right"><a href="#chroma11y">↑ back to top</a></p>
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/andrewpucci/chroma11y.git && cd chroma11y && npm install && npm run dev
+```
+
+Or **[try the live demo](https://chroma11y.netlify.app)** instantly.
+
 ---
 
 ## Installation & Setup
@@ -105,6 +139,8 @@ npm run dev
 ```
 
 5. Open in browser (usually http://localhost:5173)
+
+<p align="right"><a href="#chroma11y">↑ back to top</a></p>
 
 ---
 
@@ -215,6 +251,8 @@ $color-blue-0: #ffffff;
 
 Share your color configuration by copying the URL. All parameters are encoded in the URL for easy sharing.
 
+<p align="right"><a href="#chroma11y">↑ back to top</a></p>
+
 ---
 
 ## Technical Details
@@ -313,6 +351,8 @@ Uses Svelte 5 stores for reactive state:
 - **Bundle size**: ~316KB (includes dependencies)
 - **Memory usage**: Stable, no memory leaks
 
+<p align="right"><a href="#chroma11y">↑ back to top</a></p>
+
 ---
 
 ## Development
@@ -349,13 +389,14 @@ npx playwright test --ui
 
 - Algorithm validation, export formats, mobile responsiveness
 - Design token system (fluid typography, spacing, touch targets, motion preferences)
-- Performance benchmarks, URL/localStorage persistence, UI interactions
+- URL/localStorage persistence, UI interactions
 - Bezier editor interaction, focus indicators
+- Visual regression tests (themes, palettes, mobile layouts, bezier editor)
 
 **Unit & DOM Tests** (`src/`):
 
 - Color utility functions, export format generators, URL encoding/decoding
-- Component DOM tests (BezierEditor, ColorControls, ColorInfoDrawer, ContrastControls, ExportButtons, NeutralPalette, PaletteGrid, ThemeToggle)
+- Component DOM tests (BezierEditor, ColorControls, ColorInfoDrawer, ContrastControls, DisplaySettings, ExportButtons, NeutralPalette, PaletteGrid)
 - Favicon generation
 
 ### Linting & Formatting
@@ -392,6 +433,8 @@ Preview production build:
 npm run preview
 ```
 
+<p align="right"><a href="#chroma11y">↑ back to top</a></p>
+
 ---
 
 ## Contributing
@@ -418,6 +461,8 @@ Contributions are welcome! Please follow these guidelines:
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+<p align="right"><a href="#chroma11y">↑ back to top</a></p>
 
 ---
 

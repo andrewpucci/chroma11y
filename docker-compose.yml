@@ -1,0 +1,14 @@
+services:
+  # Update snapshots (generates new baseline images)
+  update-snapshots:
+    build: .
+    command: npx playwright test --update-snapshots --reporter=list
+    volumes:
+      - ./e2e:/app/e2e:rw
+
+  # Run E2E tests (validates against existing snapshots)
+  test:
+    build: .
+    command: npx playwright test --reporter=list
+    volumes:
+      - ./e2e:/app/e2e:ro

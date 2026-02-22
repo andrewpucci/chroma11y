@@ -7,14 +7,19 @@ export default defineConfig({
     ? undefined
     : { command: 'npm run build && npm run preview', port: 4173 },
   testDir: 'e2e',
+  snapshotPathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}-{projectName}{ext}',
   timeout: process.env.CI ? 60000 : 30000,
   retries: process.env.CI ? 2 : 0,
   expect: {
-    timeout: 15000
+    timeout: 15000,
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01
+    }
   },
   use: {
     baseURL,
-    navigationTimeout: process.env.CI ? 45000 : 15000,
+    navigationTimeout:
+      process.env.CI || process.env.PLAYWRIGHT_TEST_BASE_URL ? 60000 : 15000,
     actionTimeout: 10000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

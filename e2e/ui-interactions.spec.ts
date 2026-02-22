@@ -12,6 +12,34 @@ test.describe('UI Interactions', () => {
     await waitForAppReady(page);
   });
 
+  test.describe('Visual regression', () => {
+    test('app appearance in light theme', async ({ page }) => {
+      await expect(page).toHaveScreenshot('app-light-theme.png', {
+        fullPage: true
+      });
+    });
+
+    test('app appearance in dark theme', async ({ page }) => {
+      await page.locator('#theme-preference').selectOption('dark');
+      await page.waitForFunction(
+        () => document.documentElement.getAttribute('data-theme') === 'dark'
+      );
+      await expect(page).toHaveScreenshot('app-dark-theme.png', {
+        fullPage: true
+      });
+    });
+
+    test('palette grid visual appearance', async ({ page }) => {
+      const palettes = page.getByTestId('generated-palettes');
+      await expect(palettes).toHaveScreenshot('palette-grid.png');
+    });
+
+    test('neutral palette visual appearance', async ({ page }) => {
+      const neutralPalette = page.getByTestId('neutral-palette');
+      await expect(neutralPalette).toHaveScreenshot('neutral-palette.png');
+    });
+  });
+
   test.describe('App Loading', () => {
     test('loads the application successfully', async ({ page }) => {
       await expect(page.locator('h1')).toContainText('Chroma11y');

@@ -52,7 +52,7 @@ This is an accessibility-focused project. Every component must maintain:
 
 - **Pointer capture / drag interactions** — jsdom doesn't support `getBoundingClientRect` or pointer capture; use E2E tests
 - **SVG coordinate transforms** — Require actual rendering; use E2E tests
-- **CSS styling / visual appearance** — Use E2E visual regression tests
+- **CSS styling / visual appearance** — Use E2E visual regression tests (see `e2e/AGENTS.md` for current coverage)
 - **Internal implementation details** — Test behavior, not implementation
 
 ### Documenting untestable code
