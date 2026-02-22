@@ -1,6 +1,6 @@
 <script lang="ts">
   interface Props {
-    name: 'copy' | 'close' | 'json' | 'css' | 'scss' | 'share';
+    name: 'copy' | 'close' | 'json' | 'css' | 'scss' | 'share' | 'reset';
     size?: number;
   }
 
@@ -54,6 +54,16 @@
     <circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5" />
     <circle cx="4" cy="8" r="2" stroke="currentColor" stroke-width="1.5" />
     <path d="M6 7l4-3M6 9l4 3" stroke="currentColor" stroke-width="1.5" />
+  </svg>
+{:else if name === 'reset'}
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path
+      d="M2 8a6 6 0 1 1 1.5 3.97"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+    />
+    <path d="M2 12V8h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
   </svg>
 {:else if name === 'scss'}
   <svg width={size} height={size} viewBox="0 0 256 293" fill="none" aria-hidden="true">
