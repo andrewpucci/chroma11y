@@ -500,6 +500,34 @@ export function colorToCssRgb(color: Color): string {
 }
 
 /**
+ * Gamut-maps any Color object to Display P3 and returns a CSS color() string.
+ * e.g. "color(display-p3 0.097 0.384 0.901)"
+ */
+export function colorToCssP3(color: Color): string {
+  try {
+    const p3 = color.clone().toGamut({ space: 'p3' }).to('p3');
+    const [r, g, b] = p3.coords.map((v) => parseFloat((v ?? 0).toFixed(6)));
+    return `color(display-p3 ${r} ${g} ${b})`;
+  } catch {
+    return 'color(display-p3 0 0 0)';
+  }
+}
+
+/**
+ * Gamut-maps any Color object to Rec. 2020 and returns a CSS color() string.
+ * e.g. "color(rec2020 0.169 0.353 0.872)"
+ */
+export function colorToCssRec2020(color: Color): string {
+  try {
+    const rec = color.clone().toGamut({ space: 'rec2020' }).to('rec2020');
+    const [r, g, b] = rec.coords.map((v) => parseFloat((v ?? 0).toFixed(6)));
+    return `color(rec2020 ${r} ${g} ${b})`;
+  } catch {
+    return 'color(rec2020 0 0 0)';
+  }
+}
+
+/**
  * Converts any Color object to a CSS oklch() string (CSS Color 4 syntax).
  * e.g. "oklch(55% 0.19 264)"
  *
@@ -549,34 +577,6 @@ export function colorToCssHsl(color: Color): string {
     return hslColor.toString();
   } catch {
     return 'hsl(0 0% 0%)';
-  }
-}
-
-/**
- * Gamut-maps any Color object to Display P3 and returns a CSS color() string.
- * e.g. "color(display-p3 0.097 0.384 0.901)"
- */
-export function colorToCssP3(color: Color): string {
-  try {
-    const p3 = color.clone().toGamut({ space: 'p3' }).to('p3');
-    const [r, g, b] = p3.coords.map((v) => parseFloat((v ?? 0).toFixed(6)));
-    return `color(display-p3 ${r} ${g} ${b})`;
-  } catch {
-    return 'color(display-p3 0 0 0)';
-  }
-}
-
-/**
- * Gamut-maps any Color object to Rec. 2020 and returns a CSS color() string.
- * e.g. "color(rec2020 0.169 0.353 0.872)"
- */
-export function colorToCssRec2020(color: Color): string {
-  try {
-    const rec = color.clone().toGamut({ space: 'rec2020' }).to('rec2020');
-    const [r, g, b] = rec.coords.map((v) => parseFloat((v ?? 0).toFixed(6)));
-    return `color(rec2020 ${r} ${g} ${b})`;
-  } catch {
-    return 'color(rec2020 0 0 0)';
   }
 }
 
