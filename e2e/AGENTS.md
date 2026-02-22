@@ -1,24 +1,32 @@
 # E2E Tests
 
-Playwright end-to-end tests that run against a production build.
+Playwright end-to-end tests that run against a production build. **All E2E tests run in Docker** to ensure consistency between local development and CI.
 
 ## Setup
 
-Tests require a built app served on port 4173:
-
-```sh
-npm run build && npm run preview
-```
-
-Or run everything with:
+Run E2E tests in Docker (recommended):
 
 ```sh
 npm run test:e2e
 ```
 
+Update snapshots after UI changes:
+
+```sh
+npm run test:e2e:update
+```
+
+Run locally for debugging (results may differ from CI):
+
+```sh
+npm run test:e2e:local
+```
+
+See `docs/visual-testing.md` for full Docker workflow documentation.
+
 ## Browsers
 
-Tests run in Chromium, Firefox, and WebKit.
+Tests run in Chromium, Firefox, and WebKit. Visual regression snapshots are generated for all three browsers.
 
 ## Conventions
 
@@ -88,20 +96,19 @@ Visual regression tests use Playwright's `toHaveScreenshot()` API. Snapshots are
 
 ### Generating snapshots
 
-```sh
-# First run generates baseline snapshots
-npx playwright test --grep "visual"
+All snapshots are generated in Docker to match CI environment:
 
-# Update snapshots after intentional UI changes
-npx playwright test --update-snapshots
+```sh
+# Update snapshots after UI changes
+npm run test:e2e:update
 ```
 
 ### Best practices
 
 - Name snapshots explicitly: `await expect(page).toHaveScreenshot('palette-grid.png')`
-- Snapshots include browser/platform suffix automatically: `palette-grid-chromium-darwin.png`
+- Snapshots include browser suffix automatically: `palette-grid-chromium.png`, `palette-grid-firefox.png`, `palette-grid-webkit.png`
+- All snapshots are Linux-generated for consistency across local dev and CI
 - Use `stylePath` option to hide dynamic content (timestamps, animations)
-- Run snapshot tests in consistent environment (same OS, browser version)
 
 ### Current coverage
 
