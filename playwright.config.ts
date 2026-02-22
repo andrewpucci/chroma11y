@@ -8,6 +8,7 @@ export default defineConfig({
     : { command: 'npm run build && npm run preview', port: 4173 },
   testDir: 'e2e',
   timeout: 30000,
+  retries: process.env.CI ? 2 : 0,
   expect: {
     timeout: 10000
   },
