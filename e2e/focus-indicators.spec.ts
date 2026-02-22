@@ -9,6 +9,34 @@ import { test, expect } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
 
 test.describe('Focus Indicators', () => {
+  test.describe('Visual regression', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/');
+      await waitForAppReady(page);
+    });
+
+    test('focus indicator appearance in light mode', async ({ page }) => {
+      const hexInput = page.locator('#baseColorHex');
+      await hexInput.focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      await expect(hexInput).toHaveScreenshot('focus-indicator-light.png');
+    });
+
+    test('focus indicator appearance in dark mode', async ({ page }) => {
+      await page.locator('#theme-preference').selectOption('dark');
+      await page.waitForFunction(
+        () => document.documentElement.getAttribute('data-theme') === 'dark'
+      );
+
+      const hexInput = page.locator('#baseColorHex');
+      await hexInput.focus();
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      await expect(hexInput).toHaveScreenshot('focus-indicator-dark.png');
+    });
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);

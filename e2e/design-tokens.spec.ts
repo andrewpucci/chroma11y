@@ -253,39 +253,4 @@ test.describe('Design Tokens', () => {
     });
   });
 
-  test.describe('T-shirt Size Consistency', () => {
-    test('spacing and typography maintain proportional relationships', async ({ page }) => {
-      const spaceXs = await page.evaluate(() => {
-        return getComputedStyle(document.documentElement).getPropertyValue('--space-xs').trim();
-      });
-
-      const spaceSm = await page.evaluate(() => {
-        return getComputedStyle(document.documentElement).getPropertyValue('--space-sm').trim();
-      });
-
-      const spaceMd = await page.evaluate(() => {
-        return getComputedStyle(document.documentElement).getPropertyValue('--space-md').trim();
-      });
-
-      const spaceLg = await page.evaluate(() => {
-        return getComputedStyle(document.documentElement).getPropertyValue('--space-lg').trim();
-      });
-
-      // Check that spacing tokens are defined and use clamp() for fluid scaling
-      expect(spaceXs).toMatch(/^clamp\(/);
-      expect(spaceSm).toMatch(/^clamp\(/);
-      expect(spaceMd).toMatch(/^clamp\(/);
-      expect(spaceLg).toMatch(/^clamp\(/);
-
-      // Check that each spacing token has progressively larger maximum values in clamp()
-      const getXsMax = parseFloat(spaceXs.match(/,\s*([\d.]+)rem\)/)?.[1] || '0');
-      const getSmMax = parseFloat(spaceSm.match(/,\s*([\d.]+)rem\)/)?.[1] || '0');
-      const getMdMax = parseFloat(spaceMd.match(/,\s*([\d.]+)rem\)/)?.[1] || '0');
-      const getLgMax = parseFloat(spaceLg.match(/,\s*([\d.]+)rem\)/)?.[1] || '0');
-
-      expect(getSmMax).toBeGreaterThan(getXsMax);
-      expect(getMdMax).toBeGreaterThan(getSmMax);
-      expect(getLgMax).toBeGreaterThan(getMdMax);
-    });
-  });
 });

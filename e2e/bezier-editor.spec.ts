@@ -26,6 +26,11 @@ test.describe('Bezier Editor', () => {
       await expect(controlPoints).toHaveCount(2);
     });
 
+    test('bezier curve visual appearance', async ({ page }) => {
+      const bezierEditor = page.locator('.bezier-editor');
+      await expect(bezierEditor).toHaveScreenshot('bezier-editor-default.png');
+    });
+
     test('displays coordinate readout', async ({ page }) => {
       const bezierEditor = page.locator('.bezier-editor');
       const readout = bezierEditor.locator('.readout');

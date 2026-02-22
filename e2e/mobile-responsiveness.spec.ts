@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { waitForAppReady } from './test-utils';
 
 const MOBILE_VIEWPORTS = {
   iPhone_SE: { width: 375, height: 667 },
@@ -9,6 +10,26 @@ const MOBILE_VIEWPORTS = {
 };
 
 test.describe('Mobile Responsiveness', () => {
+  test.describe('Visual regression', () => {
+    test('mobile layout appearance (iPhone SE)', async ({ page }) => {
+      await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
+      await page.goto('/');
+      await waitForAppReady(page);
+      await expect(page).toHaveScreenshot('mobile-layout-iphone-se.png', {
+        fullPage: true
+      });
+    });
+
+    test('mobile layout appearance (small phone 320px)', async ({ page }) => {
+      await page.setViewportSize(MOBILE_VIEWPORTS.Small_Phone);
+      await page.goto('/');
+      await waitForAppReady(page);
+      await expect(page).toHaveScreenshot('mobile-layout-320px.png', {
+        fullPage: true
+      });
+    });
+  });
+
   test.describe('Layout Adaptation', () => {
     test('should stack controls above palettes on mobile (375px)', async ({ page }) => {
       await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
