@@ -33,7 +33,9 @@
     "test:unit": "vitest",
     "test:coverage": "vitest run --coverage",
     "test": "npm run test:unit -- --run && npm run test:e2e",
-    "test:e2e": "playwright test",
+    "test:e2e": "docker compose run --rm test",
+    "test:e2e:update": "./scripts/test-linux-snapshots.sh",
+    "test:e2e:local": "playwright test",
     "test:lighthouse": "rm -rf lighthouse-report .lighthouseci && lhci autorun; open $(node -e \"const m=require('./lighthouse-report/manifest.json');console.log(m.find(r=>r.isRepresentativeRun).htmlPath)\")"
   },
   "devDependencies": {
