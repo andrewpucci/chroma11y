@@ -124,4 +124,35 @@ describe('exportUtils', () => {
       expect(scss).not.toContain(':root');
     });
   });
+
+  describe('palette naming edge cases', () => {
+    it('handles grayscale palette gracefully', () => {
+      const palettes = [['#808080', '#404040']];
+
+      const css = exportAsCSS([], palettes);
+
+      // Should still produce valid output with some name
+      expect(css).toContain('--color-');
+    });
+
+    it('uses display values when provided to CSS export', () => {
+      const neutrals = ['#ffffff'];
+      const palettes: string[][] = [];
+      const displayNeutrals = ['oklch(100% 0 0)'];
+
+      const css = exportAsCSS(neutrals, palettes, displayNeutrals);
+
+      expect(css).toContain('oklch(100% 0 0)');
+    });
+
+    it('uses display values when provided to SCSS export', () => {
+      const neutrals = ['#ffffff'];
+      const palettes: string[][] = [];
+      const displayNeutrals = ['oklch(100% 0 0)'];
+
+      const scss = exportAsSCSS(neutrals, palettes, displayNeutrals);
+
+      expect(scss).toContain('oklch(100% 0 0)');
+    });
+  });
 });

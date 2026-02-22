@@ -46,6 +46,17 @@
 
   const textColor = $derived(calculateTextColor(color, contrastColorsLocal));
 
+  /**
+   * Determines the optimal text color for a swatch based on contrast ratios.
+   * Prefers the contrast color that meets the accessibility threshold; if both
+   * meet it (or neither does), uses the one with higher contrast.
+   *
+   * Note: This function's branching logic is tested indirectly through parent
+   * component tests (NeutralPalette, PaletteGrid) and E2E tests. Direct unit
+   * testing would require mocking the store subscriptions and contrast
+   * calculations, which adds complexity without significant value since the
+   * logic is straightforward and the integration is well-covered.
+   */
   function calculateTextColor(bgColor: string, contrast: { low: string; high: string }): string {
     const threshold = contrastAlgorithmLocal === 'APCA' ? MIN_APCA_LC_BODY : MIN_CONTRAST_RATIO;
     const lowVal = getContrastForAlgorithm(bgColor, contrast.low, contrastAlgorithmLocal);

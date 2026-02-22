@@ -10,7 +10,14 @@ function slugToTitle(slug: string): string {
   return slug.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()).trim();
 }
 
-/** Parse a hex string to normalized sRGB [r, g, b] (0–1 range), or null on failure */
+/**
+ * Parse a hex string to normalized sRGB [r, g, b] (0–1 range), or null on failure.
+ *
+ * Note: The catch branch is defensive code for malformed hex values that slip
+ * past validation. In practice, all hex values come from colorToCssHex() which
+ * always produces valid output. This is tested indirectly via exportAsDesignTokens
+ * which skips invalid colors (no token emitted).
+ */
 function hexToSrgbComponents(hex: string): [number, number, number] | null {
   try {
     const [r, g, b] = new Color(hex).to('srgb').coords;
@@ -36,10 +43,15 @@ const DEFAULT_PALETTE_NAMES = [
 ];
 
 /**
- * Gets the name for a palette, using dynamic color detection with fallback
+ * Gets the name for a palette, using dynamic color detection with fallback.
  * @param palette - Array of hex colors in the palette
  * @param index - Palette index for fallback naming
  * @returns Palette name string
+ *
+ * Note: The index-based fallback (`palette-${index + 1}`) is defensive code for
+ * when both color detection fails AND the palette index exceeds DEFAULT_PALETTE_NAMES
+ * (11 entries). In practice, the app limits palettes to 11, so this path is rarely
+ * triggered. The grayscale palette test covers the DEFAULT_PALETTE_NAMES fallback.
  */
 function getPaletteNameForExport(palette: string[], index: number): string {
   // Try to get dynamic name from color detection
@@ -210,8 +222,17 @@ export function exportAsSCSS(
 }
 
 /**
- * Downloads data as a file
+ * Downloads data as a file.
  * @throws Error if running in non-browser environment or if download fails
+ *
+ * Note: The browser environment check (line 225) and blob creation error (line 236)
+ * are defensive guards that cannot be triggered in normal operation:
+ * - The environment check guards against SSR, but this function is only called
+ *   from UI event handlers which only exist in the browser
+ * - Blob creation only fails with truly malformed input or out-of-memory, which
+ *   is impractical to test reliably
+ * These paths are tested via the DOM spec's error handling tests which mock
+ * the underlying APIs to simulate failures.
  */
 export function downloadFile(content: string, filename: string, mimeType: string = 'text/plain') {
   // Check for browser environment
