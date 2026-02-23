@@ -1,108 +1,85 @@
-# Visual Testing with Standardized Linux Snapshots
+# Visual Testing Workflow
 
-This project runs **all E2E tests in Docker** to ensure consistency between local development and CI. The Docker environment matches GitHub Actions exactly.
+This project uses a dual workflow for E2E confidence:
+
+- **Deterministic visual regression** in CI against a local production preview (`npm run build && npm run preview`)
+- **Netlify deploy smoke checks** against deploy previews, without pixel comparison assertions
+
+Argos is integrated for PR visual review in **phase A** while keeping existing Playwright snapshot baselines in git.
 
 ## Quick Reference
 
-| Command | Description |
-|---------|-------------|
-| `npm run test:e2e` | Run E2E tests in Docker (recommended) |
-| `npm run test:e2e:update` | Regenerate snapshots + validate |
-| `npm run test:e2e:local` | Run tests locally (may differ from CI) |
+| Command                          | Description                                   |
+| -------------------------------- | --------------------------------------------- |
+| `npm run test:e2e`               | Run full E2E suite in Docker                  |
+| `npm run test:e2e:update`        | Regenerate Linux snapshots + validate         |
+| `npm run test:e2e:local`         | Run Playwright tests locally (debugging)      |
+| `npm run test:e2e:netlify-smoke` | Run non-visual deploy smoke checks (Chromium) |
 
-## Why Docker for All E2E Tests?
+## CI Pipelines
 
-- **Cross-platform consistency**: macOS and Linux render fonts/graphics differently
-- **CI parity**: Local tests match GitHub Actions exactly
-- **Cross-browser support**: Chromium, Firefox, and WebKit all tested
-- **No flaky tests**: Same environment = same results
+### 1) Required Visual Gate (`.github/workflows/e2e.yml`)
 
-## Generating Snapshots
+- Runs Playwright against local production preview (deterministic)
+- Uses committed `toHaveScreenshot()` baselines
+- Uploads Argos captures when:
+  - `ARGOS_UPLOAD=true` on same-repo PRs
+  - `ARGOS_UPLOAD=true` on pushes to `main` (post-merge baseline refresh)
+  - `ARGOS_UPLOAD=false` on fork PRs by default
 
-### After UI Changes
+### 2) Netlify Smoke (`.github/workflows/netlify-smoke.yml`)
+
+- Waits for Netlify deploy preview URL
+- Runs `e2e/netlify-smoke.spec.ts` only
+- Verifies load and core functional paths, no visual baseline assertions
+
+## Phase A Migration Behavior
+
+During phase A we keep both mechanisms for visual checks:
+
+1. Existing Playwright `toHaveScreenshot()` assertions (git baselines)
+2. Argos captures through `e2e/visual.ts` in Chromium only when `ARGOS_UPLOAD=true`
+
+This gives rollback safety while Argos review flow stabilizes.
+
+## Snapshot Baselines (Current Source in Phase A)
+
+Snapshots are still generated in Docker and committed:
+
 ```bash
-# Regenerate all snapshots and validate
 npm run test:e2e:update
 ```
 
-### Update Only (Skip Validation)
-```bash
-./scripts/test-linux-snapshots.sh --update-only
-```
+Manual commands:
 
-### Manual Docker Commands
 ```bash
-# Build environment
 docker compose build
-
-# Update snapshots
 docker compose run --rm update-snapshots
-
-# Run tests
 docker compose run --rm test
 ```
 
-## File Structure
+## Baseline Reseeding for Argos
 
-```
-e2e/
-├── focus-indicators.spec.ts-snapshots/
-│   ├── focus-indicator-light-chromium.png
-│   ├── focus-indicator-light-firefox.png
-│   ├── focus-indicator-light-webkit.png
-│   └── ...
-└── ...
-```
+Argos baseline refresh now happens automatically on pushes to `main` in the E2E workflow.
+Manual dispatch (`workflow_dispatch`) is still available for ad-hoc runs:
 
-## Workflow
-
-1. **Make UI changes** in development
-2. **Regenerate snapshots**: `npm run test:e2e:update`
-3. **Review** the generated `.png` files
-4. **Commit** the snapshots to version control
-5. **CI passes**: Uses the same Docker environment
-
-## Docker Environment
-
-The Docker setup replicates CI exactly:
-- `ubuntu:22.04` (same as GitHub Actions `ubuntu-latest`)
-- Node.js 24 (matches CI configuration)
-- All Playwright browsers: Chromium, Firefox, WebKit
-- Playwright handles build + preview server automatically
-
-## Configuration
-
-`playwright.config.ts`:
-- `maxDiffPixelRatio: 0.02` for small tolerance
-- `webServer` config builds and starts preview server
-- All three browser projects enabled
-
-`docker-compose.yml`:
-- `update-snapshots` service: generates new baselines
-- `test` service: validates against existing snapshots
+- set `argos_upload=true` to upload captures to Argos
+- leave it `false` for a non-upload validation run
 
 ## Troubleshooting
 
-### Docker not running
-```bash
-# Ensure Docker Desktop is running, then:
-docker compose build
-```
+### Visual diffs on Netlify but not local preview
 
-### Tests fail after UI changes
+Expected in some cases due to deploy-environment rendering differences. Required visual gating is local deterministic CI; deploy checks belong in the smoke workflow.
+
+### Fork PRs do not show Argos upload
+
+Expected. Fork PRs intentionally skip Argos upload to avoid secret/integration constraints.
+
+### Updating UI changed expected snapshots
+
+Regenerate in Docker:
+
 ```bash
 npm run test:e2e:update
-# Review and commit the updated snapshots
 ```
-
-### Need to debug locally
-```bash
-# Run tests locally (results may differ from CI)
-npm run test:e2e:local
-
-# Or with UI mode
-npx playwright test --ui
-```
-
-### Slow first run
-The first `docker compose build` downloads browsers (~500MB). Subsequent runs use cached layers.

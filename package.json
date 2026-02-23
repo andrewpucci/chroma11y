@@ -36,9 +36,11 @@
     "test:e2e": "docker compose run --rm test",
     "test:e2e:update": "./scripts/test-linux-snapshots.sh",
     "test:e2e:local": "playwright test",
+    "test:e2e:netlify-smoke": "playwright test e2e/netlify-smoke.spec.ts --project=chromium",
     "test:lighthouse": "rm -rf lighthouse-report .lighthouseci && lhci autorun; open $(node -e \"const m=require('./lighthouse-report/manifest.json');console.log(m.find(r=>r.isRepresentativeRun).htmlPath)\")"
   },
   "devDependencies": {
+    "@argos-ci/playwright": "^6.4.2",
     "@eslint/compat": "^2.0.2",
     "@eslint/js": "^10.0.0",
     "@lhci/cli": "^0.15.1",
