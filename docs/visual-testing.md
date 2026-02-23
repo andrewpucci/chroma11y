@@ -22,9 +22,10 @@ Argos is integrated for PR visual review in **phase A** while keeping existing P
 
 - Runs Playwright against local production preview (deterministic)
 - Uses committed `toHaveScreenshot()` baselines
-- Uploads Argos captures for trusted PRs only:
+- Uploads Argos captures when:
   - `ARGOS_UPLOAD=true` on same-repo PRs
-  - `ARGOS_UPLOAD=false` on fork PRs and manual dispatch
+  - `ARGOS_UPLOAD=true` on pushes to `main` (post-merge baseline refresh)
+  - `ARGOS_UPLOAD=false` on fork PRs by default
 
 ### 2) Netlify Smoke (`.github/workflows/netlify-smoke.yml`)
 
@@ -59,8 +60,11 @@ docker compose run --rm test
 
 ## Baseline Reseeding for Argos
 
-The E2E workflow supports manual dispatch (`workflow_dispatch`) to run a non-upload baseline-safe pass.
-Use this with a run from `main` when you need to reseed/refresh Argos reference behavior.
+Argos baseline refresh now happens automatically on pushes to `main` in the E2E workflow.
+Manual dispatch (`workflow_dispatch`) is still available for ad-hoc runs:
+
+- set `argos_upload=true` to upload captures to Argos
+- leave it `false` for a non-upload validation run
 
 ## Troubleshooting
 

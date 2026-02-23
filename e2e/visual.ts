@@ -10,7 +10,7 @@ interface VisualCaptureOptions {
 }
 
 /**
- * Captures a visual snapshot in Argos during CI for trusted PRs.
+ * Captures a visual snapshot in Argos during CI for trusted PRs and main pushes.
  * Phase A keeps Playwright file-based snapshots and adds Argos in parallel.
  */
 export async function maybeCaptureArgosVisual(options: VisualCaptureOptions): Promise<void> {

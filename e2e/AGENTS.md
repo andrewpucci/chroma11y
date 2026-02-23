@@ -109,6 +109,8 @@ Argos capture is also enabled in phase A through `e2e/visual.ts`:
 
 - Upload is gated by `ARGOS_UPLOAD=true`
 - Capture is restricted to Chromium
+- Same-repo PRs upload to Argos
+- Pushes to `main` upload to Argos for baseline refresh
 - Fork PRs run tests but skip Argos upload
 
 ### Generating snapshots
@@ -134,7 +136,6 @@ Visual regression tests are implemented in:
 
 - **`focus-indicators.spec.ts`** — Focus ring appearance (light/dark)
 - **`ui-interactions.spec.ts`** — Full app themes, palette grid, neutral palette
-- **`mobile-responsiveness.spec.ts`** — Mobile layouts (iPhone SE, 320px)
 - **`bezier-editor.spec.ts`** — Bezier curve editor appearance
 
 Snapshots are stored in `*.spec.ts-snapshots/` directories and committed to version control.
@@ -155,7 +156,7 @@ When adding a new E2E test file:
 - **`design-tokens.spec.ts`** — Design token system runtime behavior
 - **`export-validation.spec.ts`** — Export format correctness
 - **`focus-indicators.spec.ts`** — Focus ring visibility, behavior + visual regression
-- **`mobile-responsiveness.spec.ts`** — Responsive layout testing + visual regression
+- **`mobile-responsiveness.spec.ts`** — Responsive layout and touch target behavior (non-visual assertions)
 - **`netlify-smoke.spec.ts`** — Deploy-preview functional smoke checks (no visual assertions)
 - **`persistence.spec.ts`** — URL and localStorage state persistence
 - **`ui-interactions.spec.ts`** — General UI interaction flows + visual regression (themes, palettes)
