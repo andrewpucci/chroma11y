@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { tick } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('$lib/exportUtils', () => ({
@@ -54,7 +55,8 @@ describe('ExportButtons', () => {
   });
 
   it('shows share button, copies current URL, and provides copy feedback', async () => {
-    const user = userEvent.setup();
+    vi.useFakeTimers();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     window.history.replaceState({}, '', '/?baseColor=%231862E6&themePreference=dark');
 
     render(ExportButtons);
@@ -64,5 +66,13 @@ describe('ExportButtons', () => {
     expect(copyToClipboard).toHaveBeenCalledWith(window.location.href);
     expect(announce).toHaveBeenCalledWith('Copied shareable URL to clipboard');
     expect(screen.getByText('Copied URL')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /url copied to clipboard/i })).toBeInTheDocument();
+
+    await vi.advanceTimersByTimeAsync(2000);
+    await tick();
+
+    expect(screen.getByText('Share URL')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /copy shareable url to clipboard/i })).toBeInTheDocument();
+    vi.useRealTimers();
   });
 });

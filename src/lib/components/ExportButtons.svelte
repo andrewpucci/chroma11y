@@ -22,13 +22,13 @@
   }: Props = $props();
 
   const theme = $derived($currentTheme);
-  let shareFeedbackVisible = $state(false);
-  let shareFeedbackTimeout: ReturnType<typeof setTimeout> | null = null;
+  let copyConfirmed = $state(false);
+  let copyFeedbackTimeout: ReturnType<typeof setTimeout> | null = null;
 
   onDestroy(() => {
-    if (shareFeedbackTimeout) {
-      clearTimeout(shareFeedbackTimeout);
-      shareFeedbackTimeout = null;
+    if (copyFeedbackTimeout) {
+      clearTimeout(copyFeedbackTimeout);
+      copyFeedbackTimeout = null;
     }
   });
 
@@ -55,15 +55,15 @@
     const url = window.location.href;
     copyToClipboard(url);
     announce('Copied shareable URL to clipboard');
-    shareFeedbackVisible = true;
+    copyConfirmed = true;
 
-    if (shareFeedbackTimeout) {
-      clearTimeout(shareFeedbackTimeout);
+    if (copyFeedbackTimeout) {
+      clearTimeout(copyFeedbackTimeout);
     }
 
-    shareFeedbackTimeout = setTimeout(() => {
-      shareFeedbackVisible = false;
-      shareFeedbackTimeout = null;
+    copyFeedbackTimeout = setTimeout(() => {
+      copyConfirmed = false;
+      copyFeedbackTimeout = null;
     }, 2000);
   }
 
@@ -83,13 +83,13 @@
 </script>
 
 <div class="export-buttons">
-  <Button onclick={shareURL} ariaLabel="Copy shareable URL to clipboard">
+  <Button
+    onclick={shareURL}
+    ariaLabel={copyConfirmed ? 'URL copied to clipboard' : 'Copy shareable URL to clipboard'}
+  >
     <Icon name="share" />
-    Share URL
+    <span class:label-enter={copyConfirmed}>{copyConfirmed ? 'Copied URL' : 'Share URL'}</span>
   </Button>
-  {#if shareFeedbackVisible}
-    <p class="share-feedback" role="status" aria-live="polite">Copied URL</p>
-  {/if}
   <Button
     onclick={exportJSON}
     disabled={neutrals.length === 0 && palettes.length === 0}
@@ -127,10 +127,18 @@
     gap: var(--space-sm);
   }
 
-  .share-feedback {
-    margin: 0;
-    color: var(--text-color);
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-medium);
+  .label-enter {
+    animation: label-pop var(--duration-fast) var(--ease-emphasized);
+  }
+
+  @keyframes label-pop {
+    from {
+      opacity: 0;
+      transform: translateY(0.1em) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 </style>
