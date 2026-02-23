@@ -8,11 +8,16 @@ vi.mock('$lib/exportUtils', () => ({
   downloadSCSS: vi.fn()
 }));
 
+vi.mock('$lib/colorUtils', () => ({
+  copyToClipboard: vi.fn()
+}));
+
 vi.mock('$lib/announce', () => ({
   announce: vi.fn()
 }));
 
 import ExportButtons from '$lib/components/ExportButtons.svelte';
+import { copyToClipboard } from '$lib/colorUtils';
 import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/exportUtils';
 import { announce } from '$lib/announce';
 
@@ -46,5 +51,18 @@ describe('ExportButtons', () => {
 
     await user.click(screen.getByRole('button', { name: /export scss variables/i }));
     expect(downloadSCSS).toHaveBeenCalledWith(neutrals, palettes, displayNeutrals, displayPalettes);
+  });
+
+  it('shows share button, copies current URL, and provides copy feedback', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, '', '/?baseColor=%231862E6&themePreference=dark');
+
+    render(ExportButtons);
+
+    await user.click(screen.getByRole('button', { name: /copy shareable url to clipboard/i }));
+
+    expect(copyToClipboard).toHaveBeenCalledWith(window.location.href);
+    expect(announce).toHaveBeenCalledWith('Copied shareable URL to clipboard');
+    expect(screen.getByText('Copied URL')).toBeInTheDocument();
   });
 });
