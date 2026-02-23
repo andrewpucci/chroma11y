@@ -3,6 +3,8 @@ name: E2E Tests
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       argos_upload:
@@ -46,6 +48,13 @@ jobs:
         run: npx playwright test
         env:
           ARGOS_UPLOAD: ${{ github.event.inputs.argos_upload == 'true' && 'true' || 'false' }}
+          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
+
+      - name: Run Playwright tests (main branch baseline refresh)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npx playwright test
+        env:
+          ARGOS_UPLOAD: 'true'
           ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
 
       - name: Upload Playwright report
