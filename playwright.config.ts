@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { createArgosReporterOptions } from '@argos-ci/playwright/reporter';
 
 const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:4173';
 
@@ -18,8 +19,7 @@ export default defineConfig({
   },
   use: {
     baseURL,
-    navigationTimeout:
-      process.env.CI || process.env.PLAYWRIGHT_TEST_BASE_URL ? 60000 : 15000,
+    navigationTimeout: process.env.CI || process.env.PLAYWRIGHT_TEST_BASE_URL ? 60000 : 15000,
     actionTimeout: 10000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -40,9 +40,15 @@ export default defineConfig({
     }
   ],
   reporter: [
+    [process.env.CI ? 'dot' : 'list'],
+    [
+      '@argos-ci/playwright/reporter',
+      createArgosReporterOptions({
+        uploadToArgos: process.env.ARGOS_UPLOAD === 'true'
+      })
+    ],
     ['html', { outputFolder: 'playwright-report' }],
     ['json', { outputFile: 'playwright-report/results.json' }],
-    ['junit', { outputFile: 'playwright-report/results.xml' }],
-    ['list']
+    ['junit', { outputFile: 'playwright-report/results.xml' }]
   ]
 });
