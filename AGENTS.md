@@ -160,6 +160,11 @@ The UI uses a comprehensive design token system (`src/lib/styles/tokens.css`) fo
 
 All hardcoded CSS values should use design tokens. Never add new static `px` values — use or extend the token system.
 
+When adding or changing CSS custom properties:
+
+- Ensure every `var(--token)` reference has a matching definition in `tokens.css` or component-local CSS.
+- Run `npm run test:unit -- --run src/lib/styles/tokens.spec.ts` before committing to catch undefined token references.
+
 ### Accessibility
 
 This is an accessibility-focused project. Maintain these patterns globally:

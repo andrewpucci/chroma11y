@@ -5,8 +5,36 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, readdirSync } from 'fs';
+import { extname, join } from 'path';
+
+const VARIABLE_DEFINITION_PATTERN = /(--[A-Za-z0-9_-]+)\s*:/g;
+const VARIABLE_USAGE_PATTERN = /var\(\s*(--[A-Za-z0-9_-]+)/g;
+const STYLE_SOURCE_EXTENSIONS = new Set(['.css', '.svelte', '.html']);
+
+/**
+ * Recursively gathers style source files from a directory.
+ */
+function getStyleSourceFiles(dir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...getStyleSourceFiles(fullPath));
+      continue;
+    }
+
+    const ext = extname(entry.name);
+    if (STYLE_SOURCE_EXTENSIONS.has(ext)) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
 
 describe('Design Tokens CSS File', () => {
   const tokensPath = join(__dirname, 'tokens.css');
@@ -126,6 +154,43 @@ describe('Design Tokens CSS File', () => {
       expect(tokensCSS).toContain('Border Radius Tokens');
       expect(tokensCSS).toContain('Animation/Transition Tokens');
       expect(tokensCSS).toContain('Touch Target Tokens');
+    });
+  });
+
+  describe('CSS Variable Integrity', () => {
+    it('does not use undefined CSS custom properties', () => {
+      const repoRoot = join(__dirname, '../../..');
+      const sourceRoots = [join(repoRoot, 'src'), join(repoRoot, 'static')];
+      const files = sourceRoots.flatMap((root) => getStyleSourceFiles(root));
+
+      const defined = new Set<string>();
+      const used = new Map<string, Set<string>>();
+
+      for (const file of files) {
+        const content = readFileSync(file, 'utf-8');
+
+        for (const match of content.matchAll(VARIABLE_DEFINITION_PATTERN)) {
+          defined.add(match[1]);
+        }
+
+        for (const match of content.matchAll(VARIABLE_USAGE_PATTERN)) {
+          const token = match[1];
+          const locations = used.get(token) ?? new Set<string>();
+          locations.add(file.replace(`${repoRoot}/`, ''));
+          used.set(token, locations);
+        }
+      }
+
+      const undefinedUsageTokens = [...used.keys()].filter((token) => !defined.has(token)).sort();
+
+      const diagnosticMessage = undefinedUsageTokens
+        .map((token) => `${token}: ${[...(used.get(token) ?? new Set())].join(', ')}`)
+        .join('\n');
+
+      expect(
+        undefinedUsageTokens,
+        diagnosticMessage || 'Found undefined CSS custom property usages'
+      ).toEqual([]);
     });
   });
 });

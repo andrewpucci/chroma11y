@@ -36,8 +36,8 @@ describe('ExportButtons', () => {
 
     const neutrals = ['#ffffff'];
     const palettes = [['#e6f0ff']];
-    const displayNeutrals = ['#ffffff'];
-    const displayPalettes = [['#e6f0ff']];
+    const displayNeutrals = ['oklch(94.772434% 0.048057 208.654439)'];
+    const displayPalettes = [['oklch(72.618719% 0.112904 251.168672)']];
 
     render(ExportButtons, {
       props: { neutrals, palettes, displayNeutrals, displayPalettes }
@@ -72,7 +72,9 @@ describe('ExportButtons', () => {
     await tick();
 
     expect(screen.getByText('Share URL')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /copy shareable url to clipboard/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /copy shareable url to clipboard/i })
+    ).toBeInTheDocument();
     vi.useRealTimers();
   });
 });

@@ -31,7 +31,7 @@ Defined in `colorUtils.ts`. The algorithm:
 2. **Generate palettes** — for each of `numPalettes`, hue-shift the base color by `(360/numPalettes)*i + hueNudger[i]`, then map base neutral lightness values onto that hue using gamut-boundary-relative chroma: each palette's chroma is scaled as the same proportion of its hue's maximum in-gamut chroma as the base color uses of the reference hue's boundary, producing visually even saturation across hues
 3. **Apply lightness nudgers** — final step, adds per-step lightness offsets to both neutrals and palettes
 
-Key functions: `generatePalettes()`, `generateBaseNeutrals()`, `getContrast()`, `getContrastAPCA()`, `getContrastForAlgorithm()`, `getPaletteName()`, `colorToCssHex()`, `colorToCssRgb()`, `colorToCssOklch()`, `colorToCssHsl()`, `colorToCssP3()`, `colorToCssRec2020()`, `colorToCssDisplay()`
+Key functions: `generatePalettes()`, `generateBaseNeutrals()`, `getContrast()`, `getContrastAPCA()`, `getContrastForAlgorithm()`, `getPaletteName()`, `colorToCssHex()`, `colorToCssRgb()`, `colorToCssOklch()`, `colorToCssHsl()`, `colorToCssP3()`, `colorToCssRec2020()`, `colorToCssRender()`
 
 ## Export formats
 
@@ -54,6 +54,7 @@ Palette names are auto-detected via CIEDE2000 nearest color matching, with fallb
 - DOM-dependent tests: `*.dom.spec.ts` (jsdom environment)
 - Run with `npm run test:unit` (Vitest, server project for Node environment)
 - `expect.requireAssertions` is enabled globally — every test must contain at least one assertion
+- Design token integrity: run `npm run test:unit -- --run src/lib/styles/tokens.spec.ts` when touching CSS variables. This test fails if any `var(--token)` usage has no matching definition.
 
 ### What to test
 
