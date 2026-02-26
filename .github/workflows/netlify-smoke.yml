@@ -44,7 +44,7 @@ jobs:
           ARGOS_UPLOAD: 'false'
 
       - name: Upload smoke test report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: netlify-smoke-report
