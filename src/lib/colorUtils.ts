@@ -431,31 +431,23 @@ export function maxChromaInGamut(l: number, h: number, gamut: GamutSpace = 'srgb
 function generatePalette(
   baseNeutrals: Color[],
   baseColor: Color,
-  chromaMultiplier: number,
-  referenceHue: number,
+  baseChromaRatio: number,
   gamut: GamutSpace = 'srgb'
 ): Color[] {
-  const baseChroma = (baseColor.oklch.c || 0) * chromaMultiplier;
   const paletteHue = baseColor.oklch.h ?? 0;
+  const clampedBaseChromaRatio =
+    isFinite(baseChromaRatio) && baseChromaRatio > 0 ? baseChromaRatio : 0;
 
   return baseNeutrals.map((neutralColor) => {
     const l = neutralColor.oklch.l ?? 0;
     // Preserve pure black/white endpoints — don't apply chroma to extremes
     if (l >= 0.9999 || l <= 0.0001) return oklchColor(l, 0, paletteHue);
 
-    // Compute the gamut boundary for the reference hue and this palette's hue
-    const refMaxC = maxChromaInGamut(l, referenceHue, gamut);
     const hueMaxC = maxChromaInGamut(l, paletteHue, gamut);
 
-    // Scale chroma proportionally: if the base chroma is X% of the reference
-    // hue's boundary, apply the same X% to this hue's boundary
-    let c: number;
-    if (refMaxC > 1e-6) {
-      const ratio = baseChroma / refMaxC;
-      c = ratio * hueMaxC;
-    } else {
-      c = baseChroma;
-    }
+    // Scale chroma proportionally: apply the base color's reference-hue gamut
+    // fraction consistently at every lightness step and hue.
+    const c = clampedBaseChromaRatio * hueMaxC;
 
     return oklchColor(l, c, paletteHue);
   });
@@ -512,6 +504,10 @@ export function generatePalettes(params: ColorGenParams): {
   // The reference hue is the base color's hue — all palettes scale relative to it
   const referenceHue = baseColor.oklch.h ?? 0;
   const gamut = params.gamutSpace ?? 'srgb';
+  const baseLightness = baseColor.oklch.l ?? 0;
+  const baseChroma = (baseColor.oklch.c || 0) * params.chromaMultiplier;
+  const referenceMaxAtBase = maxChromaInGamut(baseLightness, referenceHue, gamut);
+  const baseChromaRatio = referenceMaxAtBase > 1e-6 ? baseChroma / referenceMaxAtBase : 0;
 
   // Generate palettes with hue variations using BASE neutrals (without nudgers)
   const palettes: Color[][] = Array.from({ length: params.numPalettes }, (_, i) => {
@@ -519,7 +515,7 @@ export function generatePalettes(params: ColorGenParams): {
     const hueOffset = (360 / params.numPalettes) * i + hueNudger;
     const tempColor = baseColor.clone();
     tempColor.oklch.h = ((baseColor.oklch.h ?? 0) + hueOffset) % 360;
-    return generatePalette(baseNeutrals, tempColor, params.chromaMultiplier, referenceHue, gamut);
+    return generatePalette(baseNeutrals, tempColor, baseChromaRatio, gamut);
   });
 
   // Apply lightness nudgers as the FINAL step
