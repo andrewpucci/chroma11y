@@ -162,12 +162,7 @@
     text-align: left;
     overflow: hidden;
     /* Subtle inset shadow for better swatch visibility against backgrounds */
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, white 8%, transparent);
-  }
-
-  /* Enhanced visibility in dark mode - subtle light border helps dark swatches stand out */
-  :global([data-theme='dark']) .color-swatch {
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, white 12%, transparent);
+    box-shadow: inset 0 0 0 var(--border-width-thin) var(--swatch-inset-shadow-color);
   }
 
   .color-swatch::before {
