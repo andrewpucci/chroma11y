@@ -38,6 +38,7 @@
   import { announce } from '$lib/announce';
   import { generatePalettes } from '$lib/colorUtils';
   import type { ColorGenParams } from '$lib/colorUtils';
+  import { clampChromaMultiplier } from '$lib/chromaMultiplier';
   import ColorControls from '$lib/components/ColorControls.svelte';
   import ExportButtons from '$lib/components/ExportButtons.svelte';
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
@@ -180,6 +181,14 @@
     y1Local = storeY1;
     x2Local = storeX2;
     y2Local = storeY2;
+  });
+
+  // Keep saturation within the valid bounds for the active gamut.
+  $effect(() => {
+    const clampedChroma = clampChromaMultiplier(chromaMultiplierLocal, gamutSpaceLocal);
+    if (clampedChroma !== chromaMultiplierLocal) {
+      chromaMultiplierLocal = clampedChroma;
+    }
   });
 
   // Generate colors when parameters change (debounced to prevent race conditions)
@@ -385,6 +394,7 @@
             bind:baseColor={baseColorLocal}
             bind:warmth={warmthLocal}
             bind:chromaMultiplier={chromaMultiplierLocal}
+            gamutSpace={gamutSpaceLocal}
             bind:numColors={numColorsLocal}
             bind:numPalettes={numPalettesLocal}
             bind:x1={x1Local}

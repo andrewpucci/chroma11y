@@ -11,8 +11,15 @@ import type {
   ContrastAlgorithm,
   OklchDisplaySignificantDigits
 } from './types';
+import { getChromaMultiplierBounds } from './chromaMultiplier';
 
 export type UrlColorState = SerializableColorState;
+
+const VALID_DISPLAY_SPACES: DisplayColorSpace[] = ['hex', 'rgb', 'oklch', 'hsl'];
+const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
+const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
+const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
+const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
 
 /**
  * Encodes the color state into URL search parameters
@@ -86,6 +93,13 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   const baseColor = searchParams.get('c');
   if (baseColor) state.baseColor = `#${baseColor}`;
 
+  const gs = searchParams.get('gs');
+  const isValidGamut = gs && VALID_GAMUT_SPACES.includes(gs as GamutSpace);
+  const decodedGamut: GamutSpace = isValidGamut ? (gs as GamutSpace) : 'srgb';
+  if (isValidGamut) {
+    state.gamutSpace = decodedGamut;
+  }
+
   const warmth = searchParams.get('w');
   if (warmth) {
     const parsed = parseFloat(warmth);
@@ -98,8 +112,8 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   const chromaMultiplier = searchParams.get('cm');
   if (chromaMultiplier) {
     const parsed = parseFloat(chromaMultiplier);
-    // Tighter bounds: chroma multiplier typically ranges from 0.1 to 2.0
-    if (!isNaN(parsed) && isFinite(parsed) && parsed >= 0.1 && parsed <= 2.0) {
+    const { min, max } = getChromaMultiplierBounds(decodedGamut);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= min && parsed <= max) {
       state.chromaMultiplier = parsed;
     }
   }
@@ -189,18 +203,9 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   if (theme === 'light' || theme === 'dark' || theme === 'auto') state.themePreference = theme;
 
   // Display settings
-  const VALID_DISPLAY_SPACES: DisplayColorSpace[] = ['hex', 'rgb', 'oklch', 'hsl'];
-  const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
-  const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
-  const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
-  const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
-
   const ds = searchParams.get('ds');
   if (ds && VALID_DISPLAY_SPACES.includes(ds as DisplayColorSpace))
     state.displayColorSpace = ds as DisplayColorSpace;
-
-  const gs = searchParams.get('gs');
-  if (gs && VALID_GAMUT_SPACES.includes(gs as GamutSpace)) state.gamutSpace = gs as GamutSpace;
 
   const sl = searchParams.get('sl');
   if (sl && VALID_SWATCH_LABELS.includes(sl as SwatchLabels))

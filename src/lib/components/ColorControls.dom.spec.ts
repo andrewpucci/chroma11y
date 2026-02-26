@@ -84,9 +84,34 @@ describe('ColorControls', () => {
     const saturationSlider = screen.getByLabelText(/saturation/i) as HTMLInputElement;
     expect(saturationSlider.value).toBe('1');
 
-    await fireEvent.input(saturationSlider, { target: { value: '1.5' } });
+    await fireEvent.input(saturationSlider, { target: { value: '1.25' } });
 
-    expect(saturationSlider.value).toBe('1.5');
+    expect(saturationSlider.value).toBe('1.25');
+  });
+
+  it('uses saturation slider bounds tuned for visible gamut changes', () => {
+    render(ColorControls, {
+      props: {
+        chromaMultiplier: 1
+      }
+    });
+
+    const saturationSlider = screen.getByLabelText(/saturation/i) as HTMLInputElement;
+    expect(saturationSlider.min).toBe('0');
+    expect(saturationSlider.max).toBe('1.3');
+  });
+
+  it('uses wider saturation bounds for wider gamuts', () => {
+    render(ColorControls, {
+      props: {
+        chromaMultiplier: 1,
+        gamutSpace: 'p3'
+      }
+    });
+
+    const saturationSlider = screen.getByLabelText(/saturation/i) as HTMLInputElement;
+    expect(saturationSlider.min).toBe('0');
+    expect(saturationSlider.max).toBe('1.6');
   });
 
   it('updates number of palettes slider value on input', async () => {

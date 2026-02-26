@@ -164,9 +164,13 @@ The starting color for palette generation. All palettes derive from this color w
 
 Adds warmth to the neutral palette. Negative values = cooler grays, positive = warmer grays.
 
-#### Chroma Multiplier (0.1 to 2.0)
+#### Chroma Multiplier (gamut-aware)
 
 Controls overall saturation. Higher values = more vibrant colors.
+
+- **sRGB**: 0.0 to 1.3
+- **Display P3**: 0.0 to 1.6
+- **Rec. 2020**: 0.0 to 1.7
 
 #### Bezier Curve (x1, y1, x2, y2)
 

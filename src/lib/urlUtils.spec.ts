@@ -19,6 +19,12 @@ describe('urlUtils', () => {
       expect(encoded).toContain('cm=1.5');
     });
 
+    it('encodes zero chroma multiplier', () => {
+      const state: UrlColorState = { chromaMultiplier: 0 };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('cm=0');
+    });
+
     it('encodes bezier curve parameters', () => {
       const state: UrlColorState = { x1: 0.16, y1: 0, x2: 0.28, y2: 0.38 };
       const encoded = encodeStateToUrl(state);
@@ -83,6 +89,39 @@ describe('urlUtils', () => {
       expect(state.chromaMultiplier).toBe(1.14);
       expect(state.numColors).toBe(11);
       expect(state.numPalettes).toBe(5);
+    });
+
+    it('accepts zero chroma multiplier from URL', () => {
+      const params = new URLSearchParams('cm=0');
+      const state = decodeStateFromUrl(params);
+      expect(state.chromaMultiplier).toBe(0);
+    });
+
+    it('ignores out-of-range chroma multiplier from URL', () => {
+      const params = new URLSearchParams('cm=1.8');
+      const state = decodeStateFromUrl(params);
+      expect(state.chromaMultiplier).toBeUndefined();
+    });
+
+    it('accepts higher chroma multiplier when gamut is p3', () => {
+      const params = new URLSearchParams('gs=p3&cm=1.55');
+      const state = decodeStateFromUrl(params);
+      expect(state.gamutSpace).toBe('p3');
+      expect(state.chromaMultiplier).toBe(1.55);
+    });
+
+    it('accepts higher chroma multiplier when gamut is rec2020', () => {
+      const params = new URLSearchParams('gs=rec2020&cm=1.65');
+      const state = decodeStateFromUrl(params);
+      expect(state.gamutSpace).toBe('rec2020');
+      expect(state.chromaMultiplier).toBe(1.65);
+    });
+
+    it('ignores out-of-range chroma multiplier for p3 gamut', () => {
+      const params = new URLSearchParams('gs=p3&cm=1.8');
+      const state = decodeStateFromUrl(params);
+      expect(state.gamutSpace).toBe('p3');
+      expect(state.chromaMultiplier).toBeUndefined();
     });
 
     it('decodes bezier curve parameters', () => {

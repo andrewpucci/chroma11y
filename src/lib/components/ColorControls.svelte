@@ -1,11 +1,14 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import BezierEditor from './BezierEditor.svelte';
+  import { getChromaMultiplierBounds } from '$lib/chromaMultiplier';
+  import type { GamutSpace } from '$lib/types';
 
   interface Props {
     baseColor?: string;
     warmth?: number;
     chromaMultiplier?: number;
+    gamutSpace?: GamutSpace;
     numColors?: number;
     numPalettes?: number;
     x1?: number;
@@ -20,6 +23,7 @@
     baseColor = $bindable('#1862E6'),
     warmth = $bindable(0),
     chromaMultiplier = $bindable(1),
+    gamutSpace = 'srgb',
     numColors = $bindable(5),
     numPalettes = $bindable(1),
     x1 = $bindable(0),
@@ -29,6 +33,8 @@
     onRangeDragStart,
     onRangeDragEnd
   }: Props = $props();
+
+  const saturationBounds = $derived(getChromaMultiplierBounds(gamutSpace));
 
   let isDraggingCounts = $state(false);
   let activePointerId: number | null = $state(null);
@@ -121,8 +127,8 @@
         <input
           id="saturation"
           type="range"
-          min="0"
-          max="2"
+          min={saturationBounds.min}
+          max={saturationBounds.max}
           step="0.01"
           bind:value={chromaMultiplier}
           tabindex="0"

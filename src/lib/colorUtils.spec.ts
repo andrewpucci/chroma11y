@@ -632,6 +632,54 @@ describe('colorUtils', () => {
   });
 
   describe('cross-hue chroma consistency', () => {
+    it('keeps each step close to the base color gamut fraction', () => {
+      const params: ColorGenParams = {
+        numColors: 11,
+        numPalettes: 4,
+        baseColor: '#1862e6',
+        warmth: 0,
+        x1: 0.16,
+        y1: 0,
+        x2: 0.28,
+        y2: 0.38,
+        chromaMultiplier: 1,
+        currentTheme: 'light',
+        lightnessNudgers: new Array(11).fill(0),
+        hueNudgers: new Array(4).fill(0),
+        gamutSpace: 'srgb'
+      };
+
+      const result = generatePalettes(params);
+      const base = new Color(params.baseColor).to('oklch');
+      const baseL = base.oklch.l ?? 0;
+      const baseH = base.oklch.h ?? 0;
+      const baseC = base.oklch.c ?? 0;
+      const referenceMax = maxChromaInGamut(baseL, baseH, 'srgb');
+      const targetFraction = referenceMax > 1e-6 ? baseC / referenceMax : 0;
+      let assertionsMade = 0;
+
+      for (let step = 1; step < params.numColors - 1; step++) {
+        const fractions = result.palettes.map((palette) => {
+          const color = palette[step];
+          const l = color.oklch.l ?? 0;
+          const h = color.oklch.h ?? 0;
+          const c = color.oklch.c ?? 0;
+          const maxC = maxChromaInGamut(l, h, 'srgb');
+          return maxC > 1e-6 ? c / maxC : 0;
+        });
+
+        const nonZero = fractions.filter((f) => f > 0.01);
+        if (nonZero.length < 2) continue;
+
+        const avg = nonZero.reduce((a, b) => a + b, 0) / nonZero.length;
+        expect(avg).toBeGreaterThan(targetFraction - 0.05);
+        expect(avg).toBeLessThan(targetFraction + 0.05);
+        assertionsMade += 2;
+      }
+
+      expect(assertionsMade).toBeGreaterThan(0);
+    });
+
     it('palettes use a consistent fraction of their gamut boundary across hues', () => {
       const params: ColorGenParams = {
         numColors: 11,
@@ -650,6 +698,7 @@ describe('colorUtils', () => {
       };
 
       const result = generatePalettes(params);
+      let assertionsMade = 0;
 
       // For each step (excluding endpoints which are black/white),
       // compute each palette's chroma as a fraction of its hue's gamut boundary
@@ -672,8 +721,11 @@ describe('colorUtils', () => {
         for (const f of nonZero) {
           expect(f).toBeGreaterThan(avg - 0.05);
           expect(f).toBeLessThan(avg + 0.05);
+          assertionsMade += 2;
         }
       }
+
+      expect(assertionsMade).toBeGreaterThan(0);
     });
   });
 
