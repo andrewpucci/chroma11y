@@ -5,8 +5,8 @@
     palettes,
     neutralsHex,
     palettesHex,
-    neutralsDisplay,
-    palettesDisplay,
+    neutralsSwatchDisplay,
+    palettesSwatchDisplay,
     numColors,
     numPalettes,
     baseColor,
@@ -27,6 +27,7 @@
     themePreference,
     swatchLabels,
     contrastAlgorithm,
+    oklchDisplaySignificantDigits,
     updateColorState,
     updateContrastFromNeutrals,
     setTheme,
@@ -53,8 +54,8 @@
   let palettesLocal = $derived($palettes);
   let neutralsHexLocal = $derived($neutralsHex);
   let palettesHexLocal = $derived($palettesHex);
-  let neutralsDisplayLocal = $derived($neutralsDisplay);
-  let palettesDisplayLocal = $derived($palettesDisplay);
+  let neutralsSwatchDisplayLocal = $derived($neutralsSwatchDisplay);
+  let palettesSwatchDisplayLocal = $derived($palettesSwatchDisplay);
   let lightnessNudgerValues = $derived($lightnessNudgers);
   let hueNudgerValues = $derived($hueNudgers);
   let currentThemeLocal = $derived($currentTheme);
@@ -66,6 +67,7 @@
   let themePreferenceLocal = $derived($themePreference);
   let swatchLabelsLocal = $derived($swatchLabels);
   let contrastAlgorithmLocal = $derived($contrastAlgorithm);
+  let oklchDisplaySignificantDigitsLocal = $derived($oklchDisplaySignificantDigits);
 
   // Bindable state for controls
   let baseColorLocal = $state('#1862E6');
@@ -256,6 +258,7 @@
       gamutSpace: gamutSpaceLocal,
       swatchLabels: swatchLabelsLocal,
       contrastAlgorithm: contrastAlgorithmLocal,
+      oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
       themePreference: themePreferenceLocal
     };
 
@@ -315,6 +318,9 @@
     if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
     if (urlState.swatchLabels) stateUpdate.swatchLabels = urlState.swatchLabels;
     if (urlState.contrastAlgorithm) stateUpdate.contrastAlgorithm = urlState.contrastAlgorithm;
+    if (urlState.oklchDisplaySignificantDigits !== undefined) {
+      stateUpdate.oklchDisplaySignificantDigits = urlState.oklchDisplaySignificantDigits;
+    }
 
     // Apply stored values after theme preference to ensure they override any defaults
     if (Object.keys(stateUpdate).length > 0) {
@@ -402,8 +408,8 @@
           <ExportButtons
             neutrals={neutralsHexLocal}
             palettes={palettesHexLocal}
-            displayNeutrals={neutralsDisplayLocal}
-            displayPalettes={palettesDisplayLocal}
+            displayNeutrals={neutralsSwatchDisplayLocal}
+            displayPalettes={palettesSwatchDisplayLocal}
           />
         </Card>
       </Sidebar>
@@ -418,13 +424,13 @@
           <NeutralPalette
             neutrals={neutralsLocal}
             neutralsHex={neutralsHexLocal}
-            neutralsDisplay={neutralsDisplayLocal}
+            neutralsDisplay={neutralsSwatchDisplayLocal}
             {lightnessNudgerValues}
           />
           <PaletteGrid
             palettes={palettesLocal}
             palettesHex={palettesHexLocal}
-            palettesDisplay={palettesDisplayLocal}
+            palettesDisplay={palettesSwatchDisplayLocal}
             {hueNudgerValues}
           />
         </div>

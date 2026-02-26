@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     copyToClipboard,
+    colorToCssHex,
     getPrintableContrastForAlgorithm,
     getContrastForAlgorithm,
     MIN_CONTRAST_RATIO,
@@ -9,7 +10,7 @@
   import { contrastColors, swatchLabels, contrastAlgorithm } from '$lib/stores';
   import { openDrawer } from '$lib/drawerStore';
   import { announce } from '$lib/announce';
-  import type Color from 'colorjs.io';
+  import Color from 'colorjs.io';
 
   interface Props {
     color: string;
@@ -33,18 +34,38 @@
   const swatchLabelsLocal = $derived($swatchLabels);
   const contrastAlgorithmLocal = $derived($contrastAlgorithm);
 
-  const shownValue = $derived(displayValue || color);
+  const renderedColor = $derived(displayValue || color);
+  const shownValue = $derived(renderedColor);
+  const renderedHex = $derived.by(() => {
+    try {
+      return colorToCssHex(new Color(renderedColor));
+    } catch {
+      return color;
+    }
+  });
+  const drawerOklch = $derived.by(() => {
+    if (!oklchColor) return null;
+    try {
+      return new Color(renderedColor).to('oklch');
+    } catch {
+      return oklchColor;
+    }
+  });
 
   const lowContrastDisplay = $derived(
-    getPrintableContrastForAlgorithm(color, contrastColorsLocal.low, contrastAlgorithmLocal)
+    getPrintableContrastForAlgorithm(renderedColor, contrastColorsLocal.low, contrastAlgorithmLocal)
   );
   const highContrastDisplay = $derived(
-    getPrintableContrastForAlgorithm(color, contrastColorsLocal.high, contrastAlgorithmLocal)
+    getPrintableContrastForAlgorithm(
+      renderedColor,
+      contrastColorsLocal.high,
+      contrastAlgorithmLocal
+    )
   );
 
   const contrastUnit = $derived(contrastAlgorithmLocal === 'APCA' ? ' Lc' : '');
 
-  const textColor = $derived(calculateTextColor(color, contrastColorsLocal));
+  const textColor = $derived(calculateTextColor(renderedColor, contrastColorsLocal));
 
   /**
    * Determines the optimal text color for a swatch based on contrast ratios.
@@ -81,10 +102,17 @@
 
 <button
   class="color-swatch"
-  style="background-color: {displayValue || color}; color: {textColor};"
+  style="background-color: {renderedColor}; color: {textColor};"
   onclick={() => {
-    if (oklchColor) {
-      openDrawer({ hex: color, oklch: oklchColor, step: label, paletteName, isNeutral });
+    if (drawerOklch) {
+      openDrawer({
+        hex: renderedHex,
+        displayValue: shownValue,
+        oklch: drawerOklch,
+        step: label,
+        paletteName,
+        isNeutral
+      });
       announce(`Opened color info for ${shownValue}, step ${label}`);
     } else {
       copyToClipboard(shownValue);

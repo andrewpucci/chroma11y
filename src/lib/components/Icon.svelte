@@ -63,7 +63,13 @@
       stroke-width="1.5"
       stroke-linecap="round"
     />
-    <path d="M2 12V8h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+    <path
+      d="M2 12V8h4"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
   </svg>
 {:else if name === 'scss'}
   <svg width={size} height={size} viewBox="0 0 256 293" fill="none" aria-hidden="true">
