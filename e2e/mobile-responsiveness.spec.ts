@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { waitForAppReady } from './test-utils';
 
 const MOBILE_VIEWPORTS = {
   iPhone_SE: { width: 375, height: 667 },

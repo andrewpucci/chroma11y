@@ -26,7 +26,8 @@ describe('storageUtils', () => {
     gamutSpace: 'srgb',
     themePreference: 'auto',
     swatchLabels: 'both',
-    contrastAlgorithm: 'WCAG'
+    contrastAlgorithm: 'WCAG',
+    oklchDisplaySignificantDigits: 4
   };
 
   beforeEach(() => {
@@ -179,8 +180,20 @@ describe('storageUtils', () => {
       expect(result?.contrastAlgorithm).toBeUndefined();
     });
 
+    it('strips invalid oklchDisplaySignificantDigits', () => {
+      expect.assertions(2);
+
+      const invalidState = { ...mockState, oklchDisplaySignificantDigits: 99 };
+      localStorage.setItem('chroma11y-state', JSON.stringify(invalidState));
+
+      const result = loadStateFromStorage();
+
+      expect(result).not.toBeNull();
+      expect(result?.oklchDisplaySignificantDigits).toBeUndefined();
+    });
+
     it('preserves valid display settings', () => {
-      expect.assertions(5);
+      expect.assertions(6);
 
       localStorage.setItem('chroma11y-state', JSON.stringify(mockState));
 
@@ -191,6 +204,7 @@ describe('storageUtils', () => {
       expect(result?.themePreference).toBe('auto');
       expect(result?.swatchLabels).toBe('both');
       expect(result?.contrastAlgorithm).toBe('WCAG');
+      expect(result?.oklchDisplaySignificantDigits).toBe(4);
     });
   });
 

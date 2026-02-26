@@ -30,10 +30,14 @@
   // Computed color values from OKLCH source of truth
   const colorValues = $derived.by(() => {
     if (!data) return null;
+    const oklchValue =
+      data.displayValue && /^oklch\(/i.test(data.displayValue)
+        ? data.displayValue
+        : colorToCssOklch(data.oklch);
     return {
       hex: colorToCssHex(data.oklch),
       rgb: colorToCssRgb(data.oklch),
-      oklch: colorToCssOklch(data.oklch),
+      oklch: oklchValue,
       hsl: colorToCssHsl(data.oklch)
     };
   });

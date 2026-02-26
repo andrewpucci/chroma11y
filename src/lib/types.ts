@@ -13,6 +13,9 @@ export type SwatchLabels = 'both' | 'step' | 'value' | 'none';
 /** Supported contrast algorithm identifiers */
 export type ContrastAlgorithm = 'WCAG' | 'APCA';
 
+/** User-selectable significant digits for OKLCH display values */
+export type OklchDisplaySignificantDigits = 1 | 2 | 3 | 4 | 5 | 6;
+
 /**
  * Serializable color state for URL and localStorage persistence.
  * All fields are optional to support partial state updates.
@@ -38,4 +41,5 @@ export interface SerializableColorState {
   themePreference?: ThemePreference;
   swatchLabels?: SwatchLabels;
   contrastAlgorithm?: ContrastAlgorithm;
+  oklchDisplaySignificantDigits?: OklchDisplaySignificantDigits;
 }

@@ -24,17 +24,11 @@ test.describe('Algorithm Validation', () => {
 
     const nudgerInputs = page.locator('.nudger-input');
     await nudgerInputs.nth(1).fill('0.1');
+    await nudgerInputs.nth(1).press('Tab');
 
-    // Wait for color to update
-    await page.waitForFunction(
-      (before) => {
-        const hex = document.querySelectorAll('[data-testid="neutral-palette"] .hex')[1]
-          ?.textContent;
-        return hex !== before;
-      },
-      color1Before,
-      { timeout: 5000 }
-    );
+    await expect
+      .poll(async () => ((await hexElements.nth(1).textContent()) ?? '').trim(), { timeout: 15000 })
+      .not.toBe((color1Before ?? '').trim());
 
     const color0After = await hexElements.nth(0).textContent();
     const color1After = await hexElements.nth(1).textContent();
@@ -60,18 +54,13 @@ test.describe('Algorithm Validation', () => {
     const hueNudger = page.locator('.palette-block').first().locator('.nudger-input');
     await expect(hueNudger).toBeVisible();
     await hueNudger.fill('60');
+    await hueNudger.press('Tab');
 
-    // Wait for palette color to update
-    await page.waitForFunction(
-      (before) => {
-        const hex = document.querySelector(
-          '[data-testid="generated-palettes"] .swatches .hex:nth-child(6)'
-        )?.textContent;
-        return hex !== before;
-      },
-      paletteBefore,
-      { timeout: 5000 }
-    );
+    await expect
+      .poll(async () => ((await paletteHexes.nth(5).textContent()) ?? '').trim(), {
+        timeout: 15000
+      })
+      .not.toBe((paletteBefore ?? '').trim());
 
     for (let i = 0; i < 3; i++) {
       expect(await neutralHexes.nth(i).textContent()).toBe(neutralsBefore[i]);

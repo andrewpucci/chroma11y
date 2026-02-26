@@ -179,6 +179,18 @@ describe('urlUtils', () => {
       const encoded = encodeStateToUrl(state);
       expect(encoded).not.toContain('ca=');
     });
+
+    it('encodes OKLCH significant digits when not default', () => {
+      const state: UrlColorState = { oklchDisplaySignificantDigits: 5 };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('os=5');
+    });
+
+    it('omits OKLCH significant digits when default (4)', () => {
+      const state: UrlColorState = { oklchDisplaySignificantDigits: 4 };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('os=');
+    });
   });
 
   describe('display settings decoding', () => {
@@ -212,13 +224,20 @@ describe('urlUtils', () => {
       expect(state.contrastAlgorithm).toBe('APCA');
     });
 
+    it('decodes OKLCH significant digits', () => {
+      const params = new URLSearchParams('os=6');
+      const state = decodeStateFromUrl(params);
+      expect(state.oklchDisplaySignificantDigits).toBe(6);
+    });
+
     it('ignores invalid display settings values', () => {
-      const params = new URLSearchParams('ds=invalid&gs=bad&sl=nope&ca=fake');
+      const params = new URLSearchParams('ds=invalid&gs=bad&sl=nope&ca=fake&os=99');
       const state = decodeStateFromUrl(params);
       expect(state.displayColorSpace).toBeUndefined();
       expect(state.gamutSpace).toBeUndefined();
       expect(state.swatchLabels).toBeUndefined();
       expect(state.contrastAlgorithm).toBeUndefined();
+      expect(state.oklchDisplaySignificantDigits).toBeUndefined();
     });
 
     it('leaves display settings undefined when params are missing', () => {
@@ -228,6 +247,7 @@ describe('urlUtils', () => {
       expect(state.gamutSpace).toBeUndefined();
       expect(state.swatchLabels).toBeUndefined();
       expect(state.contrastAlgorithm).toBeUndefined();
+      expect(state.oklchDisplaySignificantDigits).toBeUndefined();
     });
   });
 
@@ -274,7 +294,8 @@ describe('urlUtils', () => {
         displayColorSpace: 'oklch',
         gamutSpace: 'p3',
         swatchLabels: 'step',
-        contrastAlgorithm: 'APCA'
+        contrastAlgorithm: 'APCA',
+        oklchDisplaySignificantDigits: 5
       };
 
       const encoded = encodeStateToUrl(original);
@@ -284,6 +305,7 @@ describe('urlUtils', () => {
       expect(decoded.gamutSpace).toBe(original.gamutSpace);
       expect(decoded.swatchLabels).toBe(original.swatchLabels);
       expect(decoded.contrastAlgorithm).toBe(original.contrastAlgorithm);
+      expect(decoded.oklchDisplaySignificantDigits).toBe(original.oklchDisplaySignificantDigits);
     });
   });
 });

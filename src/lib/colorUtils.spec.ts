@@ -12,10 +12,13 @@ import {
   colorToCssHex,
   colorToCssRgb,
   colorToCssOklch,
+  colorToCssOklchSwatch,
   colorToCssHsl,
   colorToCssP3,
   colorToCssRec2020,
-  colorToCssDisplay,
+  colorToCssRender,
+  colorToCssSwatchRender,
+  clampOklchDisplaySignificantDigits,
   getContrastAPCA,
   getPrintableContrastAPCA,
   getContrastForAlgorithm,
@@ -333,6 +336,63 @@ describe('colorUtils', () => {
       expect(result).not.toContain('none');
       expect(result).toMatch(/^oklch\(/);
     });
+
+    it('preserves higher precision for non-integer values', () => {
+      const color = new Color('oklch', [0.94772436, 0.048057, 208.654542]);
+      const result = colorToCssOklch(color);
+      const match = result.match(/^oklch\(([-\d.]+)% ([-\d.]+) ([-\d.]+)\)$/);
+      expect(match).toBeTruthy();
+      const [, lStr, cStr, hStr] = match ?? [];
+      expect((lStr.split('.')[1] ?? '').length).toBeGreaterThanOrEqual(4);
+      expect((cStr.split('.')[1] ?? '').length).toBeGreaterThanOrEqual(4);
+      expect((hStr.split('.')[1] ?? '').length).toBeGreaterThanOrEqual(4);
+    });
+  });
+
+  describe('colorToCssOklchSwatch', () => {
+    it('uses readable default significant digits for swatch display', () => {
+      const color = new Color('oklch', [0.94772436, 0.048057, 208.654542]);
+      const result = colorToCssOklchSwatch(color);
+      const match = result.match(/^oklch\(([-\d.]+)% ([-\d.]+) ([-\d.]+)\)$/);
+      expect(match).toBeTruthy();
+      const [, lStr, cStr, hStr] = match ?? [];
+      const countSignificantDigits = (value: string): number => {
+        const normalized = value.replace('-', '').replace('.', '').replace(/^0+/, '');
+        return normalized.length;
+      };
+      expect(countSignificantDigits(lStr)).toBeLessThanOrEqual(4);
+      expect(countSignificantDigits(cStr)).toBeLessThanOrEqual(4);
+      expect(countSignificantDigits(hStr)).toBeLessThanOrEqual(4);
+    });
+
+    it('applies custom significant digits value', () => {
+      const color = new Color('oklch', [0.94772436, 0.048057, 208.654542]);
+      expect(colorToCssOklchSwatch(color, 'srgb', 2)).toBe('oklch(95% 0.048 210)');
+    });
+
+    it('keeps hue in canonical CSS range after significant-digit rounding', () => {
+      const nearBoundary = new Color('oklch', [0.62, 0.08, 359]);
+      const result = colorToCssOklchSwatch(nearBoundary, 'srgb', 1);
+      const match = result.match(/^oklch\(([-\d.]+)% ([-\d.]+) ([-\d.]+)\)$/);
+      expect(match).toBeTruthy();
+      const hue = Number(match?.[3] ?? NaN);
+      expect(Number.isFinite(hue)).toBe(true);
+      expect(hue).toBeGreaterThanOrEqual(0);
+      expect(hue).toBeLessThan(360);
+    });
+
+    it('returns fallback for invalid input', () => {
+      const result = colorToCssOklchSwatch(null as unknown as InstanceType<typeof Color>);
+      expect(result).toBe('oklch(0% 0 0)');
+    });
+  });
+
+  describe('clampOklchDisplaySignificantDigits', () => {
+    it('returns default digits for non-finite input', () => {
+      expect(clampOklchDisplaySignificantDigits(NaN)).toBe(4);
+      expect(clampOklchDisplaySignificantDigits(Infinity)).toBe(4);
+      expect(clampOklchDisplaySignificantDigits(-Infinity)).toBe(4);
+    });
   });
 
   describe('colorToCssHsl', () => {
@@ -382,34 +442,34 @@ describe('colorUtils', () => {
     });
   });
 
-  describe('colorToCssDisplay', () => {
+  describe('colorToCssRender', () => {
     it('dispatches hex + srgb to colorToCssHex', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
-      const result = colorToCssDisplay(blue, 'hex', 'srgb');
+      const result = colorToCssRender(blue, 'hex', 'srgb');
       expect(result).toMatch(/^#[0-9a-f]{6}$/);
     });
 
     it('dispatches rgb + srgb to colorToCssRgb', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
-      const result = colorToCssDisplay(blue, 'rgb', 'srgb');
+      const result = colorToCssRender(blue, 'rgb', 'srgb');
       expect(result).toMatch(/^rgb\(/);
     });
 
     it('dispatches oklch to colorToCssOklch regardless of gamut', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
-      const result = colorToCssDisplay(blue, 'oklch', 'p3');
+      const result = colorToCssRender(blue, 'oklch', 'p3');
       expect(result).toMatch(/^oklch\(/);
     });
 
     it('dispatches hex + p3 to colorToCssP3', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
-      const result = colorToCssDisplay(blue, 'hex', 'p3');
+      const result = colorToCssRender(blue, 'hex', 'p3');
       expect(result).toMatch(/^color\(display-p3/);
     });
 
     it('dispatches hsl + rec2020 to colorToCssRec2020', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
-      const result = colorToCssDisplay(blue, 'hsl', 'rec2020');
+      const result = colorToCssRender(blue, 'hsl', 'rec2020');
       expect(result).toMatch(/^color\(rec2020/);
     });
   });
@@ -630,29 +690,44 @@ describe('colorUtils', () => {
     });
   });
 
-  describe('colorToCssDisplay additional branches', () => {
+  describe('colorToCssRender additional branches', () => {
     it('dispatches rgb + p3 to colorToCssP3', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
-      const result = colorToCssDisplay(blue, 'rgb', 'p3');
+      const result = colorToCssRender(blue, 'rgb', 'p3');
       expect(result).toMatch(/^color\(display-p3/);
     });
 
     it('dispatches rgb + rec2020 to colorToCssRec2020', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
-      const result = colorToCssDisplay(blue, 'rgb', 'rec2020');
+      const result = colorToCssRender(blue, 'rgb', 'rec2020');
       expect(result).toMatch(/^color\(rec2020/);
     });
 
     it('dispatches hsl + p3 to colorToCssP3', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
-      const result = colorToCssDisplay(blue, 'hsl', 'p3');
+      const result = colorToCssRender(blue, 'hsl', 'p3');
       expect(result).toMatch(/^color\(display-p3/);
     });
 
     it('dispatches hsl + srgb to colorToCssHsl', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
-      const result = colorToCssDisplay(blue, 'hsl', 'srgb');
+      const result = colorToCssRender(blue, 'hsl', 'srgb');
       expect(result).toMatch(/^hsl\(/);
+    });
+  });
+
+  describe('colorToCssSwatchRender', () => {
+    it('uses compact OKLCH formatting for swatches', () => {
+      const color = new Color('oklch', [0.94772436, 0.048057, 208.654542]);
+      const result = colorToCssSwatchRender(color, 'oklch', 'srgb', 2);
+      expect(result).toBe('oklch(95% 0.048 210)');
+    });
+
+    it('keeps non-OKLCH formats unchanged', () => {
+      const color = new Color('#ff0000');
+      const swatch = colorToCssSwatchRender(color, 'hex', 'srgb');
+      const regular = colorToCssRender(color, 'hex', 'srgb');
+      expect(swatch).toBe(regular);
     });
   });
 

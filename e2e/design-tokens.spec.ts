@@ -252,5 +252,4 @@ test.describe('Design Tokens', () => {
       expect(increasedSize).toBeGreaterThan(baselineSize);
     });
   });
-
 });

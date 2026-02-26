@@ -4,7 +4,13 @@
  */
 
 import type { SerializableColorState } from './types';
-import type { DisplayColorSpace, GamutSpace, SwatchLabels, ContrastAlgorithm } from './types';
+import type {
+  DisplayColorSpace,
+  GamutSpace,
+  SwatchLabels,
+  ContrastAlgorithm,
+  OklchDisplaySignificantDigits
+} from './types';
 
 export type UrlColorState = SerializableColorState;
 
@@ -62,6 +68,11 @@ export function encodeStateToUrl(state: UrlColorState): string {
   if (state.swatchLabels && state.swatchLabels !== 'both') params.set('sl', state.swatchLabels);
   if (state.contrastAlgorithm && state.contrastAlgorithm !== 'WCAG')
     params.set('ca', state.contrastAlgorithm);
+  if (
+    state.oklchDisplaySignificantDigits !== undefined &&
+    state.oklchDisplaySignificantDigits !== 4
+  )
+    params.set('os', state.oklchDisplaySignificantDigits.toString());
 
   return params.toString();
 }
@@ -182,6 +193,7 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
   const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
   const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
+  const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
 
   const ds = searchParams.get('ds');
   if (ds && VALID_DISPLAY_SPACES.includes(ds as DisplayColorSpace))
@@ -197,6 +209,14 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   const ca = searchParams.get('ca');
   if (ca && VALID_CONTRAST_ALGOS.includes(ca as ContrastAlgorithm))
     state.contrastAlgorithm = ca as ContrastAlgorithm;
+
+  const os = searchParams.get('os');
+  if (os) {
+    const parsed = parseInt(os);
+    if (VALID_OKLCH_SIG_DIGITS.includes(parsed as OklchDisplaySignificantDigits)) {
+      state.oklchDisplaySignificantDigits = parsed as OklchDisplaySignificantDigits;
+    }
+  }
 
   return state;
 }

@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import Color from 'colorjs.io';
+import { colorToCssOklch, colorToCssOklchSwatch } from './colorUtils';
 import {
   currentTheme,
   contrastColors,
@@ -30,8 +31,11 @@ import {
   themePreference,
   swatchLabels,
   contrastAlgorithm,
+  oklchDisplaySignificantDigits,
   neutralsDisplay,
   palettesDisplay,
+  neutralsSwatchDisplay,
+  palettesSwatchDisplay,
   updateColorState,
   setTheme,
   setThemePreference,
@@ -151,6 +155,11 @@ describe('stores', () => {
       expect.assertions(1);
       expect(get(contrastAlgorithm)).toBe('WCAG');
     });
+
+    it('oklchDisplaySignificantDigits reflects colorStore.oklchDisplaySignificantDigits', () => {
+      expect.assertions(1);
+      expect(get(oklchDisplaySignificantDigits)).toBe(4);
+    });
   });
 
   describe('neutralsHex derived store', () => {
@@ -196,6 +205,56 @@ describe('stores', () => {
 
       const displayValues = get(palettesDisplay);
       expect(displayValues[0][0]).toBe('#ff0000');
+    });
+  });
+
+  describe('neutralsSwatchDisplay derived store', () => {
+    it('uses compact OKLCH values for swatches', () => {
+      expect.assertions(1);
+      const testNeutrals = [new Color('oklch', [0.94772436, 0.048057, 208.654542])];
+      updateColorState({ neutrals: testNeutrals, displayColorSpace: 'oklch', gamutSpace: 'srgb' });
+
+      const swatchValues = get(neutralsSwatchDisplay);
+      expect(swatchValues[0]).toBe(colorToCssOklchSwatch(testNeutrals[0], 'srgb'));
+    });
+  });
+
+  describe('palettesSwatchDisplay derived store', () => {
+    it('uses compact OKLCH values for swatches', () => {
+      expect.assertions(1);
+      const testPalettes = [[new Color('oklch', [0.94772436, 0.048057, 208.654542])]];
+      updateColorState({ palettes: testPalettes, displayColorSpace: 'oklch', gamutSpace: 'srgb' });
+
+      const swatchValues = get(palettesSwatchDisplay);
+      expect(swatchValues[0][0]).toBe(colorToCssOklchSwatch(testPalettes[0][0], 'srgb'));
+    });
+  });
+
+  describe('display vs swatch OKLCH significant digits', () => {
+    it('keeps full precision in display stores and compact precision in swatch stores', () => {
+      expect.assertions(2);
+      const testNeutrals = [new Color('oklch', [0.94772436, 0.048057, 208.654542])];
+      updateColorState({ neutrals: testNeutrals, displayColorSpace: 'oklch', gamutSpace: 'srgb' });
+
+      const displayValues = get(neutralsDisplay);
+      const swatchValues = get(neutralsSwatchDisplay);
+
+      expect(displayValues[0]).toBe(colorToCssOklch(testNeutrals[0], 'srgb'));
+      expect(swatchValues[0]).toBe(colorToCssOklchSwatch(testNeutrals[0], 'srgb'));
+    });
+
+    it('uses configured oklchDisplaySignificantDigits for swatch output', () => {
+      expect.assertions(1);
+      const testNeutrals = [new Color('oklch', [0.94772436, 0.048057, 208.654542])];
+      updateColorState({
+        neutrals: testNeutrals,
+        displayColorSpace: 'oklch',
+        gamutSpace: 'srgb',
+        oklchDisplaySignificantDigits: 2
+      });
+
+      const swatchValues = get(neutralsSwatchDisplay);
+      expect(swatchValues[0]).toBe(colorToCssOklchSwatch(testNeutrals[0], 'srgb', 2));
     });
   });
 

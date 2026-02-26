@@ -22,6 +22,7 @@
   .sidebar-inner {
     position: sticky;
     top: 86px;
+    z-index: 2;
     display: grid;
     gap: var(--space-md);
     container-type: inline-size;

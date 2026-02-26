@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,6 +14,7 @@ import {
   themePreference,
   swatchLabels,
   contrastAlgorithm,
+  oklchDisplaySignificantDigits,
   updateColorState,
   setThemePreference
 } from '$lib/stores';
@@ -25,13 +26,14 @@ describe('DisplaySettings', () => {
       displayColorSpace: 'hex',
       gamutSpace: 'srgb',
       swatchLabels: 'both',
-      contrastAlgorithm: 'WCAG'
+      contrastAlgorithm: 'WCAG',
+      oklchDisplaySignificantDigits: 4
     });
     setThemePreference('auto');
     vi.mocked(announce).mockClear();
   });
 
-  it('renders all five settings dropdowns with accessible labels', () => {
+  it('renders base settings without OKLCH significant digits slider by default', () => {
     render(DisplaySettings);
 
     expect(screen.getByLabelText('Display color space format')).toBeInTheDocument();
@@ -39,6 +41,52 @@ describe('DisplaySettings', () => {
     expect(screen.getByLabelText('Theme preference')).toBeInTheDocument();
     expect(screen.getByLabelText('Swatch label display')).toBeInTheDocument();
     expect(screen.getByLabelText('Contrast algorithm')).toBeInTheDocument();
+    expect(screen.queryByLabelText('OKLCH display significant digits')).not.toBeInTheDocument();
+  });
+
+  it('shows OKLCH significant digits slider only when OKLCH color space is selected', async () => {
+    const user = userEvent.setup();
+    render(DisplaySettings);
+
+    expect(screen.queryByLabelText('OKLCH display significant digits')).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
+
+    expect(screen.getByLabelText('OKLCH display significant digits')).toBeInTheDocument();
+    expect(screen.getByText('OKLCH Significant Digits (4)')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Explain OKLCH significant digits' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Controls how many significant digits OKLCH swatches use for rendering and labels.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('OKLCH display significant digits')).toHaveAttribute(
+      'aria-describedby',
+      'oklch-significant-digits-help'
+    );
+
+    const colorSpaceField = screen.getByLabelText('Display color space format').closest('.field');
+    const significantDigitsField = screen
+      .getByLabelText('OKLCH display significant digits')
+      .closest('.field');
+    const gamutField = screen.getByLabelText('Gamut mapping target').closest('.field');
+
+    expect(colorSpaceField?.nextElementSibling).toBe(significantDigitsField);
+    expect(significantDigitsField?.nextElementSibling).toBe(gamutField);
+  });
+
+  it('allows keyboard users to focus the significant digits info icon', async () => {
+    const user = userEvent.setup();
+    render(DisplaySettings);
+
+    await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
+    const infoButton = screen.getByRole('button', { name: 'Explain OKLCH significant digits' });
+
+    infoButton.focus();
+
+    expect(infoButton).toHaveFocus();
   });
 
   it('changes display color space and announces', async () => {
@@ -89,5 +137,20 @@ describe('DisplaySettings', () => {
 
     expect(get(contrastAlgorithm)).toBe('APCA');
     expect(announce).toHaveBeenCalledWith('Contrast algorithm changed to APCA');
+  });
+
+  it('changes OKLCH significant digits and announces', async () => {
+    const user = userEvent.setup();
+    render(DisplaySettings);
+
+    await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
+    const slider = screen.getByLabelText('OKLCH display significant digits');
+
+    await fireEvent.input(slider, { target: { value: '5' } });
+    await fireEvent.change(slider, { target: { value: '5' } });
+
+    expect(get(oklchDisplaySignificantDigits)).toBe(5);
+    expect(screen.getByText('OKLCH Significant Digits (5)')).toBeInTheDocument();
+    expect(announce).toHaveBeenCalledWith('OKLCH significant digits changed to 5');
   });
 });

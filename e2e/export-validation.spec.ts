@@ -224,6 +224,55 @@ test.describe('Export Format Validation', () => {
       }
     });
 
+    test('CSS export uses the same OKLCH value rendered on swatches', async ({ page }) => {
+      const displaySpace = page.locator('#display-color-space');
+      await expect(displaySpace).toBeVisible();
+      await expect
+        .poll(
+          async () => {
+            await displaySpace.evaluate((el) => {
+              const select = el as HTMLSelectElement;
+              select.value = 'oklch';
+              select.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            return (
+              (
+                await page
+                  .getByTestId('neutral-palette')
+                  .locator('.color-swatch .hex')
+                  .nth(1)
+                  .textContent()
+              )?.trim() ?? ''
+            );
+          },
+          { timeout: 30000 }
+        )
+        .toMatch(/^oklch\(/i);
+
+      const swatchValue =
+        (
+          await page
+            .getByTestId('neutral-palette')
+            .locator('.color-swatch .hex')
+            .nth(1)
+            .textContent()
+        )?.trim() ?? '';
+      expect(swatchValue).toMatch(/^oklch\(/i);
+
+      const downloadPromise = page.waitForEvent('download');
+      await page.locator('button', { has: page.locator('text=Export CSS') }).click();
+
+      const download = await downloadPromise;
+      const content = await download.path();
+
+      if (content) {
+        const fileContent = fs.readFileSync(content, 'utf-8');
+        const lineMatch = fileContent.match(/--color-gray-10:\s*([^;]+);/i);
+        expect(lineMatch).toBeTruthy();
+        expect(lineMatch?.[1].trim()).toBe(swatchValue);
+      }
+    });
+
     test('SCSS download contains valid SCSS syntax', async ({ page }) => {
       const downloadPromise = page.waitForEvent('download');
       await page.locator('button', { has: page.locator('text=Export SCSS') }).click();

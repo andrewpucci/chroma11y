@@ -20,8 +20,9 @@ vi.mock('$lib/colorUtils', async (importOriginal) => {
 });
 
 import { announce } from '$lib/announce';
-import { copyToClipboard } from '$lib/colorUtils';
+import { copyToClipboard, colorToCssOklch, colorToCssOklchSwatch } from '$lib/colorUtils';
 import ColorInfoDrawer from '$lib/components/ColorInfoDrawer.svelte';
+import ColorSwatch from '$lib/components/ColorSwatch.svelte';
 
 /** Helper: build a DrawerColorData payload for a given hex */
 function makeDrawerData(hex = '#5a95ff', step = '500', paletteName = 'Blue') {
@@ -84,6 +85,34 @@ describe('ColorInfoDrawer', () => {
     for (const label of ['Hex', 'RGB', 'OKLCH', 'HSL']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
+  });
+
+  it('shows the swatch-rendered OKLCH value in the drawer', async () => {
+    const user = userEvent.setup();
+    const preciseOklch = new Color('oklch', [0.94772436, 0.048057, 208.654542]);
+    const swatchValue = colorToCssOklchSwatch(preciseOklch);
+    const fullPrecisionValue = colorToCssOklch(preciseOklch);
+    const swatchRender = render(ColorSwatch, {
+      color: '#b9f2ff',
+      displayValue: swatchValue,
+      label: '500',
+      oklchColor: preciseOklch,
+      paletteName: 'Cyan',
+      isNeutral: false
+    });
+    const drawerRender = render(ColorInfoDrawer);
+
+    await user.click(swatchRender.container.querySelector('.color-swatch') as HTMLButtonElement);
+    await screen.findByRole('dialog');
+
+    const rows = drawerRender.container.querySelectorAll('.color-value-row');
+    const oklchRow = Array.from(rows).find((row) =>
+      row.querySelector('.color-value-label')?.textContent?.includes('OKLCH')
+    );
+    const value = oklchRow?.querySelector('.color-value-code')?.textContent ?? '';
+
+    expect(swatchValue).not.toBe(fullPrecisionValue);
+    expect(value).toBe(swatchValue);
   });
 
   it('shows a color preview with the correct background', () => {

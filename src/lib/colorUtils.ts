@@ -6,7 +6,12 @@ import Color from 'colorjs.io';
 import { colornames as shortColorNames } from 'color-name-list/short';
 import easing from 'bezier-easing';
 import { announce } from '$lib/announce';
-import type { DisplayColorSpace, GamutSpace, ContrastAlgorithm } from '$lib/types';
+import type {
+  DisplayColorSpace,
+  GamutSpace,
+  ContrastAlgorithm,
+  OklchDisplaySignificantDigits
+} from '$lib/types';
 
 // Re-export Color so consumers can use it as the OKLCH type
 export type { default as ColorType } from 'colorjs.io';
@@ -99,6 +104,64 @@ export const HUE_NUDGER_BOUNDS = {
   MIN: -180,
   MAX: 180
 } as const;
+
+/** Default significant digits for OKLCH values shown on swatches */
+export const DEFAULT_OKLCH_DISPLAY_SIGNIFICANT_DIGITS: OklchDisplaySignificantDigits = 4;
+
+const MIN_OKLCH_DISPLAY_SIGNIFICANT_DIGITS = 1;
+const MAX_OKLCH_DISPLAY_SIGNIFICANT_DIGITS = 6;
+
+const significantDigitsFormatters = new Map<number, Intl.NumberFormat>();
+
+function getSignificantDigitsFormatter(digits: OklchDisplaySignificantDigits): Intl.NumberFormat {
+  const cached = significantDigitsFormatters.get(digits);
+  if (cached) return cached;
+  const formatter = new Intl.NumberFormat('en-US', {
+    maximumSignificantDigits: digits,
+    useGrouping: false,
+    notation: 'standard'
+  });
+  significantDigitsFormatters.set(digits, formatter);
+  return formatter;
+}
+
+/**
+ * Clamps user-selected OKLCH significant digits to a safe integer range.
+ */
+export function clampOklchDisplaySignificantDigits(digits: number): OklchDisplaySignificantDigits {
+  if (!Number.isFinite(digits)) return DEFAULT_OKLCH_DISPLAY_SIGNIFICANT_DIGITS;
+  const rounded = Math.round(digits);
+  if (rounded <= MIN_OKLCH_DISPLAY_SIGNIFICANT_DIGITS) return MIN_OKLCH_DISPLAY_SIGNIFICANT_DIGITS;
+  if (rounded >= MAX_OKLCH_DISPLAY_SIGNIFICANT_DIGITS) return MAX_OKLCH_DISPLAY_SIGNIFICANT_DIGITS;
+  return rounded as OklchDisplaySignificantDigits;
+}
+
+/**
+ * Formats a number using significant digits without scientific notation.
+ */
+function formatWithSignificantDigits(value: number, digits: OklchDisplaySignificantDigits): string {
+  if (!isFinite(value) || Math.abs(value) < 1e-12) return '0';
+  return getSignificantDigitsFormatter(digits).format(value);
+}
+
+/**
+ * Rounds a numeric value to the requested number of significant digits.
+ */
+function roundToSignificantDigits(value: number, digits: OklchDisplaySignificantDigits): number {
+  if (!isFinite(value) || Math.abs(value) < 1e-12) return 0;
+  return parseFloat(value.toPrecision(digits));
+}
+
+/**
+ * Keeps a rounded hue in the canonical CSS range, treating 360 as 0.
+ */
+function normalizeRoundedHue(value: number): number {
+  if (!isFinite(value)) return 0;
+  // Significant-digit rounding can overshoot near 360 (e.g. 359 -> 400).
+  const bounded = Math.max(0, Math.min(360, value));
+  if (Math.abs(bounded - 360) < 1e-9) return 0;
+  return ((bounded % 360) + 360) % 360;
+}
 
 // ===== VALIDATION FUNCTIONS =====
 
@@ -500,59 +563,6 @@ export function colorToCssRgb(color: Color): string {
 }
 
 /**
- * Converts any Color object to a CSS oklch() string (CSS Color 4 syntax).
- * e.g. "oklch(55% 0.19 264)"
- *
- * Values are rounded to 2 decimal places for readability on swatches.
- * Full precision is available in the color info drawer and exports.
- */
-export function colorToCssOklch(color: Color, gamut: GamutSpace = 'srgb'): string {
-  try {
-    // Sanitize NaN hue before gamut mapping (achromatic colors have NaN hue in colorjs.io)
-    const clone = color.clone();
-    const rawH = clone.oklch.h;
-    if (rawH == null || isNaN(rawH)) clone.oklch.h = 0;
-    // Gamut-map to the target space first so the OKLCH values represent the actual
-    // rendered color, avoiding browser-induced hue shifts for out-of-gamut colors
-    const gamutSpace = gamut === 'rec2020' ? 'rec2020' : gamut === 'p3' ? 'p3' : 'srgb';
-    const mapped = clone.toGamut({
-      space: gamutSpace,
-      blackWhiteClamp: { channel: 'oklch.l', min: 0.0001, max: 0.9999 }
-    });
-    const oklch = mapped.to('oklch');
-    const l = oklch.oklch.l ?? 0;
-    const c = oklch.oklch.c ?? 0;
-    const h = oklch.oklch.h;
-    const safeH = h == null || isNaN(h) ? 0 : h;
-    // Round to 2 decimal places for readability; snap near-zero values to 0
-    const lPct = parseFloat((l * 100).toFixed(2));
-    const cRound = c < 1e-6 ? 0 : parseFloat(c.toFixed(2));
-    const hRound = parseFloat(safeH.toFixed(2));
-    return `oklch(${lPct}% ${cRound} ${hRound})`;
-  } catch {
-    return 'oklch(0% 0 0)';
-  }
-}
-
-/**
- * Gamut-maps any Color object to sRGB and returns a CSS hsl() string (CSS Color 4 syntax).
- * e.g. "hsl(222.27 72.189% 54.103%)"
- */
-export function colorToCssHsl(color: Color): string {
-  try {
-    const hslColor = toGamut(color).to('hsl');
-    // Sanitize null/NaN hue and saturation (achromatic colors serialize as "none" otherwise)
-    const h = hslColor.hsl.h;
-    if (h == null || isNaN(h)) hslColor.hsl.h = 0;
-    const s = hslColor.hsl.s;
-    if (s == null || isNaN(s)) hslColor.hsl.s = 0;
-    return hslColor.toString();
-  } catch {
-    return 'hsl(0 0% 0%)';
-  }
-}
-
-/**
  * Gamut-maps any Color object to Display P3 and returns a CSS color() string.
  * e.g. "color(display-p3 0.097 0.384 0.901)"
  */
@@ -581,7 +591,100 @@ export function colorToCssRec2020(color: Color): string {
 }
 
 /**
- * Formats a Color object as a CSS string in the given display color space and gamut.
+ * Converts any Color object to a CSS oklch() string (CSS Color 4 syntax).
+ * e.g. "oklch(55% 0.19 264)"
+ *
+ * Values are rounded to 6 decimal places to preserve precision for
+ * non-swatch rendering and detailed color views.
+ */
+export function colorToCssOklch(color: Color, gamut: GamutSpace = 'srgb'): string {
+  try {
+    // Sanitize NaN hue before gamut mapping (achromatic colors have NaN hue in colorjs.io)
+    const clone = color.clone();
+    const rawH = clone.oklch.h;
+    if (rawH == null || isNaN(rawH)) clone.oklch.h = 0;
+    // Gamut-map to the target space first so the OKLCH values represent the actual
+    // rendered color, avoiding browser-induced hue shifts for out-of-gamut colors
+    const gamutSpace = gamut === 'rec2020' ? 'rec2020' : gamut === 'p3' ? 'p3' : 'srgb';
+    const mapped = clone.toGamut({
+      space: gamutSpace,
+      blackWhiteClamp: { channel: 'oklch.l', min: 0.0001, max: 0.9999 }
+    });
+    const oklch = mapped.to('oklch');
+    const l = oklch.oklch.l ?? 0;
+    const c = oklch.oklch.c ?? 0;
+    const h = oklch.oklch.h;
+    const safeH = h == null || isNaN(h) ? 0 : h;
+    // Keep higher precision for non-swatch use while avoiding noisy float tails.
+    const lPct = parseFloat((l * 100).toFixed(6));
+    const cRound = c < 1e-9 ? 0 : parseFloat(c.toFixed(6));
+    const hRound = parseFloat(safeH.toFixed(6));
+    return `oklch(${lPct}% ${cRound} ${hRound})`;
+  } catch {
+    return 'oklch(0% 0 0)';
+  }
+}
+
+/**
+ * Converts any Color object to a compact CSS oklch() string for swatch labels.
+ * e.g. "oklch(55% 0.19 264)"
+ *
+ * Uses user-selected significant digits to keep long OKLCH values from overflowing swatches.
+ */
+export function colorToCssOklchSwatch(
+  color: Color,
+  gamut: GamutSpace = 'srgb',
+  significantDigits: OklchDisplaySignificantDigits = DEFAULT_OKLCH_DISPLAY_SIGNIFICANT_DIGITS
+): string {
+  try {
+    // Sanitize NaN hue before gamut mapping (achromatic colors have NaN hue in colorjs.io)
+    const clone = color.clone();
+    const rawH = clone.oklch.h;
+    if (rawH == null || isNaN(rawH)) clone.oklch.h = 0;
+    // Gamut-map to the target space first so the OKLCH values represent the actual
+    // rendered color, avoiding browser-induced hue shifts for out-of-gamut colors
+    const gamutSpace = gamut === 'rec2020' ? 'rec2020' : gamut === 'p3' ? 'p3' : 'srgb';
+    const mapped = clone.toGamut({
+      space: gamutSpace,
+      blackWhiteClamp: { channel: 'oklch.l', min: 0.0001, max: 0.9999 }
+    });
+    const oklch = mapped.to('oklch');
+    const l = oklch.oklch.l ?? 0;
+    const c = oklch.oklch.c ?? 0;
+    const h = oklch.oklch.h;
+    const safeH = h == null || isNaN(h) ? 0 : h;
+    const safeDigits = clampOklchDisplaySignificantDigits(significantDigits);
+    const lPct = formatWithSignificantDigits(l * 100, safeDigits);
+    const cRound = c < 1e-9 ? '0' : formatWithSignificantDigits(c, safeDigits);
+    const roundedHue = roundToSignificantDigits(safeH, safeDigits);
+    const normalizedHue = normalizeRoundedHue(roundedHue);
+    const hRound = formatWithSignificantDigits(normalizedHue, safeDigits);
+    return `oklch(${lPct}% ${cRound} ${hRound})`;
+  } catch {
+    return 'oklch(0% 0 0)';
+  }
+}
+
+/**
+ * Gamut-maps any Color object to sRGB and returns a CSS hsl() string (CSS Color 4 syntax).
+ * e.g. "hsl(222.27 72.189% 54.103%)"
+ */
+export function colorToCssHsl(color: Color): string {
+  try {
+    const hslColor = toGamut(color).to('hsl');
+    // Sanitize null/NaN hue and saturation (achromatic colors serialize as "none" otherwise)
+    const h = hslColor.hsl.h;
+    if (h == null || isNaN(h)) hslColor.hsl.h = 0;
+    const s = hslColor.hsl.s;
+    if (s == null || isNaN(s)) hslColor.hsl.s = 0;
+    return hslColor.toString();
+  } catch {
+    return 'hsl(0 0% 0%)';
+  }
+}
+
+/**
+ * Formats a Color object as a CSS string in the given render color space and gamut.
  * This is the main dispatcher used by derived stores and components.
  *
  * Note: hex, rgb, and hsl formats are sRGB-only. When a wider gamut (P3 / Rec. 2020)
@@ -589,7 +692,7 @@ export function colorToCssRec2020(color: Color): string {
  * (e.g. `color(display-p3 …)`) because hex/rgb/hsl cannot represent out-of-sRGB values.
  * OKLCH is gamut-independent and always returns `oklch(…)` after gamut-mapping.
  */
-export function colorToCssDisplay(
+export function colorToCssRender(
   color: Color,
   space: DisplayColorSpace,
   gamut: GamutSpace
@@ -627,6 +730,23 @@ export function colorToCssDisplay(
     default:
       return colorToCssHex(color);
   }
+}
+
+/**
+ * Formats a Color for swatch labels/rendering.
+ * Uses compact rounding only for OKLCH to improve readability on swatches while
+ * leaving all other formats unchanged.
+ */
+export function colorToCssSwatchRender(
+  color: Color,
+  space: DisplayColorSpace,
+  gamut: GamutSpace,
+  oklchSignificantDigits: OklchDisplaySignificantDigits = DEFAULT_OKLCH_DISPLAY_SIGNIFICANT_DIGITS
+): string {
+  if (space === 'oklch') {
+    return colorToCssOklchSwatch(color, gamut, oklchSignificantDigits);
+  }
+  return colorToCssRender(color, space, gamut);
 }
 
 // ===== CONTRAST ALGORITHM HELPERS =====
