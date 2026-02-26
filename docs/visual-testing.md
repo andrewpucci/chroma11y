@@ -16,6 +16,8 @@ Argos is integrated for PR visual review in **phase A** while keeping existing P
 | `npm run test:e2e:local`         | Run Playwright tests locally (debugging)      |
 | `npm run test:e2e:netlify-smoke` | Run non-visual deploy smoke checks (Chromium) |
 
+`npm run test:e2e` runs `docker compose run --rm --build test` so app source changes are always rebuilt into the test image.
+
 ## CI Pipelines
 
 ### 1) Required Visual Gate (`.github/workflows/e2e.yml`)
@@ -55,7 +57,7 @@ Manual commands:
 ```bash
 docker compose build
 docker compose run --rm update-snapshots
-docker compose run --rm test
+docker compose run --rm --build test
 ```
 
 ## Baseline Reseeding for Argos

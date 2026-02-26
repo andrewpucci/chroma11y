@@ -51,6 +51,8 @@ npx playwright test --ui   # interactive UI mode
 - Tests run in Chromium, Firefox, and WebKit
 - CI visual gating runs against local production preview in `e2e.yml`
 - Netlify deploy-preview checks run separately in `netlify-smoke.yml` (non-visual smoke coverage)
+- Visual snapshot baselines must be generated in Docker via `npm run test:e2e:update` (Linux parity)
+- Do not generate or refresh Playwright snapshots with local `npx playwright test --update-snapshots`; local rendering can drift from CI
 
 ### Run everything
 

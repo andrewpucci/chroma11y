@@ -113,6 +113,24 @@ test.describe('Mobile Responsiveness', () => {
       expect(box!.height).toBeGreaterThanOrEqual(24);
       expect(box!.width).toBeGreaterThanOrEqual(24);
     });
+
+    test('bezier control targets meet WCAG 2.2 AA minimum touch target on mobile', async ({
+      page
+    }) => {
+      await page.setViewportSize(MOBILE_VIEWPORTS.iPhone_SE);
+      await page.goto('/');
+
+      const sliderTargets = page.locator('.bezier-editor [role="slider"]');
+      await expect(sliderTargets).toHaveCount(2);
+
+      const targetCount = await sliderTargets.count();
+      for (let i = 0; i < targetCount; i++) {
+        const box = await sliderTargets.nth(i).boundingBox();
+        expect(box).toBeTruthy();
+        expect(box!.width).toBeGreaterThanOrEqual(24);
+        expect(box!.height).toBeGreaterThanOrEqual(24);
+      }
+    });
   });
 
   test.describe('Swatch Grid Adaptation', () => {

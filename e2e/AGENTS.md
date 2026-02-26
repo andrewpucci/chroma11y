@@ -21,6 +21,9 @@ Update snapshots after UI changes:
 npm run test:e2e:update
 ```
 
+Important: while phase A keeps Playwright file snapshots, baseline regeneration is Docker-only.
+Never use local `npx playwright test --update-snapshots` for committed baselines.
+
 Run locally for debugging (results may differ from CI):
 
 ```sh
@@ -121,6 +124,8 @@ All snapshots are generated in Docker to match CI environment:
 # Update snapshots after UI changes
 npm run test:e2e:update
 ```
+
+Do not update committed snapshot PNGs from local Playwright runs. If local debugging needs fresh images, treat them as disposable and regenerate in Docker before commit.
 
 ### Best practices
 
