@@ -33,7 +33,7 @@
     "test:unit": "vitest",
     "test:coverage": "vitest run --coverage",
     "test": "npm run test:unit -- --run && npm run test:e2e",
-    "test:e2e": "docker compose run --rm test",
+    "test:e2e": "docker compose run --rm --build test",
     "test:e2e:update": "./scripts/test-linux-snapshots.sh",
     "test:e2e:local": "playwright test",
     "test:e2e:netlify-smoke": "playwright test e2e/netlify-smoke.spec.ts --project=chromium",
