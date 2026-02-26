@@ -67,8 +67,12 @@ test.describe('Focus Indicators', () => {
         { selector: '#saturation' },
         { selector: '#numColors' },
         { selector: '#numPalettes' },
-        { selector: '.bezier-editor circle[role="slider"]', index: 0 },
-        { selector: '.bezier-editor circle[role="slider"]', index: 1 },
+        { selector: '.bezier-editor [role="slider"]', index: 0 },
+        { selector: '.bezier-editor [role="slider"]', index: 1 },
+        { selector: '#bezier-p1-x' },
+        { selector: '#bezier-p1-y' },
+        { selector: '#bezier-p2-x' },
+        { selector: '#bezier-p2-y' },
         { selector: '#contrast-mode' }
       ];
 
