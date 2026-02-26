@@ -1,8 +1,19 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import BezierEditor from '$lib/components/BezierEditor.svelte';
+
+function getCoordinateInput(label: RegExp): HTMLInputElement {
+  return screen.getByLabelText(label) as HTMLInputElement;
+}
+
+function expectCoordinates(expected: { p1x: number; p1y: number; p2x: number; p2y: number }) {
+  expect(parseFloat(getCoordinateInput(/p1 x coordinate/i).value)).toBeCloseTo(expected.p1x, 2);
+  expect(parseFloat(getCoordinateInput(/p1 y coordinate/i).value)).toBeCloseTo(expected.p1y, 2);
+  expect(parseFloat(getCoordinateInput(/p2 x coordinate/i).value)).toBeCloseTo(expected.p2x, 2);
+  expect(parseFloat(getCoordinateInput(/p2 y coordinate/i).value)).toBeCloseTo(expected.p2y, 2);
+}
 
 describe('BezierEditor', () => {
   describe('Rendering', () => {
@@ -36,6 +47,12 @@ describe('BezierEditor', () => {
 
       expect(p1).toBeInTheDocument();
       expect(p2).toBeInTheDocument();
+      expect(p1.tagName).toBe('rect');
+      expect(p2.tagName).toBe('rect');
+      expect(p1).toHaveAttribute('width', '24');
+      expect(p1).toHaveAttribute('height', '24');
+      expect(p2).toHaveAttribute('width', '24');
+      expect(p2).toHaveAttribute('height', '24');
 
       expect(p1).toHaveAttribute('aria-valuenow', '0.16');
       expect(p1).toHaveAttribute('aria-valuemin', '0');
@@ -44,7 +61,7 @@ describe('BezierEditor', () => {
       expect(p2).toHaveAttribute('aria-valuenow', '0.28');
     });
 
-    it('displays coordinate readout with current values', () => {
+    it('renders coordinate inputs with current values', () => {
       render(BezierEditor, {
         props: {
           x1: 0.16,
@@ -54,8 +71,7 @@ describe('BezierEditor', () => {
         }
       });
 
-      expect(screen.getByText('P1(0.16, 0.00)')).toBeInTheDocument();
-      expect(screen.getByText('P2(0.28, 0.38)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.16, p1y: 0, p2x: 0.28, p2y: 0.38 });
     });
 
     it('renders axis labels', () => {
@@ -78,27 +94,23 @@ describe('BezierEditor', () => {
         }
       });
 
-      expect(screen.getByText('P1(0.50, 0.50)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.5, p1y: 0.5, p2x: 0.5, p2y: 0.5 });
 
       const p1 = screen.getByRole('slider', { name: /control point p1/i });
       await user.tab();
       expect(p1).toHaveFocus();
 
-      // Arrow right increases x1
       await user.keyboard('{ArrowRight}');
-      expect(screen.getByText('P1(0.51, 0.50)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.51, p1y: 0.5, p2x: 0.5, p2y: 0.5 });
 
-      // Arrow left decreases x1
       await user.keyboard('{ArrowLeft}');
-      expect(screen.getByText('P1(0.50, 0.50)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.5, p1y: 0.5, p2x: 0.5, p2y: 0.5 });
 
-      // Arrow up increases y1
       await user.keyboard('{ArrowUp}');
-      expect(screen.getByText('P1(0.50, 0.51)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.5, p1y: 0.51, p2x: 0.5, p2y: 0.5 });
 
-      // Arrow down decreases y1
       await user.keyboard('{ArrowDown}');
-      expect(screen.getByText('P1(0.50, 0.50)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.5, p1y: 0.5, p2x: 0.5, p2y: 0.5 });
     });
 
     it('moves P2 with arrow keys', async () => {
@@ -112,7 +124,7 @@ describe('BezierEditor', () => {
         }
       });
 
-      expect(screen.getByText('P2(0.50, 0.50)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.5, p1y: 0.5, p2x: 0.5, p2y: 0.5 });
 
       const p2 = screen.getByRole('slider', { name: /control point p2/i });
       await user.tab();
@@ -120,10 +132,10 @@ describe('BezierEditor', () => {
       expect(p2).toHaveFocus();
 
       await user.keyboard('{ArrowRight}');
-      expect(screen.getByText('P2(0.51, 0.50)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.5, p1y: 0.5, p2x: 0.51, p2y: 0.5 });
 
       await user.keyboard('{ArrowUp}');
-      expect(screen.getByText('P2(0.51, 0.51)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.5, p1y: 0.5, p2x: 0.51, p2y: 0.51 });
     });
 
     it('uses larger step size with Shift key', async () => {
@@ -141,9 +153,8 @@ describe('BezierEditor', () => {
       await user.tab();
       expect(p1).toHaveFocus();
 
-      // Shift+Arrow uses 0.05 step instead of 0.01
       await user.keyboard('{Shift>}{ArrowRight}{/Shift}');
-      expect(screen.getByText('P1(0.55, 0.50)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.55, p1y: 0.5, p2x: 0.5, p2y: 0.5 });
     });
 
     it('clamps values to 0-1 range with keyboard', async () => {
@@ -157,21 +168,19 @@ describe('BezierEditor', () => {
         }
       });
 
-      expect(screen.getByText('P1(0.99, 0.01)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.99, p1y: 0.01, p2x: 0.5, p2y: 0.5 });
 
       const p1 = screen.getByRole('slider', { name: /control point p1/i });
       await user.tab();
       expect(p1).toHaveFocus();
 
-      // Try to go beyond 1.0
       await user.keyboard('{ArrowRight}');
       await user.keyboard('{ArrowRight}');
-      expect(screen.getByText('P1(1.00, 0.01)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 1, p1y: 0.01, p2x: 0.5, p2y: 0.5 });
 
-      // Try to go below 0.0
       await user.keyboard('{ArrowDown}');
       await user.keyboard('{ArrowDown}');
-      expect(screen.getByText('P1(1.00, 0.00)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 1, p1y: 0, p2x: 0.5, p2y: 0.5 });
     });
 
     it('allows tabbing between control points', async () => {
@@ -200,8 +209,7 @@ describe('BezierEditor', () => {
         }
       });
 
-      expect(screen.getByText('P1(0.16, 0.00)')).toBeInTheDocument();
-      expect(screen.getByText('P2(0.28, 0.38)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.16, p1y: 0, p2x: 0.28, p2y: 0.38 });
     });
 
     it('rounds values to 2 decimal places', () => {
@@ -214,14 +222,86 @@ describe('BezierEditor', () => {
         }
       });
 
-      expect(screen.getByText('P1(0.12, 0.99)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.12, p1y: 0.99, p2x: 0.5, p2y: 0.5 });
     });
 
     it('accepts default values when no props provided', () => {
       render(BezierEditor);
 
-      expect(screen.getByText('P1(0.00, 0.00)')).toBeInTheDocument();
-      expect(screen.getByText('P2(1.00, 1.00)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0, p1y: 0, p2x: 1, p2y: 1 });
+    });
+  });
+
+  describe('Coordinate Inputs', () => {
+    it('renders inline coordinate inputs for both points', () => {
+      render(BezierEditor);
+
+      expect(screen.getByLabelText(/p1 x coordinate/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/p1 y coordinate/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/p2 x coordinate/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/p2 y coordinate/i)).toBeInTheDocument();
+    });
+
+    it('updates slider aria-valuetext when editing coordinate input', async () => {
+      render(BezierEditor, {
+        props: {
+          x1: 0.16,
+          y1: 0.0,
+          x2: 0.28,
+          y2: 0.38
+        }
+      });
+
+      const p1XInput = getCoordinateInput(/p1 x coordinate/i);
+      const p1Slider = screen.getByRole('slider', { name: /control point p1/i });
+
+      await fireEvent.input(p1XInput, { target: { value: '0.42' } });
+
+      expectCoordinates({ p1x: 0.42, p1y: 0, p2x: 0.28, p2y: 0.38 });
+      expect(p1Slider).toHaveAttribute('aria-valuenow', '0.42');
+      expect(p1Slider).toHaveAttribute('aria-valuetext', 'x=0.42, y=0.00');
+    });
+
+    it('clamps coordinate input values to valid 0-1 range', async () => {
+      render(BezierEditor, {
+        props: {
+          x1: 0.5,
+          y1: 0.5,
+          x2: 0.5,
+          y2: 0.5
+        }
+      });
+
+      const p2XInput = getCoordinateInput(/p2 x coordinate/i);
+      const p2YInput = getCoordinateInput(/p2 y coordinate/i);
+
+      await fireEvent.input(p2XInput, { target: { value: '1.7' } });
+      await fireEvent.input(p2YInput, { target: { value: '-0.4' } });
+
+      expectCoordinates({ p1x: 0.5, p1y: 0.5, p2x: 1, p2y: 0 });
+    });
+
+    it('restores displayed value on blur after clearing input', async () => {
+      render(BezierEditor, {
+        props: {
+          x1: 0.16,
+          y1: 0.0,
+          x2: 0.28,
+          y2: 0.38
+        }
+      });
+
+      const p1XInput = getCoordinateInput(/p1 x coordinate/i);
+      const p1Slider = screen.getByRole('slider', { name: /control point p1/i });
+
+      await fireEvent.input(p1XInput, { target: { value: '' } });
+      expect(p1XInput.value).toBe('');
+
+      await fireEvent.blur(p1XInput);
+
+      expect(p1XInput.value).toBe('0.16');
+      expect(p1Slider).toHaveAttribute('aria-valuenow', '0.16');
+      expect(p1Slider).toHaveAttribute('aria-valuetext', 'x=0.16, y=0.00');
     });
   });
 
@@ -268,8 +348,7 @@ describe('BezierEditor', () => {
         }
       });
 
-      expect(screen.getByText('P1(0.00, 0.00)')).toBeInTheDocument();
-      expect(screen.getByText('P2(0.00, 0.00)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0, p1y: 0, p2x: 0, p2y: 0 });
     });
 
     it('handles extreme values (1, 1, 1, 1)', () => {
@@ -282,8 +361,7 @@ describe('BezierEditor', () => {
         }
       });
 
-      expect(screen.getByText('P1(1.00, 1.00)')).toBeInTheDocument();
-      expect(screen.getByText('P2(1.00, 1.00)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 1, p1y: 1, p2x: 1, p2y: 1 });
     });
 
     it('handles mid-range values', () => {
@@ -296,8 +374,7 @@ describe('BezierEditor', () => {
         }
       });
 
-      expect(screen.getByText('P1(0.50, 0.50)')).toBeInTheDocument();
-      expect(screen.getByText('P2(0.50, 0.50)')).toBeInTheDocument();
+      expectCoordinates({ p1x: 0.5, p1y: 0.5, p2x: 0.5, p2y: 0.5 });
     });
   });
 });

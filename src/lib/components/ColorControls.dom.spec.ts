@@ -128,4 +128,21 @@ describe('ColorControls', () => {
 
     expect(palettesSlider.value).toBe('8');
   });
+
+  it('renders Bezier coordinate inputs with bound values', () => {
+    render(ColorControls, {
+      props: {
+        x1: 0.16,
+        y1: 0.0,
+        x2: 0.28,
+        y2: 0.38
+      }
+    });
+
+    const p1XInput = screen.getByLabelText(/p1 x coordinate/i) as HTMLInputElement;
+    const p2YInput = screen.getByLabelText(/p2 y coordinate/i) as HTMLInputElement;
+
+    expect(p1XInput.value).toBe('0.16');
+    expect(p2YInput.value).toBe('0.38');
+  });
 });
