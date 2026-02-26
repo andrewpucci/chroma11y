@@ -9,7 +9,6 @@ updates:
     directory: '/'
     schedule:
       interval: 'daily'
-    security-updates: true
     open-pull-requests-limit: 10
     labels:
       - 'dependencies'
@@ -20,6 +19,7 @@ updates:
       - 'andrewpucci'
     rebase-strategy: 'auto'
     commit-message:
+      prefix: 'chore'
       include: 'scope'
     groups:
       lint-and-format:
