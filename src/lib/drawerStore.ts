@@ -7,6 +7,8 @@ import type Color from 'colorjs.io';
 export interface DrawerColorData {
   /** The hex color string */
   hex: string;
+  /** The rendered swatch value string, if available */
+  displayValue?: string;
   /** The OKLCH color object (source of truth) */
   oklch: Color;
   /** Step label, e.g. "50" */

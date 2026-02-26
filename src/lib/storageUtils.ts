@@ -9,7 +9,8 @@ import type {
   GamutSpace,
   ThemePreference,
   SwatchLabels,
-  ContrastAlgorithm
+  ContrastAlgorithm,
+  OklchDisplaySignificantDigits
 } from './types';
 
 export type StoredColorState = SerializableColorState;
@@ -21,6 +22,7 @@ const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
 const VALID_THEME_PREFS: ThemePreference[] = ['light', 'dark', 'auto'];
 const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
 const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
+const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
 
 /**
  * Saves state to localStorage
@@ -76,6 +78,14 @@ export function loadStateFromStorage(): StoredColorState | null {
       !VALID_CONTRAST_ALGOS.includes(state.contrastAlgorithm as ContrastAlgorithm)
     ) {
       delete state.contrastAlgorithm;
+    }
+    if (
+      state.oklchDisplaySignificantDigits !== undefined &&
+      !VALID_OKLCH_SIG_DIGITS.includes(
+        state.oklchDisplaySignificantDigits as OklchDisplaySignificantDigits
+      )
+    ) {
+      delete state.oklchDisplaySignificantDigits;
     }
 
     return state;

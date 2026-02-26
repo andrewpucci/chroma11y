@@ -1,12 +1,13 @@
 import { writable, derived } from 'svelte/store';
 import type Color from 'colorjs.io';
-import { colorToCssHex, colorToCssDisplay } from '$lib/colorUtils';
+import { colorToCssHex, colorToCssRender, colorToCssSwatchRender } from '$lib/colorUtils';
 import type {
   DisplayColorSpace,
   GamutSpace,
   ThemePreference,
   SwatchLabels,
-  ContrastAlgorithm
+  ContrastAlgorithm,
+  OklchDisplaySignificantDigits
 } from '$lib/types';
 
 /**
@@ -39,6 +40,7 @@ interface ColorState {
   themePreference: ThemePreference;
   swatchLabels: SwatchLabels;
   contrastAlgorithm: ContrastAlgorithm;
+  oklchDisplaySignificantDigits: OklchDisplaySignificantDigits;
   _lastUpdated?: number;
 }
 
@@ -98,7 +100,8 @@ const DEFAULT_STATE = {
   displayColorSpace: 'hex' as DisplayColorSpace,
   gamutSpace: 'srgb' as GamutSpace,
   swatchLabels: 'both' as SwatchLabels,
-  contrastAlgorithm: 'WCAG' as ContrastAlgorithm
+  contrastAlgorithm: 'WCAG' as ContrastAlgorithm,
+  oklchDisplaySignificantDigits: 4 as OklchDisplaySignificantDigits
 };
 
 // Create the main color store
@@ -189,17 +192,49 @@ export const contrastAlgorithm = derived(
   ($colorStore) => $colorStore.contrastAlgorithm
 );
 
+// Derived store for OKLCH display significant digits
+export const oklchDisplaySignificantDigits = derived(
+  colorStore,
+  ($colorStore) => $colorStore.oklchDisplaySignificantDigits
+);
+
 // Derived store for neutrals formatted in the selected display color space
 export const neutralsDisplay = derived(colorStore, ($colorStore) =>
   $colorStore.neutrals.map((c) =>
-    colorToCssDisplay(c, $colorStore.displayColorSpace, $colorStore.gamutSpace)
+    colorToCssRender(c, $colorStore.displayColorSpace, $colorStore.gamutSpace)
   )
 );
 
 // Derived store for palettes formatted in the selected display color space
 export const palettesDisplay = derived(colorStore, ($colorStore) =>
   $colorStore.palettes.map((palette) =>
-    palette.map((c) => colorToCssDisplay(c, $colorStore.displayColorSpace, $colorStore.gamutSpace))
+    palette.map((c) => colorToCssRender(c, $colorStore.displayColorSpace, $colorStore.gamutSpace))
+  )
+);
+
+// Derived store for neutrals formatted for swatch labels
+export const neutralsSwatchDisplay = derived(colorStore, ($colorStore) =>
+  $colorStore.neutrals.map((c) =>
+    colorToCssSwatchRender(
+      c,
+      $colorStore.displayColorSpace,
+      $colorStore.gamutSpace,
+      $colorStore.oklchDisplaySignificantDigits
+    )
+  )
+);
+
+// Derived store for palettes formatted for swatch labels
+export const palettesSwatchDisplay = derived(colorStore, ($colorStore) =>
+  $colorStore.palettes.map((palette) =>
+    palette.map((c) =>
+      colorToCssSwatchRender(
+        c,
+        $colorStore.displayColorSpace,
+        $colorStore.gamutSpace,
+        $colorStore.oklchDisplaySignificantDigits
+      )
+    )
   )
 );
 
