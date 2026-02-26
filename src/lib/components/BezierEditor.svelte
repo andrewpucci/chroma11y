@@ -32,6 +32,36 @@
   function fromSvgY(py: number) {
     return Math.min(1, Math.max(0, 1 - (py - pad) / size));
   }
+  function normalizeCoordinate(value: number) {
+    return Math.round(Math.min(1, Math.max(0, value)) * 100) / 100;
+  }
+
+  function setPointCoordinates(point: 'p1' | 'p2', nextX: number, nextY: number) {
+    const normalizedX = normalizeCoordinate(nextX);
+    const normalizedY = normalizeCoordinate(nextY);
+    if (point === 'p1') {
+      x1 = normalizedX;
+      y1 = normalizedY;
+      return;
+    }
+    x2 = normalizedX;
+    y2 = normalizedY;
+  }
+
+  function setPointCoordinate(point: 'p1' | 'p2', axis: 'x' | 'y', value: number) {
+    if (point === 'p1') {
+      setPointCoordinates('p1', axis === 'x' ? value : x1, axis === 'y' ? value : y1);
+      return;
+    }
+    setPointCoordinates('p2', axis === 'x' ? value : x2, axis === 'y' ? value : y2);
+  }
+
+  function getPointCoordinate(point: 'p1' | 'p2', axis: 'x' | 'y') {
+    if (point === 'p1') {
+      return axis === 'x' ? x1 : y1;
+    }
+    return axis === 'x' ? x2 : y2;
+  }
 
   // Reactive SVG positions
   let p1x = $derived(toSvgX(x1));
@@ -128,13 +158,7 @@
     if (!pt) return;
     const nx = fromSvgX(pt.x);
     const ny = fromSvgY(pt.y);
-    if (activePoint === 'p1') {
-      x1 = Math.round(nx * 100) / 100;
-      y1 = Math.round(ny * 100) / 100;
-    } else {
-      x2 = Math.round(nx * 100) / 100;
-      y2 = Math.round(ny * 100) / 100;
-    }
+    setPointCoordinates(activePoint, nx, ny);
   }
 
   function onPointerUp() {
@@ -181,12 +205,44 @@
     }
     e.preventDefault();
     if (point === 'p1') {
-      x1 = Math.round(Math.min(1, Math.max(0, x1 + dx)) * 100) / 100;
-      y1 = Math.round(Math.min(1, Math.max(0, y1 + dy)) * 100) / 100;
-    } else {
-      x2 = Math.round(Math.min(1, Math.max(0, x2 + dx)) * 100) / 100;
-      y2 = Math.round(Math.min(1, Math.max(0, y2 + dy)) * 100) / 100;
+      setPointCoordinates('p1', x1 + dx, y1 + dy);
+      return;
     }
+    setPointCoordinates('p2', x2 + dx, y2 + dy);
+  }
+
+  function onCoordinateInput(point: 'p1' | 'p2', axis: 'x' | 'y', e: Event) {
+    const target = e.target as HTMLInputElement;
+    const rawValue = target.value;
+    if (rawValue === '' || rawValue === '.' || rawValue === '-') {
+      return;
+    }
+    const parsed = parseFloat(rawValue);
+    if (!Number.isFinite(parsed)) {
+      return;
+    }
+    setPointCoordinate(point, axis, parsed);
+  }
+
+  function onCoordinateBlur(point: 'p1' | 'p2', axis: 'x' | 'y', e: FocusEvent) {
+    const target = e.target as HTMLInputElement;
+    const rawValue = target.value;
+    const currentValue = getPointCoordinate(point, axis);
+
+    if (rawValue === '' || rawValue === '.' || rawValue === '-') {
+      target.value = `${currentValue}`;
+      return;
+    }
+
+    const parsed = parseFloat(rawValue);
+    if (!Number.isFinite(parsed)) {
+      target.value = `${currentValue}`;
+      return;
+    }
+
+    const normalized = normalizeCoordinate(parsed);
+    setPointCoordinate(point, axis, normalized);
+    target.value = `${normalized}`;
   }
 </script>
 
@@ -267,17 +323,25 @@
       />
     {/if}
 
-    <!-- Control point P1 (filled) -->
-    <circle
-      cx={p1x}
-      cy={p1y}
-      r="10"
-      class="control-point p1"
+    <!-- Visible control point P1 marker -->
+    <circle cx={p1x} cy={p1y} r="10" class="control-point p1" class:active={activePoint === 'p1'} />
+
+    <!-- Visible control point P2 marker -->
+    <circle cx={p2x} cy={p2y} r="10" class="control-point p2" class:active={activePoint === 'p2'} />
+
+    <!-- 24x24 AA-compliant slider targets -->
+    <rect
+      x={p1x - 12}
+      y={p1y - 12}
+      width="24"
+      height="24"
+      rx="12"
+      class="control-target"
       class:active={activePoint === 'p1'}
       tabindex="0"
       role="slider"
       aria-label="Control point P1"
-      aria-valuenow={Math.round(x1 * 100) / 100}
+      aria-valuenow={x1}
       aria-valuemin={0}
       aria-valuemax={1}
       aria-valuetext="x={x1.toFixed(2)}, y={y1.toFixed(2)}"
@@ -286,18 +350,18 @@
       onfocus={() => (p1FocusVisible = getLastInteractionWasKeyboard())}
       onblur={() => (p1FocusVisible = false)}
     />
-
-    <!-- Control point P2 (hollow) -->
-    <circle
-      cx={p2x}
-      cy={p2y}
-      r="10"
-      class="control-point p2"
+    <rect
+      x={p2x - 12}
+      y={p2y - 12}
+      width="24"
+      height="24"
+      rx="12"
+      class="control-target"
       class:active={activePoint === 'p2'}
       tabindex="0"
       role="slider"
       aria-label="Control point P2"
-      aria-valuenow={Math.round(x2 * 100) / 100}
+      aria-valuenow={x2}
       aria-valuemin={0}
       aria-valuemax={1}
       aria-valuetext="x={x2.toFixed(2)}, y={y2.toFixed(2)}"
@@ -321,9 +385,67 @@
     >
   </svg>
 
-  <div class="readout">
-    <span class="readout-point">P1({x1.toFixed(2)}, {y1.toFixed(2)})</span>
-    <span class="readout-point">P2({x2.toFixed(2)}, {y2.toFixed(2)})</span>
+  <div class="coordinate-grid">
+    <div class="coordinate-group field">
+      <label class="label" for="bezier-p1-x">P1 X</label>
+      <input
+        class="input mono"
+        id="bezier-p1-x"
+        type="number"
+        min="0"
+        max="1"
+        step="0.01"
+        value={x1}
+        aria-label="P1 X coordinate"
+        oninput={(e) => onCoordinateInput('p1', 'x', e)}
+        onblur={(e) => onCoordinateBlur('p1', 'x', e)}
+      />
+    </div>
+    <div class="coordinate-group field">
+      <label class="label" for="bezier-p1-y">P1 Y</label>
+      <input
+        class="input mono"
+        id="bezier-p1-y"
+        type="number"
+        min="0"
+        max="1"
+        step="0.01"
+        value={y1}
+        aria-label="P1 Y coordinate"
+        oninput={(e) => onCoordinateInput('p1', 'y', e)}
+        onblur={(e) => onCoordinateBlur('p1', 'y', e)}
+      />
+    </div>
+    <div class="coordinate-group field">
+      <label class="label" for="bezier-p2-x">P2 X</label>
+      <input
+        class="input mono"
+        id="bezier-p2-x"
+        type="number"
+        min="0"
+        max="1"
+        step="0.01"
+        value={x2}
+        aria-label="P2 X coordinate"
+        oninput={(e) => onCoordinateInput('p2', 'x', e)}
+        onblur={(e) => onCoordinateBlur('p2', 'x', e)}
+      />
+    </div>
+    <div class="coordinate-group field">
+      <label class="label" for="bezier-p2-y">P2 Y</label>
+      <input
+        class="input mono"
+        id="bezier-p2-y"
+        type="number"
+        min="0"
+        max="1"
+        step="0.01"
+        value={y2}
+        aria-label="P2 Y coordinate"
+        oninput={(e) => onCoordinateInput('p2', 'y', e)}
+        onblur={(e) => onCoordinateBlur('p2', 'y', e)}
+      />
+    </div>
   </div>
 </div>
 
@@ -381,19 +503,28 @@
   }
 
   .control-point {
-    cursor: grab;
     stroke-width: 2;
     transition: r var(--transition-fast);
+    pointer-events: none;
   }
 
   .control-point.active {
-    cursor: grabbing;
     r: 12;
   }
 
-  /* Override global focus styles for SVG elements (outline doesn't work on SVG)
-     Focus rings are handled by dedicated SVG circle elements */
-  .control-point:focus-visible {
+  .control-target {
+    fill: transparent;
+    stroke: transparent;
+    cursor: grab;
+    pointer-events: all;
+  }
+
+  .control-target.active {
+    cursor: grabbing;
+  }
+
+  /* Override global focus styles for SVG elements (outline doesn't work on SVG) */
+  .control-target:focus-visible {
     outline: none;
   }
 
@@ -419,13 +550,21 @@
     dominant-baseline: hanging;
   }
 
-  .readout {
-    display: flex;
-    justify-content: space-between;
+  .coordinate-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-sm);
-    font-family: var(--text-mono);
-    font-size: var(--font-size-xs);
-    color: var(--text-secondary);
+  }
+
+  .coordinate-group {
+    display: grid;
+    gap: var(--space-xs);
+  }
+
+  @media (max-width: 520px) {
+    .coordinate-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   .point-label {
