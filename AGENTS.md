@@ -43,7 +43,6 @@ Vitest is configured with **three projects** in `vite.config.ts`:
 
 ```sh
 npm run test:e2e            # Docker (CI-matching, recommended)
-npm run test:e2e:update     # regenerate Linux snapshots in Docker
 npm run test:e2e:local      # run Playwright directly on host machine
 npm run test:e2e:netlify-smoke  # deploy-preview smoke checks (Chromium)
 npx playwright test --ui    # interactive UI mode (local debugging)
@@ -53,10 +52,9 @@ npx playwright test --ui    # interactive UI mode (local debugging)
 - `npm run test:e2e` runs via `docker compose run --rm test` for local/CI parity
 - Playwright still targets a production preview server (port 4173) via web server config
 - Tests run in Chromium, Firefox, and WebKit
-- CI visual gating runs against local production preview in `e2e.yml`
+- CI visual gating runs through Argos captures from local production preview in `e2e.yml`
 - Netlify deploy-preview checks run separately in `netlify-smoke.yml` (non-visual smoke coverage)
-- Visual snapshot baselines must be generated in Docker via `npm run test:e2e:update` (Linux parity)
-- Do not generate or refresh Playwright snapshots with local `npx playwright test --update-snapshots`; local rendering can drift from CI
+- Playwright file snapshot baselines are not used; visual coverage is maintained via Argos-only checkpoints
 
 ### Run everything
 
