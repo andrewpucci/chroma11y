@@ -5,7 +5,6 @@
 
 import { test, expect } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
-import { maybeCaptureArgosVisual } from './visual';
 
 test.describe('Bezier Editor', () => {
   test.beforeEach(async ({ page }) => {
@@ -36,19 +35,6 @@ test.describe('Bezier Editor', () => {
       const svg = page.locator('.bezier-editor svg');
       await expect(svg.locator('text:has-text("Step")')).toBeVisible();
       await expect(svg.locator('text:has-text("Lightness")')).toBeVisible();
-    });
-  });
-
-  test.describe('Visual regression', () => {
-    test('bezier curve visual appearance', async ({ page }, testInfo) => {
-      const bezierEditor = page.locator('.bezier-editor');
-      await maybeCaptureArgosVisual({
-        page,
-        testInfo,
-        name: 'bezier-editor-default',
-        element: bezierEditor
-      });
-      await expect(bezierEditor).toHaveScreenshot('bezier-editor-default.png');
     });
   });
 

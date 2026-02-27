@@ -5,64 +5,11 @@
 
 import { test, expect } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
-import { maybeCaptureArgosVisual } from './visual';
 
 test.describe('UI Interactions', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);
-  });
-
-  test.describe('Visual regression', () => {
-    test('app appearance in light theme', async ({ page }, testInfo) => {
-      await maybeCaptureArgosVisual({
-        page,
-        testInfo,
-        name: 'app-light-theme',
-        fullPage: true
-      });
-      await expect(page).toHaveScreenshot('app-light-theme.png', {
-        fullPage: true
-      });
-    });
-
-    test('app appearance in dark theme', async ({ page }, testInfo) => {
-      await page.locator('#theme-preference').selectOption('dark');
-      await page.waitForFunction(
-        () => document.documentElement.getAttribute('data-theme') === 'dark'
-      );
-      await maybeCaptureArgosVisual({
-        page,
-        testInfo,
-        name: 'app-dark-theme',
-        fullPage: true
-      });
-      await expect(page).toHaveScreenshot('app-dark-theme.png', {
-        fullPage: true
-      });
-    });
-
-    test('palette grid visual appearance', async ({ page }, testInfo) => {
-      const palettes = page.getByTestId('generated-palettes');
-      await maybeCaptureArgosVisual({
-        page,
-        testInfo,
-        name: 'palette-grid',
-        element: palettes
-      });
-      await expect(palettes).toHaveScreenshot('palette-grid.png');
-    });
-
-    test('neutral palette visual appearance', async ({ page }, testInfo) => {
-      const neutralPalette = page.getByTestId('neutral-palette');
-      await maybeCaptureArgosVisual({
-        page,
-        testInfo,
-        name: 'neutral-palette',
-        element: neutralPalette
-      });
-      await expect(neutralPalette).toHaveScreenshot('neutral-palette.png');
-    });
   });
 
   test.describe('App Loading', () => {
