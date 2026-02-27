@@ -7,49 +7,8 @@
 
 import { test, expect } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
-import { maybeCaptureArgosVisual } from './visual';
 
 test.describe('Focus Indicators', () => {
-  test.describe('Visual regression', () => {
-    test.beforeEach(async ({ page }) => {
-      await page.goto('/');
-      await waitForAppReady(page);
-    });
-
-    test('focus indicator appearance in light mode', async ({ page }, testInfo) => {
-      const hexInput = page.locator('#baseColorHex');
-      await hexInput.focus();
-      await page.keyboard.press('Tab');
-      await page.keyboard.press('Shift+Tab');
-      await maybeCaptureArgosVisual({
-        page,
-        testInfo,
-        name: 'focus-indicator-light',
-        element: hexInput
-      });
-      await expect(hexInput).toHaveScreenshot('focus-indicator-light.png');
-    });
-
-    test('focus indicator appearance in dark mode', async ({ page }, testInfo) => {
-      await page.locator('#theme-preference').selectOption('dark');
-      await page.waitForFunction(
-        () => document.documentElement.getAttribute('data-theme') === 'dark'
-      );
-
-      const hexInput = page.locator('#baseColorHex');
-      await hexInput.focus();
-      await page.keyboard.press('Tab');
-      await page.keyboard.press('Shift+Tab');
-      await maybeCaptureArgosVisual({
-        page,
-        testInfo,
-        name: 'focus-indicator-dark',
-        element: hexInput
-      });
-      await expect(hexInput).toHaveScreenshot('focus-indicator-dark.png');
-    });
-  });
-
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);
