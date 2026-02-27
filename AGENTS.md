@@ -22,7 +22,7 @@ This project has three test layers. **All tests must pass before any commit.**
 ```sh
 npm run test:unit        # watch mode
 npm run test:unit -- --run  # single run
-npm run test:unit -- --run --coverage  # with coverage report
+npm run test:coverage  # single run with coverage report
 ```
 
 - Pure logic tests live alongside source: `src/lib/*.spec.ts`
@@ -42,12 +42,16 @@ Vitest is configured with **three projects** in `vite.config.ts`:
 ### E2E tests (Playwright)
 
 ```sh
-npm run test:e2e
-npx playwright test --ui   # interactive UI mode
+npm run test:e2e            # Docker (CI-matching, recommended)
+npm run test:e2e:update     # regenerate Linux snapshots in Docker
+npm run test:e2e:local      # run Playwright directly on host machine
+npm run test:e2e:netlify-smoke  # deploy-preview smoke checks (Chromium)
+npx playwright test --ui    # interactive UI mode (local debugging)
 ```
 
 - Test files: `e2e/*.spec.ts`
-- Runs against a production build (`npm run build && npm run preview` on port 4173)
+- `npm run test:e2e` runs via `docker compose run --rm test` for local/CI parity
+- Playwright still targets a production preview server (port 4173) via web server config
 - Tests run in Chromium, Firefox, and WebKit
 - CI visual gating runs against local production preview in `e2e.yml`
 - Netlify deploy-preview checks run separately in `netlify-smoke.yml` (non-visual smoke coverage)
