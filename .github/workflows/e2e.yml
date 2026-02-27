@@ -36,21 +36,21 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run Playwright tests (local production preview)
+      - name: Run E2E tests + Argos capture (pull request)
         if: github.event_name == 'pull_request'
         run: npx playwright test
         env:
           ARGOS_UPLOAD: ${{ github.event.pull_request.head.repo.fork == false && 'true' || 'false' }}
           ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
 
-      - name: Run Playwright tests (manual baseline reseed)
+      - name: Run E2E tests + optional Argos capture (manual dispatch)
         if: github.event_name == 'workflow_dispatch'
         run: npx playwright test
         env:
           ARGOS_UPLOAD: ${{ github.event.inputs.argos_upload == 'true' && 'true' || 'false' }}
           ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
 
-      - name: Run Playwright tests (main branch baseline refresh)
+      - name: Run E2E tests + Argos baseline refresh (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npx playwright test
         env:
