@@ -11,17 +11,18 @@ interface VisualCaptureOptions {
 
 /**
  * Captures a visual snapshot in Argos during CI for trusted PRs and main pushes.
- * Phase A keeps Playwright file-based snapshots and adds Argos in parallel.
+ * Snapshot names include browser/project suffix to avoid cross-browser baseline collisions.
  */
 export async function maybeCaptureArgosVisual(options: VisualCaptureOptions): Promise<void> {
-  const isChromium = options.testInfo.project.name === 'chromium';
   const shouldUpload = process.env.ARGOS_UPLOAD === 'true';
 
-  if (!isChromium || !shouldUpload) {
+  if (!shouldUpload) {
     return;
   }
 
-  await argosScreenshot(options.page, options.name, {
+  const snapshotName = `${options.name}-${options.testInfo.project.name}`;
+
+  await argosScreenshot(options.page, snapshotName, {
     element: options.element,
     fullPage: options.fullPage
   });
