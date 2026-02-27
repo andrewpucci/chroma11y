@@ -215,6 +215,7 @@ This project uses **Svelte 5 with runes**. Follow these patterns:
 ## PR guidelines
 
 - Run `npm run lint && npm run check && npm test` before committing
+- For dependency upgrades, bump `package.json` ranges to known-good minimums and commit `package-lock.json` in the same PR
 - Add or update tests for any code you change
 - Commit message format: `prefix: short description` (e.g., `feat:`, `fix:`, `tweak:`, `refactor:`, `test:`, `docs:`, `chore:`)
 - Keep accessibility intact — never remove ARIA attributes, keyboard handlers, or screen reader announcements without replacement

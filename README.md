@@ -387,6 +387,14 @@ Run E2E tests in UI mode:
 npx playwright test --ui
 ```
 
+### Dependency Update Policy
+
+When upgrading dependencies, treat `package.json` and `package-lock.json` as a pair:
+
+- Bump `package.json` ranges to the new known-good minimums that passed CI
+- Commit the updated `package-lock.json` in the same change
+- Validate with `npm run lint && npm run check && npm test` before merging
+
 ### Test Coverage
 
 **E2E Tests** (`e2e/`):
