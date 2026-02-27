@@ -34,7 +34,6 @@
     "test:coverage": "vitest run --coverage",
     "test": "npm run test:unit -- --run && npm run test:e2e",
     "test:e2e": "docker compose run --rm --build test",
-    "test:e2e:update": "./scripts/test-linux-snapshots.sh",
     "test:e2e:local": "playwright test",
     "test:e2e:netlify-smoke": "playwright test e2e/netlify-smoke.spec.ts --project=chromium",
     "test:lighthouse": "rm -rf lighthouse-report .lighthouseci && lhci autorun; open $(node -e \"const m=require('./lighthouse-report/manifest.json');console.log(m.find(r=>r.isRepresentativeRun).htmlPath)\")"
