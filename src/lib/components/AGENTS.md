@@ -19,6 +19,7 @@ Svelte 5 components with co-located DOM tests. All components use scoped `<style
 - **`ColorSwatch.svelte`** — individual color swatch (click-to-copy, drawer trigger)
 - **`ColorInfoDrawer.svelte`** — slide-out panel showing color details (hex, rgb, oklch, hsl, contrast, name)
 - **`DisplaySettings.svelte`** — settings card with color space, gamut, theme, swatch labels, and contrast algorithm options
+- **`SliderNumberField.svelte`** — reusable grouped range + number input control with shared accessibility semantics
 - **`DynamicSvg.svelte`** — dynamic SVG rendering with DOMPurify sanitization
 - **`AppHeader.svelte`** / **`Sidebar.svelte`** / **`Card.svelte`** / **`Brand.svelte`** — layout components
 
@@ -28,6 +29,7 @@ This is an accessibility-focused project. Every component must maintain:
 
 - **ARIA labels** on all interactive elements
 - **Keyboard navigation** support (focus management, key handlers)
+- **Inline slider number inputs** with native spinbutton behavior and synced range values
 - **Screen reader announcements** via `announce()` for state changes
 - Never remove ARIA attributes, keyboard handlers, or screen reader announcements without replacement
 
@@ -45,6 +47,7 @@ This is an accessibility-focused project. Every component must maintain:
 
 - **Rendering**: Component renders with expected structure, ARIA attributes present
 - **User events**: Click, input, keyboard interactions update state correctly
+- **Inline slider number input behavior**: native spinbutton controls, slider/input sync, range clamping
 - **Store integration**: Component reads from and writes to stores as expected
 - **Accessibility**: ARIA labels, roles, keyboard navigation work correctly
 

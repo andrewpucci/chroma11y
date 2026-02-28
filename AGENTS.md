@@ -176,6 +176,7 @@ This is an accessibility-focused project. Maintain these patterns globally:
 - **Screen reader announcements** via `announce()` dispatching `app:announce` custom events to an aria-live region
 - **ARIA labels** on all interactive elements
 - **Keyboard navigation** support throughout
+- **Inline slider number inputs** must remain keyboard accessible and sync with their paired range sliders
 - **Skip link** to main content
 - **Contrast ratios** displayed for every swatch (WCAG 2.2 AA 4.5:1 or APCA Lc 60 threshold, configurable)
 - `role="application"` on the app shell

@@ -46,6 +46,7 @@ Tests run in Chromium, Firefox, and WebKit.
 - SVG coordinate interactions and viewport-dependent behavior
 - Cross-browser compatibility
 - End-to-end workflows (input -> generation -> output/export)
+- Inline slider numeric input flows (spinbutton entry, native steppers, slider sync, and clamping)
 - Visual states through Argos capture points
 
 ## Relationship to unit tests

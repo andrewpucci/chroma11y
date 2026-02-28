@@ -97,6 +97,7 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 - **Responsive** - Container queries and modern CSS for all screen sizes
 - **Fast performance** - All operations <200ms
 - **Intuitive controls** - Easy-to-use interface
+- **Direct slider value entry** - Use inline number inputs with native steppers beside each slider
 
 <p align="right"><a href="#chroma11y">↑ back to top</a></p>
 
@@ -153,6 +154,8 @@ npm run dev
 3. **Fine-tune colors** - Use lightness and hue nudgers for precise adjustments
 4. **Set contrast mode** - Choose auto or manual contrast for text colors
 5. **Export** - Download as JSON, CSS, or SCSS
+
+Tip: each slider includes an inline number input with native up/down arrows for precise adjustments.
 
 ### Control Explanations
 
