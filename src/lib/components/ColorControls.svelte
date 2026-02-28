@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import BezierEditor from './BezierEditor.svelte';
+  import SliderNumberField from './SliderNumberField.svelte';
   import { getChromaMultiplierBounds } from '$lib/chromaMultiplier';
   import type { GamutSpace } from '$lib/types';
 
@@ -34,11 +35,65 @@
     onRangeDragEnd
   }: Props = $props();
 
+  interface RangeConfig {
+    min: number;
+    max: number;
+    step: number;
+  }
+
+  const WARMTH_RANGE: RangeConfig = { min: -50, max: 50, step: 1 };
+  const NUM_COLORS_RANGE: RangeConfig = { min: 2, max: 20, step: 1 };
+  const NUM_PALETTES_RANGE: RangeConfig = { min: 1, max: 11, step: 1 };
+  const SATURATION_STEP = 0.01;
+
   const saturationBounds = $derived(getChromaMultiplierBounds(gamutSpace));
+  const SATURATION_RANGE = $derived<RangeConfig>({
+    min: saturationBounds.min,
+    max: saturationBounds.max,
+    step: SATURATION_STEP
+  });
 
   let isDraggingCounts = $state(false);
   let activePointerId: number | null = $state(null);
   let hasWindowListeners = false;
+
+  function getStepPrecision(stepValue: number): number {
+    if (!Number.isFinite(stepValue) || stepValue <= 0) return 0;
+    const serialized = stepValue.toString();
+    const pointIndex = serialized.indexOf('.');
+    return pointIndex === -1 ? 0 : serialized.length - pointIndex - 1;
+  }
+
+  function clampToRange(rawValue: number, min: number, max: number, step: number): number {
+    if (!Number.isFinite(rawValue)) return min;
+    const clamped = Math.max(min, Math.min(max, rawValue));
+    if (!Number.isFinite(step) || step <= 0) {
+      return clamped;
+    }
+    const stepped = min + Math.round((clamped - min) / step) * step;
+    const precision = getStepPrecision(step);
+    return Number(Math.max(min, Math.min(max, stepped)).toFixed(precision));
+  }
+
+  function clampWithRange(rawValue: number, range: RangeConfig): number {
+    return clampToRange(rawValue, range.min, range.max, range.step);
+  }
+
+  function clampWarmthFromInput() {
+    warmth = clampWithRange(warmth, WARMTH_RANGE);
+  }
+
+  function clampSaturationFromInput() {
+    chromaMultiplier = clampWithRange(chromaMultiplier, SATURATION_RANGE);
+  }
+
+  function clampNumColorsFromInput() {
+    numColors = clampWithRange(numColors, NUM_COLORS_RANGE);
+  }
+
+  function clampNumPalettesFromInput() {
+    numPalettes = clampWithRange(numPalettes, NUM_PALETTES_RANGE);
+  }
 
   function cleanupWindowListeners() {
     if (!hasWindowListeners) return;
@@ -114,59 +169,61 @@
       </div>
     </div>
 
-    <div class="field">
-      <label class="label" for="warmth">Warmth ({warmth})</label>
-      <div class="slider-wrapper">
-        <input id="warmth" type="range" min="-50" max="50" bind:value={warmth} tabindex="0" />
-      </div>
-    </div>
+    <SliderNumberField
+      id="warmth"
+      label="Warmth"
+      valueInputLabel="Warmth value input"
+      min={WARMTH_RANGE.min}
+      max={WARMTH_RANGE.max}
+      step={WARMTH_RANGE.step}
+      bind:value={warmth}
+      groupHelpText={`Range ${WARMTH_RANGE.min} to ${WARMTH_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+      onNumberInput={clampWarmthFromInput}
+      onNumberBlur={clampWarmthFromInput}
+    />
 
-    <div class="field">
-      <label class="label" for="saturation">Saturation ({chromaMultiplier.toFixed(2)})</label>
-      <div class="slider-wrapper">
-        <input
-          id="saturation"
-          type="range"
-          min={saturationBounds.min}
-          max={saturationBounds.max}
-          step="0.01"
-          bind:value={chromaMultiplier}
-          tabindex="0"
-        />
-      </div>
-    </div>
+    <SliderNumberField
+      id="saturation"
+      label="Saturation"
+      valueInputLabel="Saturation value input"
+      min={SATURATION_RANGE.min}
+      max={SATURATION_RANGE.max}
+      step={SATURATION_RANGE.step}
+      bind:value={chromaMultiplier}
+      groupHelpText="Range follows the selected gamut mapping. Use slider for coarse adjustment and number input for precise adjustment."
+      onNumberInput={clampSaturationFromInput}
+      onNumberBlur={clampSaturationFromInput}
+    />
 
-    <div class="field">
-      <label class="label" for="numColors">Number of Colors ({numColors})</label>
-      <div class="slider-wrapper">
-        <input
-          id="numColors"
-          type="range"
-          min="2"
-          max="20"
-          bind:value={numColors}
-          onpointerdown={handlePointerDown}
-          oninput={handleKeyboardInput}
-          tabindex="0"
-        />
-      </div>
-    </div>
+    <SliderNumberField
+      id="numColors"
+      label="Number of Colors"
+      valueInputLabel="Number of colors value input"
+      min={NUM_COLORS_RANGE.min}
+      max={NUM_COLORS_RANGE.max}
+      step={NUM_COLORS_RANGE.step}
+      bind:value={numColors}
+      groupHelpText={`Range ${NUM_COLORS_RANGE.min} to ${NUM_COLORS_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+      onRangePointerDown={handlePointerDown}
+      onRangeInput={handleKeyboardInput}
+      onNumberInput={clampNumColorsFromInput}
+      onNumberBlur={clampNumColorsFromInput}
+    />
 
-    <div class="field">
-      <label class="label" for="numPalettes">Number of Palettes ({numPalettes})</label>
-      <div class="slider-wrapper">
-        <input
-          id="numPalettes"
-          type="range"
-          min="1"
-          max="11"
-          bind:value={numPalettes}
-          onpointerdown={handlePointerDown}
-          oninput={handleKeyboardInput}
-          tabindex="0"
-        />
-      </div>
-    </div>
+    <SliderNumberField
+      id="numPalettes"
+      label="Number of Palettes"
+      valueInputLabel="Number of palettes value input"
+      min={NUM_PALETTES_RANGE.min}
+      max={NUM_PALETTES_RANGE.max}
+      step={NUM_PALETTES_RANGE.step}
+      bind:value={numPalettes}
+      groupHelpText={`Range ${NUM_PALETTES_RANGE.min} to ${NUM_PALETTES_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+      onRangePointerDown={handlePointerDown}
+      onRangeInput={handleKeyboardInput}
+      onNumberInput={clampNumPalettesFromInput}
+      onNumberBlur={clampNumPalettesFromInput}
+    />
   </div>
 
   <div class="divider"></div>
@@ -188,10 +245,6 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-md);
-  }
-
-  input[type='range'] {
-    width: 100%;
   }
 
   .base-color-row {
@@ -263,33 +316,5 @@
   .bezier-section {
     display: grid;
     gap: var(--space-sm);
-  }
-
-  /* Touch-friendly on mobile */
-  @media (max-width: 768px) {
-    input[type='range'] {
-      height: var(--touch-target-comfortable);
-      touch-action: manipulation;
-    }
-  }
-
-  .slider-wrapper:focus-within {
-    outline: 3px solid white;
-    box-shadow: 0 0 0 6px black;
-  }
-
-  .slider-wrapper input:focus-visible {
-    outline: none;
-    box-shadow: none;
-  }
-
-  .slider-wrapper {
-    width: 100%;
-    padding: 0 var(--space-sm);
-    box-sizing: border-box;
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 </style>
