@@ -80,6 +80,7 @@
   "dependencies": {
     "@fontsource-variable/atkinson-hyperlegible-mono": "^5.2.5",
     "@fontsource-variable/atkinson-hyperlegible-next": "^5.2.6",
+    "@tabler/icons-svelte-runes": "^3.37.1",
     "bezier-easing": "^2.1.0",
     "color-name-list": "^14.33.0",
     "colorjs.io": "^0.6.1",
