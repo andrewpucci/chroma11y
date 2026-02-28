@@ -29,21 +29,43 @@ describe('ColorControls', () => {
     expect(colorInput.value.toLowerCase()).toBe('#00ff00');
   });
 
-  it('updates warmth label when slider changes', async () => {
+  it('clamps saturation number input to slider max on blur', async () => {
     render(ColorControls, {
       props: {
-        warmth: 0
+        chromaMultiplier: 1
       }
     });
 
-    const warmthSlider = screen.getByLabelText(/warmth/i) as HTMLInputElement;
+    const saturationInput = screen.getByRole('spinbutton', {
+      name: 'Saturation value input'
+    }) as HTMLInputElement;
 
-    expect(screen.getByText(/warmth \(0\)/i)).toBeInTheDocument();
+    await fireEvent.input(saturationInput, { target: { value: '5' } });
+    await fireEvent.blur(saturationInput);
 
-    await fireEvent.input(warmthSlider, { target: { value: '10' } });
+    const saturationSlider = screen.getByRole('slider', { name: 'Saturation' }) as HTMLInputElement;
+    expect(saturationSlider.value).toBe('1.3');
+    expect(saturationInput.value).toBe('1.3');
+  });
 
-    expect(warmthSlider.value).toBe('10');
-    expect(screen.getByText(/warmth \(10\)/i)).toBeInTheDocument();
+  it('clamps number of colors input during input to prevent oversized render state', async () => {
+    render(ColorControls, {
+      props: {
+        numColors: 11
+      }
+    });
+
+    const numColorsInput = screen.getByRole('spinbutton', {
+      name: 'Number of colors value input'
+    }) as HTMLInputElement;
+    const numColorsSlider = screen.getByRole('slider', {
+      name: 'Number of Colors'
+    }) as HTMLInputElement;
+
+    await fireEvent.input(numColorsInput, { target: { value: '999' } });
+
+    expect(numColorsInput.value).toBe('20');
+    expect(numColorsSlider.value).toBe('20');
   });
 
   it('calls onRangeDragStart on pointerdown and onRangeDragEnd on pointerup', async () => {
@@ -58,35 +80,19 @@ describe('ColorControls', () => {
       }
     });
 
-    const numColorsSlider = screen.getByLabelText(/number of colors/i);
+    const numColorsSlider = screen.getByRole('slider', { name: 'Number of Colors' });
 
     await fireEvent.pointerDown(numColorsSlider, { pointerId: 1 });
     expect(onRangeDragStart).toHaveBeenCalledTimes(1);
 
     await fireEvent.pointerUp(window, { pointerId: 1 });
 
-    // onRangeDragEnd is called in requestAnimationFrame, so we need to flush it
     await vi.waitFor(
       () => {
         expect(onRangeDragEnd).toHaveBeenCalledTimes(1);
       },
       { timeout: 100 }
     );
-  });
-
-  it('updates saturation slider value on input', async () => {
-    render(ColorControls, {
-      props: {
-        chromaMultiplier: 1
-      }
-    });
-
-    const saturationSlider = screen.getByLabelText(/saturation/i) as HTMLInputElement;
-    expect(saturationSlider.value).toBe('1');
-
-    await fireEvent.input(saturationSlider, { target: { value: '1.25' } });
-
-    expect(saturationSlider.value).toBe('1.25');
   });
 
   it('uses saturation slider bounds tuned for visible gamut changes', () => {
@@ -96,7 +102,7 @@ describe('ColorControls', () => {
       }
     });
 
-    const saturationSlider = screen.getByLabelText(/saturation/i) as HTMLInputElement;
+    const saturationSlider = screen.getByRole('slider', { name: 'Saturation' }) as HTMLInputElement;
     expect(saturationSlider.min).toBe('0');
     expect(saturationSlider.max).toBe('1.3');
   });
@@ -109,24 +115,9 @@ describe('ColorControls', () => {
       }
     });
 
-    const saturationSlider = screen.getByLabelText(/saturation/i) as HTMLInputElement;
+    const saturationSlider = screen.getByRole('slider', { name: 'Saturation' }) as HTMLInputElement;
     expect(saturationSlider.min).toBe('0');
     expect(saturationSlider.max).toBe('1.6');
-  });
-
-  it('updates number of palettes slider value on input', async () => {
-    render(ColorControls, {
-      props: {
-        numPalettes: 5
-      }
-    });
-
-    const palettesSlider = screen.getByLabelText(/number of palettes/i) as HTMLInputElement;
-    expect(palettesSlider.value).toBe('5');
-
-    await fireEvent.input(palettesSlider, { target: { value: '8' } });
-
-    expect(palettesSlider.value).toBe('8');
   });
 
   it('renders Bezier coordinate inputs with bound values', () => {

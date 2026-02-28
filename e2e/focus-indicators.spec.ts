@@ -20,12 +20,16 @@ test.describe('Focus Indicators', () => {
       const hexInput = page.locator('#baseColorHex');
       await hexInput.focus();
 
-      // Verify tab order from hex input through remaining controls
+      // Verify tab order from hex input through remaining controls.
       const expectedTabOrder = [
         { selector: '#warmth' },
+        { selector: '[aria-label="Warmth value input"]' },
         { selector: '#saturation' },
+        { selector: '[aria-label="Saturation value input"]' },
         { selector: '#numColors' },
+        { selector: '[aria-label="Number of colors value input"]' },
         { selector: '#numPalettes' },
+        { selector: '[aria-label="Number of palettes value input"]' },
         { selector: '.bezier-editor [role="slider"]', index: 0 },
         { selector: '.bezier-editor [role="slider"]', index: 1 },
         { selector: '#bezier-p1-x' },

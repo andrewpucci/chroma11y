@@ -116,4 +116,25 @@ test.describe('UI Interactions', () => {
       expect(newHex).not.toBe(initialHex);
     });
   });
+
+  test.describe('Slider Numeric Input', () => {
+    test('supports inline numeric editing with clamp behavior', async ({ page }) => {
+      await page.getByRole('spinbutton', { name: 'Warmth value input' }).fill('12');
+      await expect(page.locator('#warmth')).toHaveValue('12');
+
+      const numColorsInput = page.getByRole('spinbutton', { name: 'Number of colors value input' });
+      await numColorsInput.fill('99');
+      await expect(numColorsInput).toHaveValue('20');
+      await expect(page.locator('#numColors')).toHaveValue('20');
+
+      await page.getByRole('spinbutton', { name: 'Number of palettes value input' }).fill('7');
+      await expect(page.locator('#numPalettes')).toHaveValue('7');
+
+      await page.locator('#display-color-space').selectOption('oklch');
+      await page
+        .getByRole('spinbutton', { name: 'OKLCH significant digits value input' })
+        .fill('6');
+      await expect(page.locator('#oklch-significant-digits')).toHaveValue('6');
+    });
+  });
 });

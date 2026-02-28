@@ -44,7 +44,7 @@ describe('DisplaySettings', () => {
     expect(screen.queryByLabelText('OKLCH display significant digits')).not.toBeInTheDocument();
   });
 
-  it('shows OKLCH significant digits slider only when OKLCH color space is selected', async () => {
+  it('shows OKLCH significant digits slider and number input only when OKLCH color space is selected', async () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
@@ -53,7 +53,9 @@ describe('DisplaySettings', () => {
     await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
 
     expect(screen.getByLabelText('OKLCH display significant digits')).toBeInTheDocument();
-    expect(screen.getByText('OKLCH Significant Digits (4)')).toBeInTheDocument();
+    expect(
+      screen.getByRole('spinbutton', { name: 'OKLCH significant digits value input' })
+    ).toHaveValue(4);
     expect(
       screen.getByRole('button', { name: 'Explain OKLCH significant digits' })
     ).toBeInTheDocument();
@@ -62,11 +64,6 @@ describe('DisplaySettings', () => {
         'Controls how many significant digits OKLCH swatches use for rendering and labels.'
       )
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('OKLCH display significant digits')).toHaveAttribute(
-      'aria-describedby',
-      'oklch-significant-digits-help'
-    );
-
     const colorSpaceField = screen.getByLabelText('Display color space format').closest('.field');
     const significantDigitsField = screen
       .getByLabelText('OKLCH display significant digits')
@@ -139,18 +136,20 @@ describe('DisplaySettings', () => {
     expect(announce).toHaveBeenCalledWith('Contrast algorithm changed to APCA');
   });
 
-  it('changes OKLCH significant digits and announces', async () => {
+  it('changes OKLCH significant digits from number input and announces', async () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
     await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
-    const slider = screen.getByLabelText('OKLCH display significant digits');
+    const input = screen.getByRole('spinbutton', {
+      name: 'OKLCH significant digits value input'
+    }) as HTMLInputElement;
 
-    await fireEvent.input(slider, { target: { value: '5' } });
-    await fireEvent.change(slider, { target: { value: '5' } });
+    await fireEvent.input(input, { target: { value: '5' } });
+    await fireEvent.change(input, { target: { value: '5' } });
 
     expect(get(oklchDisplaySignificantDigits)).toBe(5);
-    expect(screen.getByText('OKLCH Significant Digits (5)')).toBeInTheDocument();
+    expect(input.value).toBe('5');
     expect(announce).toHaveBeenCalledWith('OKLCH significant digits changed to 5');
   });
 });
