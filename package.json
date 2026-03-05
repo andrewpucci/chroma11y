@@ -84,6 +84,6 @@
     "bezier-easing": "^2.1.0",
     "color-name-list": "^14.33.0",
     "colorjs.io": "^0.6.1",
-    "dompurify": "^3.3.1"
+    "dompurify": "^3.3.2"
   }
 }
