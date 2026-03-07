@@ -1,96 +1,71 @@
 # AGENTS.md
 
-Global instructions for Cascade. Directory-specific guidance lives in scoped `AGENTS.md` files (`src/lib/`, `src/lib/components/`, `e2e/`).
+Global instructions for agents working in this codebase. Directory-specific guidance lives in scoped `AGENTS.md` files (`src/lib/`, `src/lib/components/`, `e2e/`).
 
-Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG 2.2 and APCA contrast checking, configurable display color spaces, and multiple export formats. It is a single-page app (SPA) built with Svelte 5 and SvelteKit, deployed as a static site.
+Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG 2.2 and APCA contrast checking, configurable display color spaces, and multiple export formats. Single-page app (SPA) built with Svelte 5 + SvelteKit, deployed as a static site.
 
-The UI uses a comprehensive design token system for consistent spacing, typography, and motion, with fluid scaling and WCAG 2.2 AA compliance.
+## Build commands
 
-## Setup commands
+| Command           | Description                                   |
+| ----------------- | --------------------------------------------- |
+| `npm install`     | Install dependencies                          |
+| `npm run dev`     | Start Vite dev server (http://localhost:5173) |
+| `npm run build`   | Build for production                          |
+| `npm run preview` | Preview production build (port 4173)          |
 
-- Install deps: `npm install`
-- Start dev server: `npm run dev` (Vite, usually http://localhost:5173)
-- Build for production: `npm run build`
-- Preview production build: `npm run preview`
+## Running tests
 
-## Testing
-
-This project has three test layers. **All tests must pass before any commit.**
-
-### Unit tests (Vitest)
+**Single test file:**
 
 ```sh
-npm run test:unit        # watch mode
-npm run test:unit -- --run  # single run
-npm run test:coverage  # single run with coverage report
+npm run test:unit -- src/lib/colorUtils.spec.ts          # server (Node)
+npm run test:unit -- src/lib/components/ColorSwatch.dom.spec.ts  # dom (jsdom)
 ```
 
-- Pure logic tests live alongside source: `src/lib/*.spec.ts`
-- DOM component tests: `src/lib/components/*.dom.spec.ts` (jsdom + @testing-library/svelte)
-- Browser component tests: `src/**/*.svelte.{test,spec}.ts` (Vitest browser mode with Playwright)
-
-Vitest is configured with **three projects** in `vite.config.ts`:
-
-| Project  | Environment               | File pattern                                                   |
-| -------- | ------------------------- | -------------------------------------------------------------- |
-| `dom`    | jsdom                     | `src/**/*.dom.{test,spec}.{js,ts}`                             |
-| `client` | Vitest browser/Playwright | `src/**/*.svelte.{test,spec}.{js,ts}`                          |
-| `server` | Node                      | `src/**/*.{test,spec}.{js,ts}` (excluding dom/svelte patterns) |
-
-`expect.requireAssertions` is enabled globally — every test must contain at least one assertion.
-
-### E2E tests (Playwright)
+**Single test in file:**
 
 ```sh
-npm run test:e2e            # Docker (CI-matching, recommended)
-npm run test:e2e:local      # run Playwright directly on host machine
-npm run test:e2e:netlify-smoke  # deploy-preview smoke checks (Chromium)
-npx playwright test --ui    # interactive UI mode (local debugging)
+npm run test:unit -- src/lib/colorUtils.spec.ts -t "test name"
 ```
 
-- Test files: `e2e/*.spec.ts`
-- `npm run test:e2e` runs via `docker compose run --rm test` for local/CI parity
-- Playwright still targets a production preview server (port 4173) via web server config
-- Tests run in Chromium, Firefox, and WebKit
-- CI visual gating runs through Argos captures from local production preview in `e2e.yml`
-- Netlify deploy-preview checks run separately in `netlify-smoke.yml` (non-visual smoke coverage)
-- Playwright file snapshot baselines are not used; visual coverage is maintained via Argos-only checkpoints
-
-### Run everything
+**Run all:**
 
 ```sh
-npm test
+npm run test:unit -- --run    # unit only, single run
+npm run test:e2e              # Docker (CI-matching)
+npm run test:e2e:local        # Playwright directly
+npm test                      # unit + e2e
 ```
 
-This runs unit tests (single run) followed by E2E tests.
+Test layers - **all must pass before commit**:
 
-### Testing principles
+| Layer         | What                                              | File pattern                                                                    |
+| ------------- | ------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Unit (server) | Pure functions, algorithms                        | `src/**/*.{test,spec}.{js,ts}` (excluding `.dom` and `.svelte` tests)          |
+| Unit (dom)    | Component rendering, user events, ARIA            | `src/**/*.dom.{test,spec}.{js,ts}`                                              |
+| Unit (client) | Browser-based Svelte component tests (Playwright) | `src/**/*.svelte.{test,spec}.{js,ts}`                                           |
+| E2E           | Full user flows, visual output, drag interactions | `e2e/*.spec.ts`                                                                 |
 
-When writing or modifying tests, follow these principles:
+**Testing principles:**
 
-1. **Test your own code, not dependencies** — Don't test that `colorjs.io` calculates contrast correctly; test that your wrapper functions handle inputs/outputs as expected
-2. **Avoid duplicate coverage** — Don't test the same logic in multiple places unless testing different integration points
-3. **Document intentional coverage gaps** — If code can't be reliably unit tested (e.g., pointer drag interactions in jsdom), add a JSDoc comment explaining why and reference the E2E test that covers it
-4. **Prefer integration over isolation** — Component tests that verify real user interactions are more valuable than mocking every dependency
-5. **Keep tests focused** — Each test should verify one behavior; use descriptive `it()` names
+- Test your own code, not dependencies — test wrapper function behavior
+- Avoid duplicate coverage — don't test same logic in multiple places unless testing different integration points
+- Document intentional coverage gaps — add JSDoc comment explaining why and reference the E2E test
+- Prefer integration over isolation — component tests with real interactions are more valuable than mocking everything
+- Keep tests focused — each test verifies one behavior, use descriptive `it()` names
 
-### What belongs in each test layer
+**What belongs in each layer:**
 
-| Layer             | Test                                                                      | Don't Test                                                          |
-| ----------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Unit (server)** | Pure functions, algorithms, data transformations, store logic             | DOM interactions, browser APIs                                      |
-| **Unit (dom)**    | Component rendering, user events, ARIA attributes, store integration      | Pointer capture, SVG coordinate transforms, `getBoundingClientRect` |
-| **E2E**           | Full user flows, visual output, cross-browser behavior, drag interactions | Internal implementation details                                     |
+- Unit (server): Pure functions, algorithms, data transformations — NOT DOM interactions
+- Unit (dom): Component rendering, user events, ARIA attributes — NOT pointer capture or SVG transforms
+- Unit (client): Browser-mode Svelte component behavior (`.svelte.spec.ts`) — NOT full app flows
+- E2E: Full user flows, visual output, cross-browser behavior, drag interactions
 
-### Coverage gaps that are intentional
+**Intentional coverage gaps:**
 
-Some code paths are intentionally not covered by unit tests:
-
-- **Pointer/drag interactions** in `BezierEditor.svelte` — jsdom doesn't support `getBoundingClientRect` or pointer capture realistically; tested via E2E
-- **Defensive error handling** — Try/catch blocks for truly exceptional conditions (out of memory, malformed data from external sources) are documented inline
-- **Browser environment guards** — SSR checks like `typeof window !== 'undefined'` can't be meaningfully unit tested
-
-When adding defensive code, include a JSDoc comment explaining why it's not unit tested.
+- Pointer/drag interactions in BezierEditor — jsdom doesn't support getBoundingClientRect or pointer capture; tested via E2E
+- Defensive error handling — try/catch for exceptional conditions documented inline
+- Browser environment guards (typeof window !== 'undefined') can't be meaningfully unit tested
 
 ## Linting & formatting
 
@@ -101,122 +76,69 @@ npm run format     # Prettier write
 npm run check      # svelte-check (type checking)
 ```
 
-- Prettier: 2-space indent, single quotes, no trailing commas, 100 char print width
-- ESLint: recommended JS/TS rules + svelte plugin + prettier compat
-- TypeScript: strict mode, bundler module resolution
-
-## Tech stack
-
-- **Framework**: Svelte 5 with SvelteKit (static adapter, SPA mode with `index.html` fallback)
-- **Language**: TypeScript 5.9, strict mode
-- **Build**: Vite 7
-- **Color science**: `colorjs.io` (OKLCH, gamut mapping, WCAG 2.2 contrast, APCA contrast, CIEDE2000 delta)
-- **Easing**: `bezier-easing` (lightness curve control points)
-- **Color naming**: `color-name-list` (CIEDE2000 nearest-match)
-- **HTML sanitization**: `dompurify`
-- **Testing**: Vitest 4 (unit/DOM/browser) + Playwright (E2E) + @testing-library/svelte
-- **Node**: ≥24.13.0
-
-## Project structure
-
-```
-src/
-├── lib/
-│   ├── components/          # Svelte 5 components (.svelte) + co-located DOM tests (.dom.spec.ts)
-│   ├── styles/
-│   │   ├── tokens.css       # Design token system (typography, spacing, motion, etc.)
-│   │   ├── tokens.spec.ts   # Unit tests for token definitions
-│   │   └── nudger.css       # Shared nudger input styles
-│   ├── colorUtils.ts        # Core color generation algorithms (OKLCH, bezier, contrast, naming)
-│   ├── exportUtils.ts       # Export format generators (JSON design tokens, CSS, SCSS)
-│   ├── stores.ts            # Svelte writable/derived stores (central state)
-│   ├── storageUtils.ts      # localStorage persistence
-│   ├── urlUtils.ts          # URL state encoding/decoding
-│   ├── drawerStore.ts       # Color info drawer state
-│   ├── announce.ts          # Screen reader announcement utility (aria-live)
-│   └── types.ts             # Shared TypeScript interfaces
-├── routes/
-│   ├── +page.svelte         # Main application page (single route)
-│   ├── +layout.svelte       # Root layout (imports tokens.css)
-│   └── +layout.ts           # Disables SSR (prerender + SPA)
-└── app.html                 # HTML shell
-e2e/                         # Playwright E2E test specs (including design-tokens.spec.ts)
-scripts/                     # Build-time scripts (favicon generation)
-static/                      # Static assets (favicon, manifest, robots.txt)
-```
-
-## Architecture & patterns
-
-Detailed store patterns, color generation pipeline, persistence, export formats, and component inventory are documented in the scoped `AGENTS.md` files under `src/lib/` and `src/lib/components/`.
-
-### Design Token System
-
-The UI uses a comprehensive design token system (`src/lib/styles/tokens.css`) for consistent spacing, typography, and motion:
-
-- **Fluid typography**: T-shirt sized (xs/sm/md/lg/xl) using `clamp()` for viewport-responsive scaling
-- **Fluid spacing**: T-shirt sized, visually consistent with typography scale
-- **Fluid border radii**: T-shirt sized, proportional to spacing tokens
-- **Motion tokens**: Built-in `prefers-reduced-motion` support (durations become 0ms when reduced)
-- **Touch targets**: WCAG 2.2 AA compliant (24px minimum, 44px comfortable)
-- **Variable fonts**: Smooth weight transitions using `font-variation-settings`
-- **Container queries**: Used for component-scoped responsive design where appropriate
-- **Modern CSS**: Logical properties, modern easing functions (`cubic-bezier`), `:has()` selector
-
-All hardcoded CSS values should use design tokens. Never add new static `px` values — use or extend the token system.
-
-When adding or changing CSS custom properties:
-
-- Ensure every `var(--token)` reference has a matching definition in `tokens.css` or component-local CSS.
-- Run `npm run test:unit -- --run src/lib/styles/tokens.spec.ts` before committing to catch undefined token references.
-
-### Accessibility
-
-This is an accessibility-focused project. Maintain these patterns globally:
-
-- **Screen reader announcements** via `announce()` dispatching `app:announce` custom events to an aria-live region
-- **ARIA labels** on all interactive elements
-- **Keyboard navigation** support throughout
-- **Inline slider number inputs** must remain keyboard accessible and sync with their paired range sliders
-- **Skip link** to main content
-- **Contrast ratios** displayed for every swatch (WCAG 2.2 AA 4.5:1 or APCA Lc 60 threshold, configurable)
-- `role="application"` on the app shell
-- Never remove ARIA attributes, keyboard handlers, or screen reader announcements without replacement
-
-## Svelte 5 conventions
-
-This project uses **Svelte 5 with runes**. Follow these patterns:
-
-- Use `$state()` for reactive local state, `$derived()` for computed values, `$effect()` for side effects
-- Use `$props()` for component props (not `export let`)
-- Use `bind:` for two-way bindings
-- Use `onclick={handler}` event attributes (not `on:click`)
-- Use `{#snippet}` and `{@render}` instead of slots where applicable
-- Stores use the classic `writable`/`derived` API from `svelte/store` (not runes) — this is intentional for cross-module shared state
-- Component DOM tests use `@testing-library/svelte` with `render()` and `screen` queries
-- Scoped `<style>` blocks for component CSS — no Tailwind, no CSS-in-JS
-
 ## Code style
 
-- TypeScript strict mode — no `any` unless absolutely necessary
-- JSDoc comments on all functions (public, exported, and internal)
-- Prettier formatting: 2 spaces, single quotes, no trailing commas, 100 char width
-- Keep components focused and single-purpose
-- Pure functions preferred — side effects isolated to stores and `$effect()`
-- Error handling: try/catch with fallback values (never crash the UI)
-- Color objects (`colorjs.io` `Color`) are the internal representation; hex conversion happens at the store/display layer
-- Helper functions mutate the store: `updateColorState()`, `setTheme()`, `setThemePreference()`, `updateLightnessNudger()`, `updateHueNudger()`, `updateContrastFromNeutrals()`, `updateContrastStep()`, `resetColorState()`
+### TypeScript
+
+- Strict mode — no `any` unless absolutely necessary
+- Explicit return types on exported functions
+- Use interfaces over types for public APIs
+
+### Prettier: 2 spaces, single quotes, no trailing commas, 100 char width
+
+### Imports ordering
+
+1. Svelte/core (`svelte`, `svelte/store`)
+2. Third-party (`colorjs.io`, etc.)
+3. `$lib/` relative imports
+4. Same directory
+
+### Naming conventions
+
+- Files: PascalCase components (`ColorSwatch.svelte`), camelCase utils (`colorUtils.ts`)
+- Functions: camelCase with verb prefixes (`generatePalettes`, `getContrast`)
+- Constants: SCREAMING_SNAKE_CASE config, camelCase exports
+- Types/Interfaces: PascalCase
+
+### JSDoc & Error handling
+
+- Required on all exported functions (include @param, @returns)
+- Never crash the UI — try/catch with fallback values
+- Document defensive code with JSDoc explaining why it can't be unit tested
+
+## Svelte 5 conventions (runes)
+
+- `$state()`, `$derived()`, `$effect()` for local reactivity
+- `$props()` (not `export let`)
+- `onclick={handler}` (not `on:click`)
+- `{#snippet}` / `{@render}` instead of slots
+- Stores use classic `writable`/`derived` from `svelte/store` (not runes)
+- Scoped `<style>` blocks — no Tailwind, no CSS-in-JS
+
+## Design tokens
+
+All hardcoded CSS values should use design tokens from `src/lib/styles/tokens.css`. Never add new static `px` values — use or extend the token system. Run token tests before committing: `npm run test:unit -- --run src/lib/styles/tokens.spec.ts`
+
+## Accessibility (critical)
+
+- Screen reader announcements via `announce()` to aria-live region
+- ARIA labels on all interactive elements
+- Keyboard navigation throughout
+- Inline slider number inputs must remain keyboard accessible and sync with range sliders
+- Contrast ratios displayed for every swatch (WCAG 2.2 AA or APCA)
+- Never remove ARIA attributes, keyboard handlers, or announcements without replacement
 
 ## Security
 
-- HTML content sanitized with DOMPurify before rendering
-- URL parameters validated with strict bounds checking (type, range, format)
+- HTML sanitized with DOMPurify
+- URL params validated (strict bounds checking)
 - localStorage reads wrapped in try/catch with shape validation
-- No external API calls — all computation is client-side
+- No external API calls — all client-side
 
 ## PR guidelines
 
-- Run `npm run lint && npm run check && npm test` before committing
-- For dependency upgrades, bump `package.json` ranges to known-good minimums and commit `package-lock.json` in the same PR
-- Add or update tests for any code you change
-- Commit message format: `prefix: short description` (e.g., `feat:`, `fix:`, `tweak:`, `refactor:`, `test:`, `docs:`, `chore:`)
-- Keep accessibility intact — never remove ARIA attributes, keyboard handlers, or screen reader announcements without replacement
+Run before commit: `npm run lint && npm run check && npm test`
+
+- Add/update tests for any code change
+- Commit format: `prefix: description` (feat:, fix:, tweak:, refactor:, test:, docs:, chore:)
+- Keep accessibility intact
