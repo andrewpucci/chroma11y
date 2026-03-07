@@ -46,7 +46,7 @@
     "@playwright/test": "^1.58.2",
     "@resvg/resvg-js": "^2.6.2",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.53.3",
+    "@sveltejs/kit": "^2.53.4",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^5.3.1",
@@ -84,6 +84,6 @@
     "bezier-easing": "^2.1.0",
     "color-name-list": "^14.33.0",
     "colorjs.io": "^0.6.1",
-    "dompurify": "^3.3.1"
+    "dompurify": "^3.3.2"
   }
 }
