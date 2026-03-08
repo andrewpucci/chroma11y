@@ -3,6 +3,7 @@
     IconAlertCircle,
     IconBraces,
     IconBrandSass,
+    IconCheck,
     IconCopy,
     IconFileTypeCss,
     IconRefresh,
@@ -10,7 +11,16 @@
     IconX
   } from '@tabler/icons-svelte-runes';
 
-  type IconName = 'copy' | 'close' | 'json' | 'css' | 'scss' | 'share' | 'reset';
+  type IconName =
+    | 'copy'
+    | 'close'
+    | 'json'
+    | 'css'
+    | 'scss'
+    | 'share'
+    | 'reset'
+    | 'status-pass'
+    | 'status-fail';
 
   interface Props {
     name: IconName;
@@ -25,7 +35,9 @@
     css: IconFileTypeCss,
     share: IconShare,
     reset: IconRefresh,
-    scss: IconBrandSass
+    scss: IconBrandSass,
+    'status-pass': IconCheck,
+    'status-fail': IconX
   } as const satisfies Record<IconName, typeof IconCopy>;
 
   let { name, size = 16, stroke = 1.75 }: Props = $props();

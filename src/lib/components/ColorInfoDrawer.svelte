@@ -8,6 +8,7 @@
     getContrastAPCA,
     getPrintableContrastAPCA,
     MIN_CONTRAST_RATIO,
+    MIN_APCA_LC_FLUENT,
     MIN_APCA_LC_BODY,
     MIN_APCA_LC_LARGE,
     colorToCssHex,
@@ -47,32 +48,54 @@
 
   const lowContrast = $derived.by(() => {
     if (!data)
-      return { wcag: 0, wcagAA: false, wcagAAA: false, apca: 0, apcaLarge: false, apcaBody: false };
+      return {
+        wcag: 0,
+        wcagThreeToOne: false,
+        wcagAA: false,
+        wcagAAA: false,
+        apca: 0,
+        apcaLarge: false,
+        apcaFluent: false,
+        apcaBody: false
+      };
     const hex = colorValues?.hex ?? data.hex;
     const wcag = getContrast(hex, contrastColorsLocal.low);
     const apca = getContrastAPCA(contrastColorsLocal.low, hex);
     return {
       wcag: getPrintableContrast(hex, contrastColorsLocal.low),
+      wcagThreeToOne: wcag >= 3,
       wcagAA: wcag >= MIN_CONTRAST_RATIO,
       wcagAAA: wcag >= WCAG_AAA_RATIO,
       apca: getPrintableContrastAPCA(contrastColorsLocal.low, hex),
       apcaLarge: apca >= MIN_APCA_LC_LARGE,
+      apcaFluent: apca >= MIN_APCA_LC_FLUENT,
       apcaBody: apca >= MIN_APCA_LC_BODY
     };
   });
 
   const highContrast = $derived.by(() => {
     if (!data)
-      return { wcag: 0, wcagAA: false, wcagAAA: false, apca: 0, apcaLarge: false, apcaBody: false };
+      return {
+        wcag: 0,
+        wcagThreeToOne: false,
+        wcagAA: false,
+        wcagAAA: false,
+        apca: 0,
+        apcaLarge: false,
+        apcaFluent: false,
+        apcaBody: false
+      };
     const hex = colorValues?.hex ?? data.hex;
     const wcag = getContrast(hex, contrastColorsLocal.high);
     const apca = getContrastAPCA(contrastColorsLocal.high, hex);
     return {
       wcag: getPrintableContrast(hex, contrastColorsLocal.high),
+      wcagThreeToOne: wcag >= 3,
       wcagAA: wcag >= MIN_CONTRAST_RATIO,
       wcagAAA: wcag >= WCAG_AAA_RATIO,
       apca: getPrintableContrastAPCA(contrastColorsLocal.high, hex),
       apcaLarge: apca >= MIN_APCA_LC_LARGE,
+      apcaFluent: apca >= MIN_APCA_LC_FLUENT,
       apcaBody: apca >= MIN_APCA_LC_BODY
     };
   });
@@ -317,21 +340,52 @@
                 </div>
               </div>
               <div class="contrast-detail">
-                <span class="contrast-algo-label">WCAG 2.1</span>
+                <span class="contrast-algo-label">WCAG 2.2</span>
                 <span class="contrast-ratio mono">{lowContrast.wcag}:1</span>
+                <span
+                  class="badge"
+                  class:badge--pass={lowContrast.wcagThreeToOne}
+                  class:badge--fail={!lowContrast.wcagThreeToOne}
+                  aria-label="Low contrast WCAG 2.2 3 to 1 {lowContrast.wcagThreeToOne ? 'pass' : 'fail'}"
+                >
+                  <span class="badge-icon">
+                    <Icon
+                      name={lowContrast.wcagThreeToOne ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">3:1</span>
+                </span>
                 <span
                   class="badge"
                   class:badge--pass={lowContrast.wcagAA}
                   class:badge--fail={!lowContrast.wcagAA}
+                  aria-label="Low contrast WCAG 2.2 AA {lowContrast.wcagAA ? 'pass' : 'fail'}"
                 >
-                  AA {lowContrast.wcagAA ? 'Pass' : 'Fail'}
+                  <span class="badge-icon">
+                    <Icon
+                      name={lowContrast.wcagAA ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">AA</span>
                 </span>
                 <span
                   class="badge"
                   class:badge--pass={lowContrast.wcagAAA}
                   class:badge--fail={!lowContrast.wcagAAA}
+                  aria-label="Low contrast WCAG 2.2 AAA {lowContrast.wcagAAA ? 'pass' : 'fail'}"
                 >
-                  AAA {lowContrast.wcagAAA ? 'Pass' : 'Fail'}
+                  <span class="badge-icon">
+                    <Icon
+                      name={lowContrast.wcagAAA ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">AAA</span>
                 </span>
               </div>
               <div class="contrast-detail">
@@ -341,15 +395,46 @@
                   class="badge"
                   class:badge--pass={lowContrast.apcaLarge}
                   class:badge--fail={!lowContrast.apcaLarge}
+                  aria-label="Low contrast APCA Large {lowContrast.apcaLarge ? 'pass' : 'fail'}"
                 >
-                  Large {lowContrast.apcaLarge ? 'Pass' : 'Fail'}
+                  <span class="badge-icon">
+                    <Icon
+                      name={lowContrast.apcaLarge ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">Large</span>
+                </span>
+                <span
+                  class="badge"
+                  class:badge--pass={lowContrast.apcaFluent}
+                  class:badge--fail={!lowContrast.apcaFluent}
+                  aria-label="Low contrast APCA Fluent {lowContrast.apcaFluent ? 'pass' : 'fail'}"
+                >
+                  <span class="badge-icon">
+                    <Icon
+                      name={lowContrast.apcaFluent ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">Fluent</span>
                 </span>
                 <span
                   class="badge"
                   class:badge--pass={lowContrast.apcaBody}
                   class:badge--fail={!lowContrast.apcaBody}
+                  aria-label="Low contrast APCA Body {lowContrast.apcaBody ? 'pass' : 'fail'}"
                 >
-                  Body {lowContrast.apcaBody ? 'Pass' : 'Fail'}
+                  <span class="badge-icon">
+                    <Icon
+                      name={lowContrast.apcaBody ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">Body</span>
                 </span>
               </div>
             </div>
@@ -367,21 +452,52 @@
                 </div>
               </div>
               <div class="contrast-detail">
-                <span class="contrast-algo-label">WCAG 2.1</span>
+                <span class="contrast-algo-label">WCAG 2.2</span>
                 <span class="contrast-ratio mono">{highContrast.wcag}:1</span>
+                <span
+                  class="badge"
+                  class:badge--pass={highContrast.wcagThreeToOne}
+                  class:badge--fail={!highContrast.wcagThreeToOne}
+                  aria-label="High contrast WCAG 2.2 3 to 1 {highContrast.wcagThreeToOne ? 'pass' : 'fail'}"
+                >
+                  <span class="badge-icon">
+                    <Icon
+                      name={highContrast.wcagThreeToOne ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">3:1</span>
+                </span>
                 <span
                   class="badge"
                   class:badge--pass={highContrast.wcagAA}
                   class:badge--fail={!highContrast.wcagAA}
+                  aria-label="High contrast WCAG 2.2 AA {highContrast.wcagAA ? 'pass' : 'fail'}"
                 >
-                  AA {highContrast.wcagAA ? 'Pass' : 'Fail'}
+                  <span class="badge-icon">
+                    <Icon
+                      name={highContrast.wcagAA ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">AA</span>
                 </span>
                 <span
                   class="badge"
                   class:badge--pass={highContrast.wcagAAA}
                   class:badge--fail={!highContrast.wcagAAA}
+                  aria-label="High contrast WCAG 2.2 AAA {highContrast.wcagAAA ? 'pass' : 'fail'}"
                 >
-                  AAA {highContrast.wcagAAA ? 'Pass' : 'Fail'}
+                  <span class="badge-icon">
+                    <Icon
+                      name={highContrast.wcagAAA ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">AAA</span>
                 </span>
               </div>
               <div class="contrast-detail">
@@ -391,15 +507,46 @@
                   class="badge"
                   class:badge--pass={highContrast.apcaLarge}
                   class:badge--fail={!highContrast.apcaLarge}
+                  aria-label="High contrast APCA Large {highContrast.apcaLarge ? 'pass' : 'fail'}"
                 >
-                  Large {highContrast.apcaLarge ? 'Pass' : 'Fail'}
+                  <span class="badge-icon">
+                    <Icon
+                      name={highContrast.apcaLarge ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">Large</span>
+                </span>
+                <span
+                  class="badge"
+                  class:badge--pass={highContrast.apcaFluent}
+                  class:badge--fail={!highContrast.apcaFluent}
+                  aria-label="High contrast APCA Fluent {highContrast.apcaFluent ? 'pass' : 'fail'}"
+                >
+                  <span class="badge-icon">
+                    <Icon
+                      name={highContrast.apcaFluent ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">Fluent</span>
                 </span>
                 <span
                   class="badge"
                   class:badge--pass={highContrast.apcaBody}
                   class:badge--fail={!highContrast.apcaBody}
+                  aria-label="High contrast APCA Body {highContrast.apcaBody ? 'pass' : 'fail'}"
                 >
-                  Body {highContrast.apcaBody ? 'Pass' : 'Fail'}
+                  <span class="badge-icon">
+                    <Icon
+                      name={highContrast.apcaBody ? 'status-pass' : 'status-fail'}
+                      size={12}
+                      stroke={2}
+                    />
+                  </span>
+                  <span class="badge-label">Body</span>
                 </span>
               </div>
             </div>
@@ -715,12 +862,30 @@
   }
 
   .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-bold);
     padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-sm);
     text-transform: uppercase;
     letter-spacing: var(--letter-spacing-wide);
+    white-space: nowrap;
+    line-height: 1;
+    min-width: 0;
+  }
+
+  .badge-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 12px;
+    height: 12px;
+    flex: 0 0 12px;
+  }
+
+  .badge-label {
+    min-width: 0;
     white-space: nowrap;
   }
 

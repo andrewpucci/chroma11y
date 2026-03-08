@@ -165,19 +165,27 @@ describe('ColorInfoDrawer', () => {
     expect(screen.getByText('High step')).toBeInTheDocument();
   });
 
-  it('shows both WCAG and APCA badges for both contrast rows', () => {
+  it('shows iconized WCAG and APCA badges for both contrast rows', () => {
     openDrawer(makeDrawerData());
     render(ColorInfoDrawer);
 
-    const aaBadges = screen.getAllByText(/^AA /);
-    const aaaBadges = screen.getAllByText(/^AAA /);
-    const largeBadges = screen.getAllByText(/^Large /);
-    const bodyBadges = screen.getAllByText(/^Body /);
+    const threeToOneBadges = screen.getAllByText('3:1');
+    const aaBadges = screen.getAllByText('AA');
+    const aaaBadges = screen.getAllByText('AAA');
+    const largeBadges = screen.getAllByText('Large');
+    const fluentBadges = screen.getAllByText('Fluent');
+    const bodyBadges = screen.getAllByText('Body');
+    const labeledBadges = screen.getAllByLabelText(
+      /(Low|High) contrast (WCAG 2.1|WCAG 2.2|APCA) (3 to 1|AA|AAA|Large|Fluent|Body) (pass|fail)/
+    );
 
+    expect(threeToOneBadges).toHaveLength(2);
     expect(aaBadges).toHaveLength(2);
     expect(aaaBadges).toHaveLength(2);
     expect(largeBadges).toHaveLength(2);
+    expect(fluentBadges).toHaveLength(2);
     expect(bodyBadges).toHaveLength(2);
+    expect(labeledBadges).toHaveLength(12);
   });
 
   it('shows WCAG ratios in N:1 format and APCA values in Lc format', () => {

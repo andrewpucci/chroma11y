@@ -2,14 +2,22 @@
   import {
     copyToClipboard,
     colorToCssHex,
-    getPrintableContrastForAlgorithm,
     getContrastForAlgorithm,
     MIN_CONTRAST_RATIO,
-    MIN_APCA_LC_BODY
+    MIN_APCA_LC_FLUENT,
+    MIN_APCA_LC_BODY,
+    MIN_APCA_LC_LARGE
   } from '$lib/colorUtils';
-  import { contrastColors, swatchLabels, contrastAlgorithm } from '$lib/stores';
+  import {
+    contrastColors,
+    swatchLabels,
+    showSwatchContrastIndicators,
+    swatchContrastIndicators,
+    contrastAlgorithm
+  } from '$lib/stores';
   import { openDrawer } from '$lib/drawerStore';
   import { announce } from '$lib/announce';
+  import Icon from './Icon.svelte';
   import Color from 'colorjs.io';
 
   interface Props {
@@ -32,6 +40,8 @@
 
   const contrastColorsLocal = $derived($contrastColors);
   const swatchLabelsLocal = $derived($swatchLabels);
+  const showSwatchContrastIndicatorsLocal = $derived($showSwatchContrastIndicators);
+  const swatchContrastIndicatorsLocal = $derived($swatchContrastIndicators);
   const contrastAlgorithmLocal = $derived($contrastAlgorithm);
 
   const renderedColor = $derived(displayValue || color);
@@ -52,20 +62,157 @@
     }
   });
 
-  const lowContrastDisplay = $derived(
-    getPrintableContrastForAlgorithm(renderedColor, contrastColorsLocal.low, contrastAlgorithmLocal)
-  );
-  const highContrastDisplay = $derived(
-    getPrintableContrastForAlgorithm(
-      renderedColor,
-      contrastColorsLocal.high,
-      contrastAlgorithmLocal
-    )
+  interface IndicatorBadge {
+    criterion: '3:1' | 'AA' | 'AAA' | 'Large' | 'Fluent' | 'Body';
+    passes: boolean;
+    ariaLabel: string;
+  }
+
+  interface IndicatorGroup {
+    label: 'Low' | 'High';
+    badges: IndicatorBadge[];
+  }
+
+  const INDICATOR_TINT_MAX_ALPHA = 0.05;
+  const INDICATOR_TINT_SEARCH_ITERATIONS = 10;
+
+  const hasVisibleIndicatorsForAlgorithm = $derived.by(() => {
+    if (contrastAlgorithmLocal === 'WCAG') {
+      return (
+        swatchContrastIndicatorsLocal.wcagThreeToOne ||
+        swatchContrastIndicatorsLocal.wcagAA ||
+        swatchContrastIndicatorsLocal.wcagAAA
+      );
+    }
+    return (
+      swatchContrastIndicatorsLocal.apcaLarge ||
+      swatchContrastIndicatorsLocal.apcaFluent ||
+      swatchContrastIndicatorsLocal.apcaBody
+    );
+  });
+
+  const shouldShowIndicators = $derived(
+    showSwatchContrastIndicatorsLocal &&
+      swatchLabelsLocal !== 'none' &&
+      hasVisibleIndicatorsForAlgorithm
   );
 
-  const contrastUnit = $derived(contrastAlgorithmLocal === 'APCA' ? ' Lc' : '');
+  const indicatorGroups = $derived.by((): IndicatorGroup[] => {
+    const groups: IndicatorGroup[] = [];
+
+    for (const [groupLabel, contrastColor] of [
+      ['Low', contrastColorsLocal.low],
+      ['High', contrastColorsLocal.high]
+    ] as const) {
+      const contrastValue = getContrastForAlgorithm(
+        renderedColor,
+        contrastColor,
+        contrastAlgorithmLocal
+      );
+      if (contrastAlgorithmLocal === 'WCAG') {
+        const threeToOnePass = contrastValue >= 3;
+        const aaPass = contrastValue >= MIN_CONTRAST_RATIO;
+        const aaaPass = contrastValue >= 7;
+        const badges: IndicatorBadge[] = [];
+        if (swatchContrastIndicatorsLocal.wcagThreeToOne) {
+          badges.push({
+            criterion: '3:1',
+            passes: threeToOnePass,
+            ariaLabel: `${groupLabel} contrast WCAG 2.2 3 to 1 ${threeToOnePass ? 'pass' : 'fail'}`
+          });
+        }
+        if (swatchContrastIndicatorsLocal.wcagAA) {
+          badges.push({
+            criterion: 'AA',
+            passes: aaPass,
+            ariaLabel: `${groupLabel} contrast WCAG 2.2 AA ${aaPass ? 'pass' : 'fail'}`
+          });
+        }
+        if (swatchContrastIndicatorsLocal.wcagAAA) {
+          badges.push({
+            criterion: 'AAA',
+            passes: aaaPass,
+            ariaLabel: `${groupLabel} contrast WCAG 2.2 AAA ${aaaPass ? 'pass' : 'fail'}`
+          });
+        }
+
+        groups.push({
+          label: groupLabel,
+          badges
+        });
+      } else {
+        const largePass = contrastValue >= MIN_APCA_LC_LARGE;
+        const fluentPass = contrastValue >= MIN_APCA_LC_FLUENT;
+        const bodyPass = contrastValue >= MIN_APCA_LC_BODY;
+        const badges: IndicatorBadge[] = [];
+        if (swatchContrastIndicatorsLocal.apcaLarge) {
+          badges.push({
+            criterion: 'Large',
+            passes: largePass,
+            ariaLabel: `${groupLabel} contrast APCA Large ${largePass ? 'pass' : 'fail'}`
+          });
+        }
+        if (swatchContrastIndicatorsLocal.apcaFluent) {
+          badges.push({
+            criterion: 'Fluent',
+            passes: fluentPass,
+            ariaLabel: `${groupLabel} contrast APCA Fluent ${fluentPass ? 'pass' : 'fail'}`
+          });
+        }
+        if (swatchContrastIndicatorsLocal.apcaBody) {
+          badges.push({
+            criterion: 'Body',
+            passes: bodyPass,
+            ariaLabel: `${groupLabel} contrast APCA Body ${bodyPass ? 'pass' : 'fail'}`
+          });
+        }
+
+        groups.push({
+          label: groupLabel,
+          badges
+        });
+      }
+    }
+
+    return groups;
+  });
 
   const textColor = $derived(calculateTextColor(renderedColor, contrastColorsLocal));
+  const indicatorTintAlpha = $derived.by(() => {
+    if (!shouldShowIndicators) return INDICATOR_TINT_MAX_ALPHA;
+
+    const minimumContrast =
+      contrastAlgorithmLocal === 'APCA' ? MIN_APCA_LC_FLUENT : MIN_CONTRAST_RATIO;
+    const baseContrast = getContrastForAlgorithm(renderedColor, textColor, contrastAlgorithmLocal);
+    if (baseContrast < minimumContrast) return 0;
+
+    const contrastAtMaxTint = getContrastForAlgorithm(
+      getTintedBackgroundColor(renderedColor, textColor, INDICATOR_TINT_MAX_ALPHA),
+      textColor,
+      contrastAlgorithmLocal
+    );
+    if (contrastAtMaxTint >= minimumContrast) return INDICATOR_TINT_MAX_ALPHA;
+
+    let low = 0;
+    let high = INDICATOR_TINT_MAX_ALPHA;
+    for (let i = 0; i < INDICATOR_TINT_SEARCH_ITERATIONS; i++) {
+      const mid = (low + high) / 2;
+      const contrastAtMidTint = getContrastForAlgorithm(
+        getTintedBackgroundColor(renderedColor, textColor, mid),
+        textColor,
+        contrastAlgorithmLocal
+      );
+
+      if (contrastAtMidTint >= minimumContrast) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+
+    return low;
+  });
+  const indicatorTintPercent = $derived(`${(indicatorTintAlpha * 100).toFixed(2)}%`);
 
   /**
    * Determines the optimal text color for a swatch based on contrast ratios.
@@ -79,7 +226,7 @@
    * logic is straightforward and the integration is well-covered.
    */
   function calculateTextColor(bgColor: string, contrast: { low: string; high: string }): string {
-    const threshold = contrastAlgorithmLocal === 'APCA' ? MIN_APCA_LC_BODY : MIN_CONTRAST_RATIO;
+    const threshold = contrastAlgorithmLocal === 'APCA' ? MIN_APCA_LC_FLUENT : MIN_CONTRAST_RATIO;
     const lowVal = getContrastForAlgorithm(bgColor, contrast.low, contrastAlgorithmLocal);
     const highVal = getContrastForAlgorithm(bgColor, contrast.high, contrastAlgorithmLocal);
 
@@ -98,11 +245,27 @@
       return highVal > lowVal ? contrast.high : contrast.low;
     }
   }
+
+  function getTintedBackgroundColor(
+    bgColor: string,
+    textColorForTint: string,
+    tintAlpha: number
+  ): string {
+    if (tintAlpha <= 0) return bgColor;
+    try {
+      return new Color(bgColor)
+        .mix(new Color(textColorForTint), tintAlpha, { space: 'oklab' })
+        .to('srgb')
+        .toString({ format: 'hex' });
+    } catch {
+      return bgColor;
+    }
+  }
 </script>
 
 <button
   class="color-swatch"
-  style="background-color: {renderedColor}; color: {textColor};"
+  style="background-color: {renderedColor}; color: {textColor}; --swatch-indicator-tint-alpha: {indicatorTintPercent};"
   onclick={() => {
     if (drawerOklch) {
       openDrawer({
@@ -129,10 +292,32 @@
   {#if swatchLabelsLocal === 'both' || swatchLabelsLocal === 'value'}
     <span class="hex">{shownValue}</span>
   {/if}
-  {#if swatchLabelsLocal === 'both' || swatchLabelsLocal === 'value'}
-    <span class="contrast-info" aria-hidden="true"
-      >{lowContrastDisplay}{contrastUnit} {highContrastDisplay}{contrastUnit}</span
+  {#if shouldShowIndicators}
+    <div
+      class="contrast-indicators"
+      class:contrast-indicators--apca={contrastAlgorithmLocal === 'APCA'}
     >
+      {#each indicatorGroups as group (group.label)}
+        <div class="indicator-group">
+          <span class="indicator-group-label" aria-hidden="true">{group.label}</span>
+          <div class="indicator-badges">
+            {#each group.badges as badge (`${group.label}-${badge.criterion}`)}
+              <span
+                class="badge"
+                class:badge--pass={badge.passes}
+                class:badge--fail={!badge.passes}
+                aria-label={badge.ariaLabel}
+              >
+                <span class="badge-icon">
+                  <Icon name={badge.passes ? 'status-pass' : 'status-fail'} size={12} stroke={2} />
+                </span>
+                <span class="badge-label">{badge.criterion}</span>
+              </span>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </div>
   {/if}
 </button>
 
@@ -156,8 +341,8 @@
       transform var(--transition-fast),
       border-color var(--transition-fast),
       box-shadow var(--transition-fast);
-    width: var(--swatch-width, 96px);
-    flex: var(--swatch-flex, 0 0 96px);
+    width: var(--swatch-width, 148px);
+    flex: var(--swatch-flex, 0 0 148px);
     min-height: 64px;
     text-align: left;
     overflow: hidden;
@@ -181,8 +366,8 @@
   /* Touch-friendly tap targets on mobile (44x44px minimum) */
   @media (max-width: 768px) {
     .color-swatch {
-      width: var(--swatch-width, 96px);
-      flex-basis: var(--swatch-width, 96px);
+      width: var(--swatch-width, 136px);
+      flex-basis: var(--swatch-width, 136px);
       min-height: 72px;
       touch-action: manipulation;
     }
@@ -190,8 +375,8 @@
 
   @media (max-width: 575px) {
     .color-swatch {
-      width: var(--swatch-width, 92px);
-      flex-basis: var(--swatch-width, 92px);
+      width: var(--swatch-width, 128px);
+      flex-basis: var(--swatch-width, 128px);
       min-height: 64px;
     }
 
@@ -203,8 +388,12 @@
       font-size: var(--font-size-xs);
     }
 
-    .contrast-info {
+    .indicator-group-label {
       font-size: var(--font-size-xs);
+    }
+
+    .contrast-indicators {
+      grid-template-columns: 1fr;
     }
   }
 
@@ -239,13 +428,93 @@
     flex: 0 0 auto;
   }
 
-  .contrast-info {
+  .contrast-indicators {
     position: relative;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xs);
+  }
+
+  .contrast-indicators--apca {
+    grid-template-columns: 1fr;
+  }
+
+  .indicator-group {
+    display: grid;
+    align-content: start;
+    gap: var(--space-xs);
+    padding: var(--space-xs);
+    border: none;
+    border-radius: var(--radius-sm);
+    background: color-mix(
+      in oklab,
+      currentColor var(--swatch-indicator-tint-alpha, 5%),
+      transparent
+    );
+    min-width: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .indicator-group-label {
     font-size: var(--font-size-xs);
-    opacity: 0.65;
+    opacity: 1;
     font-family: var(--text-mono);
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wide);
+    font-weight: var(--font-weight-semibold);
+    color: color-mix(in oklab, currentColor 90%, transparent);
+  }
+
+  .indicator-badges {
+    display: grid;
+    gap: var(--space-xs);
+    justify-items: start;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .badge {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: calc(var(--space-xs) * 0.5);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    padding: 0 calc(var(--space-xs) * 0.5);
+    border-radius: var(--radius-sm);
+    line-height: var(--line-height-tight);
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .badge-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 12px;
+    height: 12px;
+    flex: 0 0 12px;
+  }
+
+  .badge-label {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .badge--pass {
+    background: var(--badge-pass-bg);
+    color: var(--badge-pass-text);
+    border: 1px solid var(--badge-pass-border);
+  }
+
+  .badge--fail {
+    background: var(--badge-fail-bg);
+    color: var(--badge-fail-text);
+    border: 1px solid var(--badge-fail-border);
   }
 </style>
