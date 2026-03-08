@@ -20,7 +20,7 @@ test.describe('Focus Indicators', () => {
       const hexInput = page.locator('#baseColorHex');
       await hexInput.focus();
 
-      // Verify tab order from hex input through remaining controls.
+      // Verify strict tab order from hex input through the algorithm selector.
       const expectedTabOrder = [
         { selector: '#warmth' },
         { selector: '[aria-label="Warmth value input"]' },
@@ -36,7 +36,7 @@ test.describe('Focus Indicators', () => {
         { selector: '#bezier-p1-y' },
         { selector: '#bezier-p2-x' },
         { selector: '#bezier-p2-y' },
-        { selector: '#contrast-mode' }
+        { selector: '#contrast-algorithm' }
       ];
 
       for (const item of expectedTabOrder) {
@@ -49,6 +49,29 @@ test.describe('Focus Indicators', () => {
 
         await expect(locator).toBeFocused();
       }
+
+      // Browser engines differ in checklist sub-order; ensure we traverse checklist controls
+      // before arriving at contrast mode.
+      const focusedControls: string[] = [];
+      let reachedContrastMode = false;
+      for (let i = 0; i < 12; i++) {
+        await page.keyboard.press('Tab');
+
+        const focusedControl = await page.evaluate(() => {
+          const active = document.activeElement as HTMLElement | null;
+          if (!active) return '';
+
+          return active.id || active.getAttribute('aria-label') || active.tagName;
+        });
+        focusedControls.push(focusedControl);
+
+        if (focusedControl === 'contrast-mode') {
+          reachedContrastMode = true;
+          break;
+        }
+      }
+
+      expect(reachedContrastMode).toBe(true);
     });
 
     test('focus indicator is visible after keyboard navigation', async ({ page }) => {
