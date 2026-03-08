@@ -5,7 +5,6 @@
     gamutSpace,
     themePreference,
     swatchLabels,
-    contrastAlgorithm,
     updateColorState,
     setThemePreference
   } from '$lib/stores';
@@ -17,7 +16,6 @@
     GamutSpace,
     ThemePreference,
     SwatchLabels,
-    ContrastAlgorithm,
     OklchDisplaySignificantDigits
   } from '$lib/types';
 
@@ -34,7 +32,12 @@
   const gamutSpaceLocal = $derived($gamutSpace);
   const themePreferenceLocal = $derived($themePreference);
   const swatchLabelsLocal = $derived($swatchLabels);
-  const contrastAlgorithmLocal = $derived($contrastAlgorithm);
+  const swatchStepLabelEnabled = $derived(
+    swatchLabelsLocal === 'both' || swatchLabelsLocal === 'step'
+  );
+  const swatchValueLabelEnabled = $derived(
+    swatchLabelsLocal === 'both' || swatchLabelsLocal === 'value'
+  );
 
   function setOklchSignificantDigits(value: number, shouldAnnounce: boolean): void {
     const clampedValue = clampOklchDisplaySignificantDigits(value) as OklchDisplaySignificantDigits;
@@ -74,18 +77,28 @@
     announce(`Theme preference changed to ${value === 'auto' ? 'auto (system)' : value}`);
   }
 
-  function handleSwatchLabelsChange(event: Event) {
-    const value = (event.target as HTMLSelectElement).value as SwatchLabels;
-    updateColorState({ swatchLabels: value });
-    announce(
-      `Swatch labels changed to ${value === 'both' ? 'step and value' : value === 'none' ? 'hidden' : value + ' only'}`
-    );
+  function toSwatchLabels(stepEnabled: boolean, valueEnabled: boolean): SwatchLabels {
+    if (stepEnabled && valueEnabled) return 'both';
+    if (stepEnabled) return 'step';
+    if (valueEnabled) return 'value';
+    return 'none';
   }
 
-  function handleContrastAlgorithmChange(event: Event) {
-    const value = (event.target as HTMLSelectElement).value as ContrastAlgorithm;
-    updateColorState({ contrastAlgorithm: value });
-    announce(`Contrast algorithm changed to ${value === 'WCAG' ? 'WCAG 2.1' : 'APCA'}`);
+  function describeSwatchLabels(value: SwatchLabels): string {
+    if (value === 'both') return 'step and value';
+    if (value === 'step') return 'step only';
+    if (value === 'value') return 'value only';
+    return 'hidden';
+  }
+
+  function handleSwatchLabelsToggle(which: 'step' | 'value', event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    const nextStep = which === 'step' ? checked : swatchStepLabelEnabled;
+    const nextValue = which === 'value' ? checked : swatchValueLabelEnabled;
+    const value = toSwatchLabels(nextStep, nextValue);
+
+    updateColorState({ swatchLabels: value });
+    announce(`Swatch labels changed to ${describeSwatchLabels(value)}`);
   }
 </script>
 
@@ -158,33 +171,29 @@
   </div>
 
   <div class="field">
-    <label class="label" for="swatch-labels">Swatch Labels</label>
-    <select
-      class="select"
-      id="swatch-labels"
-      value={swatchLabelsLocal}
-      onchange={handleSwatchLabelsChange}
-      aria-label="Swatch label display"
-    >
-      <option value="both">Step + Value</option>
-      <option value="step">Step Only</option>
-      <option value="value">Value Only</option>
-      <option value="none">None</option>
-    </select>
-  </div>
-
-  <div class="field">
-    <label class="label" for="contrast-algorithm">Contrast Algorithm</label>
-    <select
-      class="select"
-      id="contrast-algorithm"
-      value={contrastAlgorithmLocal}
-      onchange={handleContrastAlgorithmChange}
-      aria-label="Contrast algorithm"
-    >
-      <option value="WCAG">WCAG 2.1</option>
-      <option value="APCA">APCA</option>
-    </select>
+    <span class="label">Swatch Labels</span>
+    <div class="checklist" role="group" aria-label="Swatch label display options">
+      <label class="check-item" for="swatch-label-step">
+        <input
+          id="swatch-label-step"
+          type="checkbox"
+          checked={swatchStepLabelEnabled}
+          onchange={(event) => handleSwatchLabelsToggle('step', event)}
+          aria-label="Show step labels on swatches"
+        />
+        <span>Step</span>
+      </label>
+      <label class="check-item" for="swatch-label-value">
+        <input
+          id="swatch-label-value"
+          type="checkbox"
+          checked={swatchValueLabelEnabled}
+          onchange={(event) => handleSwatchLabelsToggle('value', event)}
+          aria-label="Show value labels on swatches"
+        />
+        <span>Value</span>
+      </label>
+    </div>
   </div>
 </section>
 
@@ -192,5 +201,30 @@
   .display-settings {
     display: grid;
     gap: var(--space-md);
+  }
+
+  .checklist {
+    display: grid;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    border: var(--border-width-thin) solid var(--border);
+    border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--bg-primary) 88%, transparent);
+  }
+
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-height: var(--touch-target-comfortable);
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+  }
+
+  .check-item input {
+    width: var(--touch-target-min);
+    height: var(--touch-target-min);
+    margin: 0;
+    accent-color: var(--accent);
   }
 </style>

@@ -13,7 +13,6 @@ import {
   gamutSpace,
   themePreference,
   swatchLabels,
-  contrastAlgorithm,
   oklchDisplaySignificantDigits,
   updateColorState,
   setThemePreference
@@ -26,7 +25,6 @@ describe('DisplaySettings', () => {
       displayColorSpace: 'hex',
       gamutSpace: 'srgb',
       swatchLabels: 'both',
-      contrastAlgorithm: 'WCAG',
       oklchDisplaySignificantDigits: 4
     });
     setThemePreference('auto');
@@ -39,8 +37,8 @@ describe('DisplaySettings', () => {
     expect(screen.getByLabelText('Display color space format')).toBeInTheDocument();
     expect(screen.getByLabelText('Gamut mapping target')).toBeInTheDocument();
     expect(screen.getByLabelText('Theme preference')).toBeInTheDocument();
-    expect(screen.getByLabelText('Swatch label display')).toBeInTheDocument();
-    expect(screen.getByLabelText('Contrast algorithm')).toBeInTheDocument();
+    expect(screen.getByLabelText('Show step labels on swatches')).toBeInTheDocument();
+    expect(screen.getByLabelText('Show value labels on swatches')).toBeInTheDocument();
     expect(screen.queryByLabelText('OKLCH display significant digits')).not.toBeInTheDocument();
   });
 
@@ -116,24 +114,15 @@ describe('DisplaySettings', () => {
     expect(announce).toHaveBeenCalledWith('Theme preference changed to dark');
   });
 
-  it('changes swatch labels and announces', async () => {
+  it('changes swatch labels from checklist and announces', async () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
-    await user.selectOptions(screen.getByLabelText('Swatch label display'), 'none');
+    await user.click(screen.getByLabelText('Show step labels on swatches'));
+    await user.click(screen.getByLabelText('Show value labels on swatches'));
 
     expect(get(swatchLabels)).toBe('none');
     expect(announce).toHaveBeenCalledWith('Swatch labels changed to hidden');
-  });
-
-  it('changes contrast algorithm and announces', async () => {
-    const user = userEvent.setup();
-    render(DisplaySettings);
-
-    await user.selectOptions(screen.getByLabelText('Contrast algorithm'), 'APCA');
-
-    expect(get(contrastAlgorithm)).toBe('APCA');
-    expect(announce).toHaveBeenCalledWith('Contrast algorithm changed to APCA');
   });
 
   it('changes OKLCH significant digits from number input and announces', async () => {
