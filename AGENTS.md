@@ -32,8 +32,10 @@ npm run test:unit -- src/lib/colorUtils.spec.ts -t "test name"
 
 ```sh
 npm run test:unit -- --run    # unit only, single run
+npm run test:coverage         # unit coverage report (V8 coverage provider)
 npm run test:e2e              # Docker (CI-matching, rebuilds test image)
 npm run test:e2e:local        # Playwright directly
+npm run test:e2e:netlify-smoke # deploy smoke checks (Chromium)
 npm run test:lighthouse       # Lighthouse CI audit + opens representative report
 npm test                      # unit + e2e
 ```
