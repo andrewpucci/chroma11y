@@ -66,6 +66,25 @@ npm test
 
 If any standard check is intentionally skipped, explain why in the PR body.
 
+## Local Git Hooks
+
+This repository uses Husky + lint-staged + commitlint to catch issues before CI:
+
+- `pre-commit`: runs `lint-staged` (Prettier + ESLint on staged files)
+- `pre-push`: runs `npm run check` and `npm run test:unit -- --run`
+- `commit-msg`: validates commit messages with commitlint
+
+Hooks are installed automatically by `npm install` via the `prepare` script.
+
+### Emergency Hook Bypass
+
+Use bypasses sparingly and only when absolutely necessary:
+
+- Skip hooks for one commit: `HUSKY=0 git commit -m "..."`
+- Skip hooks for one push: `HUSKY=0 git push`
+
+If you bypass hooks, explain why in the PR description and make sure CI is green.
+
 ## Code and Test Expectations
 
 - Add or update tests for behavior changes.

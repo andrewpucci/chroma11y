@@ -434,6 +434,17 @@ Type checking:
 npm run check
 ```
 
+### Local Git Hooks
+
+Git hooks are managed with Husky and installed automatically by `npm install` (via `prepare`).
+
+- `pre-commit`: runs `lint-staged` (Prettier + ESLint on staged files)
+- `pre-push`: runs `npm run check` and `npm run test:unit -- --run`
+- `commit-msg`: validates conventional commit format with commitlint
+- Allowed commit types: `feat`, `fix`, `tweak`, `refactor`, `test`, `docs`, `chore`
+
+Hooks improve fast local feedback, but they do not replace full validation. Run `npm run lint && npm run check && npm test` before opening or updating a PR.
+
 ### Building
 
 Create production build:

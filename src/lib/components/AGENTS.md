@@ -2,6 +2,13 @@
 
 Svelte 5 components with co-located DOM tests. All components use scoped `<style>` blocks — no Tailwind, no CSS-in-JS.
 
+## Workflow expectations
+
+- `pre-commit` runs staged-file formatting/linting through `lint-staged`
+- `pre-push` runs `npm run check` and `npm run test:unit -- --run` (includes component DOM tests)
+- Keep component tests stable and deterministic; flaky DOM tests block every push
+- Full validation before PR update remains: `npm run lint && npm run check && npm test`
+
 ## File conventions
 
 - Components: `ComponentName.svelte`
