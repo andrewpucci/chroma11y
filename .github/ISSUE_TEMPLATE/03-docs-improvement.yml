@@ -1,0 +1,64 @@
+name: Documentation improvement
+description: Request updates to docs, guides, or contributor instructions.
+title: '[Docs]: '
+labels: ['documentation']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for documentation gaps, clarity issues, or outdated guidance.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is unclear, missing, or incorrect?
+      placeholder: Describe the docs issue and why it matters.
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Affected Location
+      description: Link or path to the docs/code section that needs work.
+      placeholder: e.g. README.md, AGENTS.md, docs/visual-testing.md, src/lib/colorUtils.ts JSDoc
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_update
+    attributes:
+      label: Proposed Update
+      description: What should be added or changed?
+      placeholder: Describe the new or corrected documentation content.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Define what "done" looks like.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Primary Audience
+      description: Who is blocked by this docs issue?
+      options:
+        - End users of the app
+        - Contributors writing code
+        - Test and CI maintainers
+        - Accessibility reviewers
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submit Checklist
+      options:
+        - label: I searched existing issues to avoid creating a duplicate.
+          required: true

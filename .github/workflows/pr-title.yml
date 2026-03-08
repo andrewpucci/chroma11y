@@ -1,0 +1,41 @@
+name: PR Title
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Validate PR title format
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          if [[ "$PR_AUTHOR" == "dependabot[bot]" ]]; then
+            echo "Dependabot PR detected; skipping title format enforcement."
+            exit 0
+          fi
+
+          if [[ "$PR_TITLE" =~ ^(feat|fix|tweak|refactor|test|docs|chore):\ .+\ \(#[0-9]+\)$ ]]; then
+            echo "PR title matches required issue-linked format."
+            exit 0
+          fi
+
+          if [[ "$PR_TITLE" =~ ^(feat|fix|tweak|refactor|test|docs|chore):\ .+\ \[no-issue\]$ ]]; then
+            echo "PR title matches allowed no-issue format."
+            exit 0
+          fi
+
+          echo "Invalid PR title: $PR_TITLE"
+          echo "Expected:"
+          echo "  1) <type>: <summary> (#<issue-number>)"
+          echo "  2) <type>: <summary> [no-issue]"
+          echo "Where <type> is one of: feat, fix, tweak, refactor, test, docs, chore."
+          exit 1
