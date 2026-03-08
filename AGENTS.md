@@ -152,6 +152,8 @@ Run before opening/updating a PR: `npm run lint && npm run check && npm test`
 
 - Add/update tests for any code change
 - Commit format: `prefix: description` (feat:, fix:, tweak:, refactor:, test:, docs:, chore:)
+- Use `npm run pr:create` to open PRs; this enforces `.github/pull_request_template.md`
+- Do not use `gh pr create --body`/`--body-file` directly
 - PR title format (CI enforced): `<type>: <summary> (#<issue-number>)` or `<type>: <summary> [no-issue]`
 - Allowed PR title types: `feat`, `fix`, `tweak`, `refactor`, `test`, `docs`, `chore`
 - Keep accessibility intact
