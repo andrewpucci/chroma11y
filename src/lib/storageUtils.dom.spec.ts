@@ -26,6 +26,15 @@ describe('storageUtils', () => {
     gamutSpace: 'srgb',
     themePreference: 'auto',
     swatchLabels: 'both',
+    showSwatchContrastIndicators: true,
+    swatchContrastIndicators: {
+      wcagThreeToOne: true,
+      wcagAA: true,
+      wcagAAA: true,
+      apcaLarge: true,
+      apcaFluent: true,
+      apcaBody: true
+    },
     contrastAlgorithm: 'WCAG',
     oklchDisplaySignificantDigits: 4
   };
@@ -180,6 +189,88 @@ describe('storageUtils', () => {
       expect(result?.contrastAlgorithm).toBeUndefined();
     });
 
+    it('strips invalid showSwatchContrastIndicators', () => {
+      expect.assertions(2);
+
+      const invalidState = { ...mockState, showSwatchContrastIndicators: 'invalid' };
+      localStorage.setItem('chroma11y-state', JSON.stringify(invalidState));
+
+      const result = loadStateFromStorage();
+
+      expect(result).not.toBeNull();
+      expect(result?.showSwatchContrastIndicators).toBe(true);
+    });
+
+    it('strips invalid swatchContrastIndicators object', () => {
+      expect.assertions(2);
+
+      const invalidState = {
+        ...mockState,
+        swatchContrastIndicators: {
+          wcagThreeToOne: true,
+          wcagAA: true,
+          wcagAAA: 'nope',
+          apcaLarge: true,
+          apcaFluent: true,
+          apcaBody: true
+        }
+      };
+      localStorage.setItem('chroma11y-state', JSON.stringify(invalidState));
+
+      const result = loadStateFromStorage();
+
+      expect(result).not.toBeNull();
+      expect(result?.swatchContrastIndicators).toEqual({
+        wcagThreeToOne: true,
+        wcagAA: true,
+        wcagAAA: true,
+        apcaLarge: true,
+        apcaFluent: true,
+        apcaBody: true
+      });
+    });
+
+    it('maps legacy showSwatchContrastIndicators false to all indicator levels hidden', () => {
+      expect.assertions(2);
+
+      const legacyState = { ...mockState, showSwatchContrastIndicators: false };
+      delete legacyState.swatchContrastIndicators;
+      localStorage.setItem('chroma11y-state', JSON.stringify(legacyState));
+
+      const result = loadStateFromStorage();
+
+      expect(result?.showSwatchContrastIndicators).toBe(false);
+      expect(result?.swatchContrastIndicators).toEqual({
+        wcagThreeToOne: false,
+        wcagAA: false,
+        wcagAAA: false,
+        apcaLarge: false,
+        apcaFluent: false,
+        apcaBody: false
+      });
+    });
+
+    it('maps legacy indicator objects without wcagThreeToOne to new shape', () => {
+      expect.assertions(2);
+
+      const legacyState = {
+        ...mockState,
+        swatchContrastIndicators: {
+          wcagAA: true,
+          wcagAAA: false,
+          apcaLarge: true,
+          apcaFluent: true,
+          apcaBody: true
+        }
+      };
+      localStorage.setItem('chroma11y-state', JSON.stringify(legacyState));
+
+      const result = loadStateFromStorage();
+
+      expect(result?.swatchContrastIndicators?.wcagThreeToOne).toBe(true);
+      expect(result?.swatchContrastIndicators?.wcagAAA).toBe(false);
+    });
+
     it('strips invalid oklchDisplaySignificantDigits', () => {
       expect.assertions(2);
 
@@ -193,7 +284,7 @@ describe('storageUtils', () => {
     });
 
     it('preserves valid display settings', () => {
-      expect.assertions(6);
+      expect.assertions(8);
 
       localStorage.setItem('chroma11y-state', JSON.stringify(mockState));
 
@@ -203,6 +294,8 @@ describe('storageUtils', () => {
       expect(result?.gamutSpace).toBe('srgb');
       expect(result?.themePreference).toBe('auto');
       expect(result?.swatchLabels).toBe('both');
+      expect(result?.showSwatchContrastIndicators).toBe(true);
+      expect(result?.swatchContrastIndicators).toEqual(mockState.swatchContrastIndicators);
       expect(result?.contrastAlgorithm).toBe('WCAG');
       expect(result?.oklchDisplaySignificantDigits).toBe(4);
     });

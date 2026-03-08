@@ -30,6 +30,8 @@ import {
   gamutSpace,
   themePreference,
   swatchLabels,
+  showSwatchContrastIndicators,
+  swatchContrastIndicators,
   contrastAlgorithm,
   oklchDisplaySignificantDigits,
   neutralsDisplay,
@@ -149,6 +151,23 @@ describe('stores', () => {
     it('swatchLabels reflects colorStore.swatchLabels', () => {
       expect.assertions(1);
       expect(get(swatchLabels)).toBe('both');
+    });
+
+    it('showSwatchContrastIndicators reflects colorStore.showSwatchContrastIndicators', () => {
+      expect.assertions(1);
+      expect(get(showSwatchContrastIndicators)).toBe(true);
+    });
+
+    it('swatchContrastIndicators reflects colorStore.swatchContrastIndicators', () => {
+      expect.assertions(1);
+      expect(get(swatchContrastIndicators)).toEqual({
+        wcagThreeToOne: true,
+        wcagAA: true,
+        wcagAAA: true,
+        apcaLarge: true,
+        apcaFluent: true,
+        apcaBody: true
+      });
     });
 
     it('contrastAlgorithm reflects colorStore.contrastAlgorithm', () => {
@@ -273,6 +292,36 @@ describe('stores', () => {
 
       expect(get(warmth)).toBe(10);
       expect(get(chromaMultiplier)).toBe(0.5);
+    });
+
+    it('updates swatch contrast indicator visibility', () => {
+      expect.assertions(1);
+      updateColorState({ showSwatchContrastIndicators: false });
+
+      expect(get(showSwatchContrastIndicators)).toBe(false);
+    });
+
+    it('updates swatch contrast indicator criterion visibility', () => {
+      expect.assertions(1);
+      updateColorState({
+        swatchContrastIndicators: {
+          wcagThreeToOne: true,
+          wcagAA: false,
+          wcagAAA: true,
+          apcaLarge: true,
+          apcaFluent: true,
+          apcaBody: false
+        }
+      });
+
+      expect(get(swatchContrastIndicators)).toEqual({
+        wcagThreeToOne: true,
+        wcagAA: false,
+        wcagAAA: true,
+        apcaLarge: true,
+        apcaFluent: true,
+        apcaBody: false
+      });
     });
   });
 

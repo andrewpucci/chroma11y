@@ -10,7 +10,8 @@ import type {
   ThemePreference,
   SwatchLabels,
   ContrastAlgorithm,
-  OklchDisplaySignificantDigits
+  OklchDisplaySignificantDigits,
+  SwatchContrastIndicators
 } from './types';
 
 export type StoredColorState = SerializableColorState;
@@ -23,6 +24,21 @@ const VALID_THEME_PREFS: ThemePreference[] = ['light', 'dark', 'auto'];
 const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
 const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
 const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
+
+function isValidSwatchContrastIndicators(value: unknown): value is SwatchContrastIndicators {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const candidate = value as Record<string, unknown>;
+  const keys: (keyof SwatchContrastIndicators)[] = [
+    'wcagThreeToOne',
+    'wcagAA',
+    'wcagAAA',
+    'apcaLarge',
+    'apcaFluent',
+    'apcaBody'
+  ];
+  return keys.every((key) => typeof candidate[key] === 'boolean');
+}
 
 /**
  * Saves state to localStorage
@@ -72,6 +88,65 @@ export function loadStateFromStorage(): StoredColorState | null {
     }
     if (state.swatchLabels && !VALID_SWATCH_LABELS.includes(state.swatchLabels as SwatchLabels)) {
       delete state.swatchLabels;
+    }
+    if (
+      state.showSwatchContrastIndicators !== undefined &&
+      typeof state.showSwatchContrastIndicators !== 'boolean'
+    ) {
+      delete state.showSwatchContrastIndicators;
+    }
+    if (
+      state.swatchContrastIndicators !== undefined &&
+      !isValidSwatchContrastIndicators(state.swatchContrastIndicators)
+    ) {
+      const legacyIndicators = state.swatchContrastIndicators as Partial<SwatchContrastIndicators>;
+      if (
+        typeof legacyIndicators?.wcagAA === 'boolean' &&
+        typeof legacyIndicators?.wcagAAA === 'boolean' &&
+        typeof legacyIndicators?.apcaLarge === 'boolean' &&
+        typeof legacyIndicators?.apcaFluent === 'boolean' &&
+        typeof legacyIndicators?.apcaBody === 'boolean'
+      ) {
+        state.swatchContrastIndicators = {
+          wcagThreeToOne: legacyIndicators.wcagAA || legacyIndicators.wcagAAA,
+          wcagAA: legacyIndicators.wcagAA,
+          wcagAAA: legacyIndicators.wcagAAA,
+          apcaLarge: legacyIndicators.apcaLarge,
+          apcaFluent: legacyIndicators.apcaFluent,
+          apcaBody: legacyIndicators.apcaBody
+        };
+      } else if (
+        typeof legacyIndicators?.wcagAA === 'boolean' &&
+        typeof legacyIndicators?.wcagAAA === 'boolean' &&
+        typeof legacyIndicators?.apcaLarge === 'boolean' &&
+        typeof legacyIndicators?.apcaBody === 'boolean'
+      ) {
+        state.swatchContrastIndicators = {
+          wcagThreeToOne: legacyIndicators.wcagAA || legacyIndicators.wcagAAA,
+          wcagAA: legacyIndicators.wcagAA,
+          wcagAAA: legacyIndicators.wcagAAA,
+          apcaLarge: legacyIndicators.apcaLarge,
+          apcaFluent: legacyIndicators.apcaBody,
+          apcaBody: legacyIndicators.apcaBody
+        };
+      } else {
+        delete state.swatchContrastIndicators;
+      }
+    }
+    if (!state.swatchContrastIndicators && state.showSwatchContrastIndicators !== undefined) {
+      state.swatchContrastIndicators = {
+        wcagThreeToOne: state.showSwatchContrastIndicators,
+        wcagAA: state.showSwatchContrastIndicators,
+        wcagAAA: state.showSwatchContrastIndicators,
+        apcaLarge: state.showSwatchContrastIndicators,
+        apcaFluent: state.showSwatchContrastIndicators,
+        apcaBody: state.showSwatchContrastIndicators
+      };
+    }
+    if (state.swatchContrastIndicators && state.showSwatchContrastIndicators === undefined) {
+      state.showSwatchContrastIndicators = Object.values(state.swatchContrastIndicators).some(
+        Boolean
+      );
     }
     if (
       state.contrastAlgorithm &&

@@ -207,6 +207,51 @@ describe('urlUtils', () => {
       expect(encoded).not.toContain('sl=');
     });
 
+    it('encodes swatch contrast indicators when all levels are hidden', () => {
+      const state: UrlColorState = {
+        swatchContrastIndicators: {
+          wcagThreeToOne: false,
+          wcagAA: false,
+          wcagAAA: false,
+          apcaLarge: false,
+          apcaFluent: false,
+          apcaBody: false
+        }
+      };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('si=0');
+    });
+
+    it('encodes selected swatch contrast indicator levels as compact mask', () => {
+      const state: UrlColorState = {
+        swatchContrastIndicators: {
+          wcagThreeToOne: true,
+          wcagAA: true,
+          wcagAAA: false,
+          apcaLarge: true,
+          apcaFluent: true,
+          apcaBody: false
+        }
+      };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('si=calf');
+    });
+
+    it('omits swatch contrast indicators when all levels are visible (default)', () => {
+      const state: UrlColorState = {
+        swatchContrastIndicators: {
+          wcagThreeToOne: true,
+          wcagAA: true,
+          wcagAAA: true,
+          apcaLarge: true,
+          apcaFluent: true,
+          apcaBody: true
+        }
+      };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('si=');
+    });
+
     it('encodes contrast algorithm when not default', () => {
       const state: UrlColorState = { contrastAlgorithm: 'APCA' };
       const encoded = encodeStateToUrl(state);
@@ -257,6 +302,58 @@ describe('urlUtils', () => {
       expect(state.swatchLabels).toBe('step');
     });
 
+    it('decodes swatch contrast indicator mask', () => {
+      const params = new URLSearchParams('si=caA');
+      const state = decodeStateFromUrl(params);
+      expect(state.swatchContrastIndicators).toEqual({
+        wcagThreeToOne: true,
+        wcagAA: true,
+        wcagAAA: true,
+        apcaLarge: false,
+        apcaFluent: false,
+        apcaBody: false
+      });
+      expect(state.showSwatchContrastIndicators).toBe(true);
+    });
+
+    it('infers WCAG 3:1 for legacy masks that only include AA/AAA codes', () => {
+      const params = new URLSearchParams('si=alfb');
+      const state = decodeStateFromUrl(params);
+
+      expect(state.swatchContrastIndicators).toEqual({
+        wcagThreeToOne: true,
+        wcagAA: true,
+        wcagAAA: false,
+        apcaLarge: true,
+        apcaFluent: true,
+        apcaBody: true
+      });
+    });
+
+    it('decodes legacy hidden/visible indicator flags', () => {
+      const hidden = decodeStateFromUrl(new URLSearchParams('si=0'));
+      const visible = decodeStateFromUrl(new URLSearchParams('si=1'));
+
+      expect(hidden.swatchContrastIndicators).toEqual({
+        wcagThreeToOne: false,
+        wcagAA: false,
+        wcagAAA: false,
+        apcaLarge: false,
+        apcaFluent: false,
+        apcaBody: false
+      });
+      expect(hidden.showSwatchContrastIndicators).toBe(false);
+      expect(visible.swatchContrastIndicators).toEqual({
+        wcagThreeToOne: true,
+        wcagAA: true,
+        wcagAAA: true,
+        apcaLarge: true,
+        apcaFluent: true,
+        apcaBody: true
+      });
+      expect(visible.showSwatchContrastIndicators).toBe(true);
+    });
+
     it('decodes contrast algorithm', () => {
       const params = new URLSearchParams('ca=APCA');
       const state = decodeStateFromUrl(params);
@@ -270,11 +367,13 @@ describe('urlUtils', () => {
     });
 
     it('ignores invalid display settings values', () => {
-      const params = new URLSearchParams('ds=invalid&gs=bad&sl=nope&ca=fake&os=99');
+      const params = new URLSearchParams('ds=invalid&gs=bad&sl=nope&si=bad&ca=fake&os=99');
       const state = decodeStateFromUrl(params);
       expect(state.displayColorSpace).toBeUndefined();
       expect(state.gamutSpace).toBeUndefined();
       expect(state.swatchLabels).toBeUndefined();
+      expect(state.showSwatchContrastIndicators).toBeUndefined();
+      expect(state.swatchContrastIndicators).toBeUndefined();
       expect(state.contrastAlgorithm).toBeUndefined();
       expect(state.oklchDisplaySignificantDigits).toBeUndefined();
     });
@@ -285,6 +384,8 @@ describe('urlUtils', () => {
       expect(state.displayColorSpace).toBeUndefined();
       expect(state.gamutSpace).toBeUndefined();
       expect(state.swatchLabels).toBeUndefined();
+      expect(state.showSwatchContrastIndicators).toBeUndefined();
+      expect(state.swatchContrastIndicators).toBeUndefined();
       expect(state.contrastAlgorithm).toBeUndefined();
       expect(state.oklchDisplaySignificantDigits).toBeUndefined();
     });
@@ -333,6 +434,14 @@ describe('urlUtils', () => {
         displayColorSpace: 'oklch',
         gamutSpace: 'p3',
         swatchLabels: 'step',
+        swatchContrastIndicators: {
+          wcagThreeToOne: true,
+          wcagAA: true,
+          wcagAAA: false,
+          apcaLarge: false,
+          apcaFluent: false,
+          apcaBody: true
+        },
         contrastAlgorithm: 'APCA',
         oklchDisplaySignificantDigits: 5
       };
@@ -343,6 +452,8 @@ describe('urlUtils', () => {
       expect(decoded.displayColorSpace).toBe(original.displayColorSpace);
       expect(decoded.gamutSpace).toBe(original.gamutSpace);
       expect(decoded.swatchLabels).toBe(original.swatchLabels);
+      expect(decoded.swatchContrastIndicators).toEqual(original.swatchContrastIndicators);
+      expect(decoded.showSwatchContrastIndicators).toBe(true);
       expect(decoded.contrastAlgorithm).toBe(original.contrastAlgorithm);
       expect(decoded.oklchDisplaySignificantDigits).toBe(original.oklchDisplaySignificantDigits);
     });

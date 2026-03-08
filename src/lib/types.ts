@@ -13,6 +13,16 @@ export type SwatchLabels = 'both' | 'step' | 'value' | 'none';
 /** Supported contrast algorithm identifiers */
 export type ContrastAlgorithm = 'WCAG' | 'APCA';
 
+/** Swatch contrast indicator visibility by criterion */
+export interface SwatchContrastIndicators {
+  wcagThreeToOne: boolean;
+  wcagAA: boolean;
+  wcagAAA: boolean;
+  apcaLarge: boolean;
+  apcaFluent: boolean;
+  apcaBody: boolean;
+}
+
 /** User-selectable significant digits for OKLCH display values */
 export type OklchDisplaySignificantDigits = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -40,6 +50,8 @@ export interface SerializableColorState {
   gamutSpace?: GamutSpace;
   themePreference?: ThemePreference;
   swatchLabels?: SwatchLabels;
+  showSwatchContrastIndicators?: boolean;
+  swatchContrastIndicators?: SwatchContrastIndicators;
   contrastAlgorithm?: ContrastAlgorithm;
   oklchDisplaySignificantDigits?: OklchDisplaySignificantDigits;
 }

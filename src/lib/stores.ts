@@ -7,7 +7,8 @@ import type {
   ThemePreference,
   SwatchLabels,
   ContrastAlgorithm,
-  OklchDisplaySignificantDigits
+  OklchDisplaySignificantDigits,
+  SwatchContrastIndicators
 } from '$lib/types';
 
 /**
@@ -39,6 +40,8 @@ interface ColorState {
   gamutSpace: GamutSpace;
   themePreference: ThemePreference;
   swatchLabels: SwatchLabels;
+  showSwatchContrastIndicators: boolean;
+  swatchContrastIndicators: SwatchContrastIndicators;
   contrastAlgorithm: ContrastAlgorithm;
   oklchDisplaySignificantDigits: OklchDisplaySignificantDigits;
   _lastUpdated?: number;
@@ -100,6 +103,15 @@ const DEFAULT_STATE = {
   displayColorSpace: 'hex' as DisplayColorSpace,
   gamutSpace: 'srgb' as GamutSpace,
   swatchLabels: 'both' as SwatchLabels,
+  showSwatchContrastIndicators: true,
+  swatchContrastIndicators: {
+    wcagThreeToOne: true,
+    wcagAA: true,
+    wcagAAA: true,
+    apcaLarge: true,
+    apcaFluent: true,
+    apcaBody: true
+  } as SwatchContrastIndicators,
   contrastAlgorithm: 'WCAG' as ContrastAlgorithm,
   oklchDisplaySignificantDigits: 4 as OklchDisplaySignificantDigits
 };
@@ -185,6 +197,18 @@ export const themePreference = derived(colorStore, ($colorStore) => $colorStore.
 
 // Derived store for swatch labels
 export const swatchLabels = derived(colorStore, ($colorStore) => $colorStore.swatchLabels);
+
+// Derived store for swatch contrast indicator visibility
+export const showSwatchContrastIndicators = derived(
+  colorStore,
+  ($colorStore) => $colorStore.showSwatchContrastIndicators
+);
+
+// Derived store for swatch contrast indicator criterion visibility
+export const swatchContrastIndicators = derived(
+  colorStore,
+  ($colorStore) => $colorStore.swatchContrastIndicators
+);
 
 // Derived store for contrast algorithm
 export const contrastAlgorithm = derived(
