@@ -1,0 +1,83 @@
+name: Bug report
+description: Report a defect or behavioral regression.
+title: '[Bug]: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please include reproducible details so triage can happen quickly.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is broken right now?
+      placeholder: Describe the current behavior and impact.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen instead?
+      placeholder: Describe the expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Provide exact, deterministic repro steps.
+      placeholder: |
+        1. Go to ...
+        2. Set ...
+        3. Click ...
+        4. Observe ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected Area
+      description: Which part of the app is affected?
+      options:
+        - Color generation / contrast logic
+        - UI components / interactions
+        - Accessibility / keyboard / screen reader
+        - URL or localStorage persistence
+        - Export formats
+        - Tests / CI workflow
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: accessibility_impact
+    attributes:
+      label: Accessibility Impact
+      description: Does this impact accessibility behavior?
+      options:
+        - Yes - accessibility is degraded or blocked
+        - No known accessibility impact
+        - Unknown - needs assessment
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser/device/OS and app context.
+      placeholder: e.g. Safari 18 on macOS 15, 375px viewport, theme=dark
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Supporting Evidence
+      description: Screenshots, recordings, logs, or URLs that help reproduce.
+      placeholder: Paste links, stack traces, or additional details.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submit Checklist
+      options:
+        - label: I searched existing issues to avoid creating a duplicate.
+          required: true
