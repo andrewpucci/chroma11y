@@ -57,6 +57,37 @@ test.describe('Local Storage Persistence', () => {
     // Should still be in dark mode
     await expect(page.locator('#theme-preference')).toHaveValue('dark');
   });
+
+  test('remembers swatch contrast indicator selections across sessions', async ({ page }) => {
+    await page.locator('#indicator-wcag-aa').uncheck();
+    await page.locator('#indicator-wcag-aaa').uncheck();
+
+    await page.waitForFunction(
+      () => {
+        const raw = localStorage.getItem('chroma11y-state');
+        if (!raw) return false;
+
+        try {
+          const parsed = JSON.parse(raw) as {
+            swatchContrastIndicators?: { wcagAA?: boolean; wcagAAA?: boolean };
+          };
+          return (
+            parsed.swatchContrastIndicators?.wcagAA === false &&
+            parsed.swatchContrastIndicators?.wcagAAA === false
+          );
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 5000 }
+    );
+
+    await page.goto('/');
+    await waitForAppReady(page);
+
+    await expect(page.locator('#indicator-wcag-aa')).not.toBeChecked();
+    await expect(page.locator('#indicator-wcag-aaa')).not.toBeChecked();
+  });
 });
 
 test.describe('URL State Persistence', () => {
@@ -116,5 +147,19 @@ test.describe('URL State Persistence', () => {
     // URL should win - base color should be red
     const baseColorValue = await page.locator('#baseColorHex').inputValue();
     expect(baseColorValue.toLowerCase()).toBe('#ff0000');
+  });
+
+  test('persists swatch contrast indicator selections in URL', async ({ page }) => {
+    await page.locator('#indicator-wcag-aaa').uncheck();
+
+    await page.waitForFunction(() => window.location.href.includes('si='), { timeout: 5000 });
+    const url = page.url();
+    expect(url).toContain('si=calfb');
+
+    await page.goto(url);
+    await waitForAppReady(page);
+
+    await expect(page.locator('#indicator-wcag-aa')).toBeChecked();
+    await expect(page.locator('#indicator-wcag-aaa')).not.toBeChecked();
   });
 });

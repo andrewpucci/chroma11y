@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Color from 'colorjs.io';
 import ContrastControls from '$lib/components/ContrastControls.svelte';
@@ -9,9 +9,17 @@ import {
   contrastMode,
   highStep,
   lowStep,
+  contrastAlgorithm,
+  swatchContrastIndicators,
+  showSwatchContrastIndicators,
   resetColorState,
   updateColorState
 } from '$lib/stores';
+import { announce } from '$lib/announce';
+
+vi.mock('$lib/announce', () => ({
+  announce: vi.fn()
+}));
 
 function hexToRgb(hex: string): string {
   let normalized = hex.trim();
@@ -48,7 +56,83 @@ describe('ContrastControls', () => {
         '#777777',
         '#666666',
         '#000000'
-      ].map((hex) => new Color(hex).to('oklch'))
+      ].map((hex) => new Color(hex).to('oklch')),
+      contrastAlgorithm: 'WCAG',
+      showSwatchContrastIndicators: true,
+      swatchContrastIndicators: {
+        wcagThreeToOne: true,
+        wcagAA: true,
+        wcagAAA: true,
+        apcaLarge: true,
+        apcaFluent: true,
+        apcaBody: true
+      }
+    });
+    vi.mocked(announce).mockClear();
+  });
+
+  it('renders contrast algorithm select and WCAG indicator checklist by default', () => {
+    render(ContrastControls);
+
+    expect(screen.getByLabelText(/contrast algorithm/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/show wcag 3 to 1 indicator/i)).toBeChecked();
+    expect(screen.getByLabelText(/show wcag aa indicator/i)).toBeChecked();
+    expect(screen.getByLabelText(/show wcag aaa indicator/i)).toBeChecked();
+    expect(screen.getByLabelText(/explain wcag 3 to 1 level/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/explain wcag aa level/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/explain wcag aaa level/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/show apca large indicator/i)).not.toBeInTheDocument();
+  });
+
+  it('switches indicator checklist when changing algorithm to APCA', async () => {
+    render(ContrastControls);
+
+    await fireEvent.change(screen.getByLabelText(/contrast algorithm/i), {
+      target: { value: 'APCA' }
+    });
+
+    expect(get(contrastAlgorithm)).toBe('APCA');
+    expect(screen.getByLabelText(/show apca large indicator/i)).toBeChecked();
+    expect(screen.getByLabelText(/show apca fluent indicator/i)).toBeChecked();
+    expect(screen.getByLabelText(/show apca body indicator/i)).toBeChecked();
+    expect(screen.getByLabelText(/explain apca large level/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/explain apca fluent level/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/explain apca body level/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/show wcag aa indicator/i)).not.toBeInTheDocument();
+  });
+
+  it('updates indicator selection in store when toggling checklist items', async () => {
+    render(ContrastControls);
+
+    await fireEvent.click(screen.getByLabelText(/show wcag aa indicator/i));
+
+    expect(get(swatchContrastIndicators).wcagAA).toBe(false);
+    expect(vi.mocked(announce)).toHaveBeenLastCalledWith(
+      'Swatch contrast indicators showing 3:1 and AAA 7:1'
+    );
+  });
+
+  it('sets overall swatch indicator visibility false when all indicators are unchecked', async () => {
+    render(ContrastControls);
+
+    await fireEvent.click(screen.getByLabelText(/show wcag 3 to 1 indicator/i));
+    await fireEvent.click(screen.getByLabelText(/show wcag aa indicator/i));
+    await fireEvent.click(screen.getByLabelText(/show wcag aaa indicator/i));
+    await fireEvent.change(screen.getByLabelText(/contrast algorithm/i), {
+      target: { value: 'APCA' }
+    });
+    await fireEvent.click(screen.getByLabelText(/show apca large indicator/i));
+    await fireEvent.click(screen.getByLabelText(/show apca fluent indicator/i));
+    await fireEvent.click(screen.getByLabelText(/show apca body indicator/i));
+
+    expect(get(showSwatchContrastIndicators)).toBe(false);
+    expect(get(swatchContrastIndicators)).toEqual({
+      wcagAA: false,
+      wcagAAA: false,
+      wcagThreeToOne: false,
+      apcaLarge: false,
+      apcaFluent: false,
+      apcaBody: false
     });
   });
 
