@@ -166,7 +166,7 @@
   .neutral-item {
     display: flex;
     flex-direction: column;
-    width: var(--neutral-item-width, 96px);
+    width: var(--neutral-item-width, 148px);
     border-radius: var(--radius-md);
     background: var(--bg-primary);
     transition: transform var(--transition-fast);
@@ -190,13 +190,13 @@
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
     .neutral-item {
-      --neutral-item-width: 96px;
+      --neutral-item-width: 136px;
     }
   }
 
   @media (max-width: 575px) {
     .neutral-item {
-      --neutral-item-width: 92px;
+      --neutral-item-width: 128px;
     }
   }
 </style>

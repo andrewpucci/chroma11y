@@ -747,8 +747,11 @@ export function colorToCssSwatchRender(
 
 // ===== CONTRAST ALGORITHM HELPERS =====
 
+/** Minimum APCA Lc value for fluent/content text (approximate threshold) */
+export const MIN_APCA_LC_FLUENT = 60;
+
 /** Minimum APCA Lc value for body text (approximate threshold) */
-export const MIN_APCA_LC_BODY = 60;
+export const MIN_APCA_LC_BODY = 75;
 
 /** Minimum APCA Lc value for large text (approximate threshold) */
 export const MIN_APCA_LC_LARGE = 45;

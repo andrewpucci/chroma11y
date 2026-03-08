@@ -233,8 +233,13 @@ test.describe('Visual Regression', () => {
     await contrastAlgorithm.selectOption('APCA');
     await expect(contrastAlgorithm).toHaveValue('APCA');
 
-    const firstSwatchContrastInfo = page.locator('.color-swatch .contrast-info').first();
-    await expect(firstSwatchContrastInfo).toContainText('Lc');
+    const firstSwatchContrastIndicators = page
+      .locator('.color-swatch .contrast-indicators')
+      .first();
+    await expect(firstSwatchContrastIndicators).toBeVisible();
+    await expect(firstSwatchContrastIndicators).toContainText('Large');
+    await expect(firstSwatchContrastIndicators).toContainText('Fluent');
+    await expect(firstSwatchContrastIndicators).toContainText('Body');
 
     const palettes = page.getByTestId('generated-palettes');
     await expect(palettes).toBeVisible();

@@ -20,12 +20,15 @@
   --accent-hover: #1352c4;
 
   /* Status badge colors */
-  --badge-pass-bg: color-mix(in oklab, #22c55e 18%, transparent);
-  --badge-pass-text: #16a34a;
-  --badge-pass-border: color-mix(in oklab, #22c55e 30%, transparent);
-  --badge-fail-bg: color-mix(in oklab, #ef4444 14%, transparent);
-  --badge-fail-text: #dc2626;
-  --badge-fail-border: color-mix(in oklab, #ef4444 25%, transparent);
+  --badge-pass-bg: #166534;
+  --badge-pass-text: #f0fdf4;
+  --badge-pass-border: #14532d;
+  --badge-fail-bg: #991b1b;
+  --badge-fail-text: #fef2f2;
+  --badge-fail-border: #7f1d1d;
+  --swatch-indicator-group-bg: #111827;
+  --swatch-indicator-group-border: #1f2937;
+  --swatch-indicator-group-label: #e5e7eb;
   --swatch-inset-shadow-color: color-mix(in oklab, white 8%, transparent);
 }
 
@@ -41,12 +44,15 @@
   --accent-hover: #79b8ff;
 
   /* Status badge colors - dark theme */
-  --badge-pass-bg: color-mix(in oklab, #22c55e 15%, transparent);
-  --badge-pass-text: #4ade80;
-  --badge-pass-border: color-mix(in oklab, #22c55e 25%, transparent);
-  --badge-fail-bg: color-mix(in oklab, #ef4444 12%, transparent);
-  --badge-fail-text: #f87171;
-  --badge-fail-border: color-mix(in oklab, #ef4444 20%, transparent);
+  --badge-pass-bg: #15803d;
+  --badge-pass-text: #f0fdf4;
+  --badge-pass-border: #166534;
+  --badge-fail-bg: #b91c1c;
+  --badge-fail-text: #fef2f2;
+  --badge-fail-border: #991b1b;
+  --swatch-indicator-group-bg: #030712;
+  --swatch-indicator-group-border: #1f2937;
+  --swatch-indicator-group-label: #d1d5db;
   --swatch-inset-shadow-color: color-mix(in oklab, white 12%, transparent);
 }
 
