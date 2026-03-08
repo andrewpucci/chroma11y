@@ -25,8 +25,7 @@
       'APCA Lc 45 minimum for larger, heavier text such as headlines, and for icons or pictograms with fine detail.',
     fluent:
       'APCA Lc 60 minimum for fluent content text that is not body/column text. This is text users are expected to read.',
-    body:
-      'APCA Lc 75 minimum for columns of body text where readability is critical. APCA guidance prefers Lc 90 for body text.'
+    body: 'APCA Lc 75 minimum for columns of body text where readability is critical. APCA guidance prefers Lc 90 for body text.'
   } as const;
   const WCAG_LEVEL_DESCRIPTIONS = {
     threeToOne:
