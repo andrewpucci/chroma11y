@@ -346,7 +346,9 @@
                   class="badge"
                   class:badge--pass={lowContrast.wcagThreeToOne}
                   class:badge--fail={!lowContrast.wcagThreeToOne}
-                  aria-label="Low contrast WCAG 2.2 3 to 1 {lowContrast.wcagThreeToOne ? 'pass' : 'fail'}"
+                  aria-label="Low contrast WCAG 2.2 3 to 1 {lowContrast.wcagThreeToOne
+                    ? 'pass'
+                    : 'fail'}"
                 >
                   <span class="badge-icon">
                     <Icon
@@ -458,7 +460,9 @@
                   class="badge"
                   class:badge--pass={highContrast.wcagThreeToOne}
                   class:badge--fail={!highContrast.wcagThreeToOne}
-                  aria-label="High contrast WCAG 2.2 3 to 1 {highContrast.wcagThreeToOne ? 'pass' : 'fail'}"
+                  aria-label="High contrast WCAG 2.2 3 to 1 {highContrast.wcagThreeToOne
+                    ? 'pass'
+                    : 'fail'}"
                 >
                   <span class="badge-icon">
                     <Icon
