@@ -6,12 +6,13 @@ Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG 2
 
 ## Build commands
 
-| Command           | Description                                   |
-| ----------------- | --------------------------------------------- |
-| `npm install`     | Install dependencies                          |
-| `npm run dev`     | Start Vite dev server (http://localhost:5173) |
-| `npm run build`   | Build for production                          |
-| `npm run preview` | Preview production build (port 4173)          |
+| Command                 | Description                                   |
+| ----------------------- | --------------------------------------------- |
+| `npm install`           | Install dependencies                          |
+| `npm run dev`           | Start Vite dev server (http://localhost:5173) |
+| `npm run build`         | Build for production                          |
+| `npm run preview`       | Preview production build (port 4173)          |
+| `npm run hooks:install` | Manually reinstall Husky hooks                |
 
 ## Running tests
 
@@ -136,9 +137,18 @@ All hardcoded CSS values should use design tokens from `src/lib/styles/tokens.cs
 - localStorage reads wrapped in try/catch with shape validation
 - No external API calls — all client-side
 
+## Local git hooks
+
+Husky hooks are installed automatically by `npm install` (via `prepare`):
+
+- `pre-commit`: `npm run lint-staged` (Prettier + ESLint on staged files)
+- `pre-push`: `npm run check` and `npm run test:unit -- --run`
+- `commit-msg`: commitlint conventional-commit validation
+- Allowed commit types: `feat`, `fix`, `tweak`, `refactor`, `test`, `docs`, `chore`
+
 ## PR guidelines
 
-Run before commit: `npm run lint && npm run check && npm test`
+Run before opening/updating a PR: `npm run lint && npm run check && npm test`
 
 - Add/update tests for any code change
 - Commit format: `prefix: description` (feat:, fix:, tweak:, refactor:, test:, docs:, chore:)

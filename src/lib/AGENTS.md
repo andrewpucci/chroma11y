@@ -2,6 +2,13 @@
 
 Core logic, stores, and utilities for Chroma11y. Unit tests are co-located alongside source files as `*.spec.ts`.
 
+## Workflow expectations
+
+- `pre-commit` runs staged-file formatting/linting through `lint-staged`
+- `pre-push` runs `npm run check` and `npm run test:unit -- --run`
+- Changes in `src/lib` should keep unit/DOM tests deterministic and fast because they run on every push
+- Full validation before PR update remains: `npm run lint && npm run check && npm test`
+
 ## Module inventory
 
 - **`colorUtils.ts`** — core color generation algorithms (OKLCH, bezier, contrast, naming)

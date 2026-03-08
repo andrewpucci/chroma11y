@@ -2,6 +2,12 @@
 
 Playwright end-to-end tests run against a production build. Full-suite CI parity runs use Docker.
 
+## Workflow expectations
+
+- Git hooks do not run E2E by default; `pre-push` currently runs type-checking and unit tests only
+- For behavior or visual changes, run `npm test` (or at minimum `npm run test:e2e:local`) before opening/updating a PR
+- Keep E2E tests deterministic across Chromium, Firefox, and WebKit
+
 CI pipelines:
 
 - `e2e.yml`: deterministic E2E execution + Argos visual capture
