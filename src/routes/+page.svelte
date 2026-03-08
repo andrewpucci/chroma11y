@@ -26,6 +26,8 @@
     gamutSpace,
     themePreference,
     swatchLabels,
+    showSwatchContrastIndicators,
+    swatchContrastIndicators,
     contrastAlgorithm,
     oklchDisplaySignificantDigits,
     updateColorState,
@@ -67,6 +69,8 @@
   let gamutSpaceLocal = $derived($gamutSpace);
   let themePreferenceLocal = $derived($themePreference);
   let swatchLabelsLocal = $derived($swatchLabels);
+  let showSwatchContrastIndicatorsLocal = $derived($showSwatchContrastIndicators);
+  let swatchContrastIndicatorsLocal = $derived($swatchContrastIndicators);
   let contrastAlgorithmLocal = $derived($contrastAlgorithm);
   let oklchDisplaySignificantDigitsLocal = $derived($oklchDisplaySignificantDigits);
 
@@ -266,6 +270,8 @@
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
       swatchLabels: swatchLabelsLocal,
+      showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
+      swatchContrastIndicators: swatchContrastIndicatorsLocal,
       contrastAlgorithm: contrastAlgorithmLocal,
       oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
       themePreference: themePreferenceLocal
@@ -326,6 +332,22 @@
     if (urlState.displayColorSpace) stateUpdate.displayColorSpace = urlState.displayColorSpace;
     if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
     if (urlState.swatchLabels) stateUpdate.swatchLabels = urlState.swatchLabels;
+    if (urlState.swatchContrastIndicators) {
+      stateUpdate.swatchContrastIndicators = urlState.swatchContrastIndicators;
+      stateUpdate.showSwatchContrastIndicators = Object.values(
+        urlState.swatchContrastIndicators
+      ).some(Boolean);
+    } else if (urlState.showSwatchContrastIndicators !== undefined) {
+      stateUpdate.showSwatchContrastIndicators = urlState.showSwatchContrastIndicators;
+      stateUpdate.swatchContrastIndicators = {
+        wcagThreeToOne: urlState.showSwatchContrastIndicators,
+        wcagAA: urlState.showSwatchContrastIndicators,
+        wcagAAA: urlState.showSwatchContrastIndicators,
+        apcaLarge: urlState.showSwatchContrastIndicators,
+        apcaFluent: urlState.showSwatchContrastIndicators,
+        apcaBody: urlState.showSwatchContrastIndicators
+      };
+    }
     if (urlState.contrastAlgorithm) stateUpdate.contrastAlgorithm = urlState.contrastAlgorithm;
     if (urlState.oklchDisplaySignificantDigits !== undefined) {
       stateUpdate.oklchDisplaySignificantDigits = urlState.oklchDisplaySignificantDigits;
@@ -410,7 +432,7 @@
           <ContrastControls />
         </Card>
 
-        <Card title="Settings" subtitle="Display preferences and contrast options">
+        <Card title="Settings" subtitle="Display preferences">
           <DisplaySettings />
         </Card>
 

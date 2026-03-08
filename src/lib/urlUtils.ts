@@ -9,7 +9,8 @@ import type {
   GamutSpace,
   SwatchLabels,
   ContrastAlgorithm,
-  OklchDisplaySignificantDigits
+  OklchDisplaySignificantDigits,
+  SwatchContrastIndicators
 } from './types';
 import { getChromaMultiplierBounds } from './chromaMultiplier';
 
@@ -20,6 +21,68 @@ const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
 const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
 const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
 const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
+const DEFAULT_SWATCH_CONTRAST_INDICATORS: SwatchContrastIndicators = {
+  wcagThreeToOne: true,
+  wcagAA: true,
+  wcagAAA: true,
+  apcaLarge: true,
+  apcaFluent: true,
+  apcaBody: true
+};
+const INDICATOR_KEY_BY_CODE = {
+  c: 'wcagThreeToOne',
+  a: 'wcagAA',
+  A: 'wcagAAA',
+  l: 'apcaLarge',
+  f: 'apcaFluent',
+  b: 'apcaBody'
+} as const satisfies Record<string, keyof SwatchContrastIndicators>;
+const INDICATOR_CODE_ORDER = ['c', 'a', 'A', 'l', 'f', 'b'] as const;
+
+function areAllIndicatorsVisible(indicators: SwatchContrastIndicators): boolean {
+  return Object.values(indicators).every(Boolean);
+}
+
+function areNoIndicatorsVisible(indicators: SwatchContrastIndicators): boolean {
+  return Object.values(indicators).every((value) => !value);
+}
+
+function encodeIndicators(indicators: SwatchContrastIndicators): string {
+  return INDICATOR_CODE_ORDER.filter((code) => indicators[INDICATOR_KEY_BY_CODE[code]]).join('');
+}
+
+function decodeIndicators(encoded: string): SwatchContrastIndicators | null {
+  if (!encoded) return null;
+  if (encoded === '0') {
+    return {
+      wcagThreeToOne: false,
+      wcagAA: false,
+      wcagAAA: false,
+      apcaLarge: false,
+      apcaFluent: false,
+      apcaBody: false
+    };
+  }
+  if (encoded === '1') {
+    return { ...DEFAULT_SWATCH_CONTRAST_INDICATORS };
+  }
+
+  if (!/^[caAlfb]+$/.test(encoded)) {
+    return null;
+  }
+
+  const uniqueCodes = new Set(encoded.split(''));
+  const hasLegacyWcagCodes = uniqueCodes.has('a') || uniqueCodes.has('A');
+  return {
+    // Backward compatibility for masks created before the 3:1 bucket existed.
+    wcagThreeToOne: uniqueCodes.has('c') || hasLegacyWcagCodes,
+    wcagAA: uniqueCodes.has('a'),
+    wcagAAA: uniqueCodes.has('A'),
+    apcaLarge: uniqueCodes.has('l'),
+    apcaFluent: uniqueCodes.has('f'),
+    apcaBody: uniqueCodes.has('b')
+  };
+}
 
 /**
  * Encodes the color state into URL search parameters
@@ -73,6 +136,19 @@ export function encodeStateToUrl(state: UrlColorState): string {
     params.set('ds', state.displayColorSpace);
   if (state.gamutSpace && state.gamutSpace !== 'srgb') params.set('gs', state.gamutSpace);
   if (state.swatchLabels && state.swatchLabels !== 'both') params.set('sl', state.swatchLabels);
+  if (state.swatchContrastIndicators) {
+    if (areNoIndicatorsVisible(state.swatchContrastIndicators)) {
+      params.set('si', '0');
+    } else if (!areAllIndicatorsVisible(state.swatchContrastIndicators)) {
+      params.set('si', encodeIndicators(state.swatchContrastIndicators));
+    }
+  } else if (
+    state.showSwatchContrastIndicators !== undefined &&
+    !state.showSwatchContrastIndicators
+  ) {
+    // Backward-compatible fallback for pre-checklist state
+    params.set('si', '0');
+  }
   if (state.contrastAlgorithm && state.contrastAlgorithm !== 'WCAG')
     params.set('ca', state.contrastAlgorithm);
   if (
@@ -210,6 +286,15 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   const sl = searchParams.get('sl');
   if (sl && VALID_SWATCH_LABELS.includes(sl as SwatchLabels))
     state.swatchLabels = sl as SwatchLabels;
+
+  const si = searchParams.get('si');
+  if (si) {
+    const decodedIndicators = decodeIndicators(si);
+    if (decodedIndicators) {
+      state.swatchContrastIndicators = decodedIndicators;
+      state.showSwatchContrastIndicators = Object.values(decodedIndicators).some(Boolean);
+    }
+  }
 
   const ca = searchParams.get('ca');
   if (ca && VALID_CONTRAST_ALGOS.includes(ca as ContrastAlgorithm))
