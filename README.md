@@ -456,6 +456,8 @@ npm run preview
 
 Contributions are welcome! Please follow these guidelines:
 
+Primary contributor guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+
 ### Code Style
 
 - Use TypeScript for type safety
@@ -476,6 +478,17 @@ Contributions are welcome! Please follow these guidelines:
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Issue and PR Naming
+
+- Issues are created through structured forms and prefixed automatically:
+  - `[Bug]: ...`
+  - `[Feature]: ...`
+  - `[Docs]: ...`
+- PR titles are validated in CI and must use:
+  - `<type>: <summary> (#<issue-number>)`
+  - or `<type>: <summary> [no-issue]`
+- Allowed PR title types: `feat`, `fix`, `tweak`, `refactor`, `test`, `docs`, `chore`
 
 <p align="right"><a href="#chroma11y">↑ back to top</a></p>
 

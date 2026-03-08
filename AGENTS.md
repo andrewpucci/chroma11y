@@ -142,4 +142,13 @@ Run before commit: `npm run lint && npm run check && npm test`
 
 - Add/update tests for any code change
 - Commit format: `prefix: description` (feat:, fix:, tweak:, refactor:, test:, docs:, chore:)
+- PR title format (CI enforced): `<type>: <summary> (#<issue-number>)` or `<type>: <summary> [no-issue]`
+- Allowed PR title types: `feat`, `fix`, `tweak`, `refactor`, `test`, `docs`, `chore`
 - Keep accessibility intact
+
+## Issue guidelines
+
+- Use issue forms in `.github/ISSUE_TEMPLATE/` (`Bug report`, `Feature request`, `Documentation improvement`)
+- Do not use blank issues (disabled in `config.yml`)
+- Security vulnerabilities must be reported privately via GitHub Security Advisories:
+  `https://github.com/andrewpucci/chroma11y/security/advisories/new`
