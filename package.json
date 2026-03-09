@@ -45,7 +45,7 @@
     "@argos-ci/playwright": "^6.4.2",
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
-    "@eslint/compat": "^2.0.2",
+    "@eslint/compat": "^2.0.3",
     "@eslint/js": "^10.0.0",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.58.2",
