@@ -88,6 +88,30 @@ test.describe('Local Storage Persistence', () => {
     await expect(page.locator('#indicator-wcag-aa')).not.toBeChecked();
     await expect(page.locator('#indicator-wcag-aaa')).not.toBeChecked();
   });
+
+  test('remembers swatch gamut warning visibility across sessions', async ({ page }) => {
+    await page.locator('#show-swatch-gamut-warnings').uncheck();
+
+    await page.waitForFunction(
+      () => {
+        const raw = localStorage.getItem('chroma11y-state');
+        if (!raw) return false;
+
+        try {
+          const parsed = JSON.parse(raw) as { showSwatchGamutWarnings?: boolean };
+          return parsed.showSwatchGamutWarnings === false;
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 5000 }
+    );
+
+    await page.goto('/');
+    await waitForAppReady(page);
+
+    await expect(page.locator('#show-swatch-gamut-warnings')).not.toBeChecked();
+  });
 });
 
 test.describe('URL State Persistence', () => {
@@ -161,5 +185,30 @@ test.describe('URL State Persistence', () => {
 
     await expect(page.locator('#indicator-wcag-aa')).toBeChecked();
     await expect(page.locator('#indicator-wcag-aaa')).not.toBeChecked();
+  });
+
+  test('persists swatch gamut warning visibility in URL', async ({ page }) => {
+    await page.locator('#show-swatch-gamut-warnings').uncheck();
+
+    await page.waitForFunction(() => window.location.href.includes('gw=0'), { timeout: 5000 });
+    const url = page.url();
+    expect(url).toContain('gw=0');
+
+    await page.goto(url);
+    await waitForAppReady(page);
+
+    await expect(page.locator('#show-swatch-gamut-warnings')).not.toBeChecked();
+  });
+
+  test('hex display locks gamut to sRGB', async ({ page }) => {
+    await page.locator('#display-color-space').selectOption('oklch');
+    await page.locator('#gamut-space').selectOption('p3');
+    await expect(page.locator('#gamut-space')).toHaveValue('p3');
+
+    await page.locator('#display-color-space').selectOption('hex');
+
+    await expect(page.locator('#gamut-space')).toHaveValue('srgb');
+    await expect(page.locator('#gamut-space')).toBeDisabled();
+    expect(page.url()).not.toContain('gs=');
   });
 });
