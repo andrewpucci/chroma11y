@@ -7,10 +7,10 @@ import {
 } from './chromaMultiplier';
 
 describe('chromaMultiplier', () => {
-  it('returns gamut-aware max bounds', () => {
-    expect(getChromaMultiplierBounds('srgb').max).toBe(1.3);
-    expect(getChromaMultiplierBounds('p3').max).toBe(1.6);
-    expect(getChromaMultiplierBounds('rec2020').max).toBe(1.7);
+  it('returns normalized max bounds across gamuts', () => {
+    expect(getChromaMultiplierBounds('srgb').max).toBe(1);
+    expect(getChromaMultiplierBounds('p3').max).toBe(1);
+    expect(getChromaMultiplierBounds('rec2020').max).toBe(1);
   });
 
   it('uses zero as the shared lower bound', () => {
@@ -20,9 +20,9 @@ describe('chromaMultiplier', () => {
 
   it('clamps to the active gamut range', () => {
     expect(clampChromaMultiplier(-0.4, 'srgb')).toBe(0);
-    expect(clampChromaMultiplier(1.9, 'srgb')).toBe(1.3);
-    expect(clampChromaMultiplier(1.9, 'p3')).toBe(1.6);
-    expect(clampChromaMultiplier(1.9, 'rec2020')).toBe(1.7);
+    expect(clampChromaMultiplier(1.9, 'srgb')).toBe(1);
+    expect(clampChromaMultiplier(1.9, 'p3')).toBe(1);
+    expect(clampChromaMultiplier(1.9, 'rec2020')).toBe(1);
   });
 
   it('returns min for non-finite values', () => {

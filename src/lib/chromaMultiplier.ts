@@ -2,12 +2,14 @@ import type { GamutSpace } from '$lib/types';
 
 /** Saturation slider minimum, shared across all gamuts. */
 export const CHROMA_MULTIPLIER_MIN = 0;
+/** Saturation slider maximum for normalized chroma mode. */
+export const CHROMA_MULTIPLIER_MAX = 1;
 
-/** Gamut-aware upper bounds for saturation control. */
+/** Upper bounds for saturation control (normalized across gamuts). */
 export const CHROMA_MULTIPLIER_MAX_BY_GAMUT: Record<GamutSpace, number> = {
-  srgb: 1.3,
-  p3: 1.6,
-  rec2020: 1.7
+  srgb: CHROMA_MULTIPLIER_MAX,
+  p3: CHROMA_MULTIPLIER_MAX,
+  rec2020: CHROMA_MULTIPLIER_MAX
 };
 
 /**

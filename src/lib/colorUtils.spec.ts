@@ -584,6 +584,16 @@ describe('colorUtils', () => {
       // Warm hue is 60
       expect(midNeutral.oklch.h).toBeCloseTo(60, 0);
     });
+
+    it('keeps pure endpoints achromatic even when warmth is applied', () => {
+      const warmParams = { ...baseParams, warmth: 20 };
+      const neutrals = generateBaseNeutrals(warmParams);
+
+      expect(neutrals[0].oklch.l).toBeCloseTo(1, 4);
+      expect(neutrals[0].oklch.c ?? 0).toBeCloseTo(0, 6);
+      expect(neutrals[4].oklch.l).toBeCloseTo(0, 4);
+      expect(neutrals[4].oklch.c ?? 0).toBeCloseTo(0, 6);
+    });
   });
 
   describe('getContrastForAlgorithm', () => {
@@ -723,6 +733,52 @@ describe('colorUtils', () => {
           expect(f).toBeLessThan(avg + 0.05);
           assertionsMade += 2;
         }
+      }
+
+      expect(assertionsMade).toBeGreaterThan(0);
+    });
+
+    it('high chroma multiplier approaches normalized gamut boundary without overflow', () => {
+      const params: ColorGenParams = {
+        numColors: 11,
+        numPalettes: 11,
+        baseColor: '#1862e6',
+        warmth: -7,
+        x1: 0.16,
+        y1: 0,
+        x2: 0.28,
+        y2: 0.38,
+        chromaMultiplier: 1.6,
+        currentTheme: 'light',
+        lightnessNudgers: new Array(11).fill(0),
+        hueNudgers: new Array(11).fill(0),
+        gamutSpace: 'p3'
+      };
+
+      const result = generatePalettes(params);
+      let assertionsMade = 0;
+
+      for (let step = 1; step < params.numColors - 1; step++) {
+        const fractions = result.palettes.map((palette) => {
+          const color = palette[step];
+          const l = color.oklch.l ?? 0;
+          const h = color.oklch.h ?? 0;
+          const c = color.oklch.c ?? 0;
+          const maxC = maxChromaInGamut(l, h, 'p3');
+          return maxC > 1e-6 ? c / maxC : 0;
+        });
+
+        const nonZero = fractions.filter((f) => f > 0.01);
+        if (nonZero.length < 2) continue;
+
+        const maxFraction = Math.max(...nonZero);
+        const minFraction = Math.min(...nonZero);
+        const avgFraction = nonZero.reduce((sum, f) => sum + f, 0) / nonZero.length;
+
+        expect(maxFraction).toBeLessThanOrEqual(1.001);
+        expect(avgFraction).toBeGreaterThan(0.9);
+        expect(maxFraction - minFraction).toBeLessThan(0.1);
+        assertionsMade += 3;
       }
 
       expect(assertionsMade).toBeGreaterThan(0);

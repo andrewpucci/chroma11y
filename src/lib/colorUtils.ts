@@ -367,12 +367,16 @@ export function generateBaseNeutrals(params: ColorGenParams): Color[] {
 
   // Process each sample to create neutral colors with warmth applied directly in OKLCH
   const baseNeutrals: Color[] = initialSamples.map((sample) => {
+    const l = sample.oklch.l ?? 0;
+    // Preserve pure endpoints so neutral step 0/100 stay achromatic.
+    if (l >= 0.9999 || l <= 0.0001) return oklchColor(l, 0, 0);
+
     const baseWarmthChroma = Math.abs(params.warmth) * WARMTH_CONFIG.CHROMA_SCALE;
     const scaledChroma = baseWarmthChroma * params.chromaMultiplier;
     const clampedChroma = Math.min(scaledChroma, WARMTH_CONFIG.MAX_CHROMA);
     const warmthHue = params.warmth >= 0 ? WARMTH_CONFIG.WARM_HUE : WARMTH_CONFIG.COOL_HUE;
 
-    return oklchColor(sample.oklch.l ?? 0, clampedChroma, warmthHue);
+    return oklchColor(l, clampedChroma, warmthHue);
   });
 
   return baseNeutrals;
@@ -436,7 +440,7 @@ function generatePalette(
 ): Color[] {
   const paletteHue = baseColor.oklch.h ?? 0;
   const clampedBaseChromaRatio =
-    isFinite(baseChromaRatio) && baseChromaRatio > 0 ? baseChromaRatio : 0;
+    isFinite(baseChromaRatio) && baseChromaRatio > 0 ? Math.min(baseChromaRatio, 1) : 0;
 
   return baseNeutrals.map((neutralColor) => {
     const l = neutralColor.oklch.l ?? 0;
@@ -507,7 +511,8 @@ export function generatePalettes(params: ColorGenParams): {
   const baseLightness = baseColor.oklch.l ?? 0;
   const baseChroma = (baseColor.oklch.c || 0) * params.chromaMultiplier;
   const referenceMaxAtBase = maxChromaInGamut(baseLightness, referenceHue, gamut);
-  const baseChromaRatio = referenceMaxAtBase > 1e-6 ? baseChroma / referenceMaxAtBase : 0;
+  const baseChromaRatio =
+    referenceMaxAtBase > 1e-6 ? Math.min(baseChroma / referenceMaxAtBase, 1) : 0;
 
   // Generate palettes with hue variations using BASE neutrals (without nudgers)
   const palettes: Color[][] = Array.from({ length: params.numPalettes }, (_, i) => {
