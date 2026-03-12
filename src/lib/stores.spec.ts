@@ -30,6 +30,7 @@ import {
   gamutSpace,
   themePreference,
   swatchLabels,
+  showSwatchGamutWarnings,
   showSwatchContrastIndicators,
   swatchContrastIndicators,
   contrastAlgorithm,
@@ -112,7 +113,7 @@ describe('stores', () => {
 
     it('chromaMultiplier reflects colorStore.chromaMultiplier', () => {
       expect.assertions(1);
-      expect(get(chromaMultiplier)).toBe(1.14);
+      expect(get(chromaMultiplier)).toBe(1);
     });
 
     it('bezier control points reflect colorStore values', () => {
@@ -156,6 +157,11 @@ describe('stores', () => {
     it('showSwatchContrastIndicators reflects colorStore.showSwatchContrastIndicators', () => {
       expect.assertions(1);
       expect(get(showSwatchContrastIndicators)).toBe(true);
+    });
+
+    it('showSwatchGamutWarnings reflects colorStore.showSwatchGamutWarnings', () => {
+      expect.assertions(1);
+      expect(get(showSwatchGamutWarnings)).toBe(true);
     });
 
     it('swatchContrastIndicators reflects colorStore.swatchContrastIndicators', () => {
@@ -301,6 +307,13 @@ describe('stores', () => {
       expect(get(showSwatchContrastIndicators)).toBe(false);
     });
 
+    it('updates swatch gamut warning visibility', () => {
+      expect.assertions(1);
+      updateColorState({ showSwatchGamutWarnings: false });
+
+      expect(get(showSwatchGamutWarnings)).toBe(false);
+    });
+
     it('updates swatch contrast indicator criterion visibility', () => {
       expect.assertions(1);
       updateColorState({
@@ -323,6 +336,23 @@ describe('stores', () => {
         apcaBody: false
       });
     });
+
+    it('forces gamutSpace to sRGB when displayColorSpace is hex', () => {
+      expect.assertions(2);
+      updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'p3' });
+      updateColorState({ displayColorSpace: 'hex' });
+
+      expect(get(displayColorSpace)).toBe('hex');
+      expect(get(gamutSpace)).toBe('srgb');
+    });
+
+    it('keeps non-sRGB gamut when displayColorSpace is not hex', () => {
+      expect.assertions(2);
+      updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'rec2020' });
+
+      expect(get(displayColorSpace)).toBe('oklch');
+      expect(get(gamutSpace)).toBe('rec2020');
+    });
   });
 
   describe('setTheme', () => {
@@ -333,7 +363,7 @@ describe('stores', () => {
 
       expect(get(currentTheme)).toBe('light');
       expect(get(x1)).toBe(0.16);
-      expect(get(chromaMultiplier)).toBe(1.14);
+      expect(get(chromaMultiplier)).toBe(1);
     });
 
     it('applies dark theme preset', () => {
@@ -518,7 +548,7 @@ describe('stores', () => {
       resetColorState('light');
 
       expect(get(warmth)).toBe(-7);
-      expect(get(chromaMultiplier)).toBe(1.14);
+      expect(get(chromaMultiplier)).toBe(1);
       expect(get(themePreference)).toBe('auto');
     });
 

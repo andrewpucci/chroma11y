@@ -15,7 +15,7 @@ describe('storageUtils', () => {
     y1: 0.0,
     x2: 0.28,
     y2: 0.38,
-    chromaMultiplier: 1.14,
+    chromaMultiplier: 1,
     contrastMode: 'auto',
     lowStep: 0,
     highStep: 10,
@@ -26,6 +26,7 @@ describe('storageUtils', () => {
     gamutSpace: 'srgb',
     themePreference: 'auto',
     swatchLabels: 'both',
+    showSwatchGamutWarnings: true,
     showSwatchContrastIndicators: true,
     swatchContrastIndicators: {
       wcagThreeToOne: true,
@@ -201,6 +202,18 @@ describe('storageUtils', () => {
       expect(result?.showSwatchContrastIndicators).toBe(true);
     });
 
+    it('strips invalid showSwatchGamutWarnings', () => {
+      expect.assertions(2);
+
+      const invalidState = { ...mockState, showSwatchGamutWarnings: 'invalid' };
+      localStorage.setItem('chroma11y-state', JSON.stringify(invalidState));
+
+      const result = loadStateFromStorage();
+
+      expect(result).not.toBeNull();
+      expect(result?.showSwatchGamutWarnings).toBeUndefined();
+    });
+
     it('strips invalid swatchContrastIndicators object', () => {
       expect.assertions(2);
 
@@ -283,8 +296,31 @@ describe('storageUtils', () => {
       expect(result?.oklchDisplaySignificantDigits).toBeUndefined();
     });
 
+    it('normalizes non-sRGB gamut to sRGB when displayColorSpace is hex', () => {
+      expect.assertions(1);
+
+      localStorage.setItem(
+        'chroma11y-state',
+        JSON.stringify({ ...mockState, displayColorSpace: 'hex', gamutSpace: 'p3' })
+      );
+
+      const result = loadStateFromStorage();
+      expect(result?.gamutSpace).toBe('srgb');
+    });
+
+    it('normalizes non-sRGB gamut to sRGB when displayColorSpace is omitted', () => {
+      expect.assertions(1);
+
+      const stateWithoutDisplay = { ...mockState, gamutSpace: 'rec2020' };
+      delete stateWithoutDisplay.displayColorSpace;
+      localStorage.setItem('chroma11y-state', JSON.stringify(stateWithoutDisplay));
+
+      const result = loadStateFromStorage();
+      expect(result?.gamutSpace).toBe('srgb');
+    });
+
     it('preserves valid display settings', () => {
-      expect.assertions(8);
+      expect.assertions(9);
 
       localStorage.setItem('chroma11y-state', JSON.stringify(mockState));
 
@@ -294,6 +330,7 @@ describe('storageUtils', () => {
       expect(result?.gamutSpace).toBe('srgb');
       expect(result?.themePreference).toBe('auto');
       expect(result?.swatchLabels).toBe('both');
+      expect(result?.showSwatchGamutWarnings).toBe(true);
       expect(result?.showSwatchContrastIndicators).toBe(true);
       expect(result?.swatchContrastIndicators).toEqual(mockState.swatchContrastIndicators);
       expect(result?.contrastAlgorithm).toBe('WCAG');

@@ -13,10 +13,10 @@ describe('urlUtils', () => {
     });
 
     it('encodes numeric values', () => {
-      const state: UrlColorState = { warmth: 5, chromaMultiplier: 1.5 };
+      const state: UrlColorState = { warmth: 5, chromaMultiplier: 0.95 };
       const encoded = encodeStateToUrl(state);
       expect(encoded).toContain('w=5');
-      expect(encoded).toContain('cm=1.5');
+      expect(encoded).toContain('cm=0.95');
     });
 
     it('encodes zero chroma multiplier', () => {
@@ -83,10 +83,10 @@ describe('urlUtils', () => {
     });
 
     it('decodes numeric values', () => {
-      const params = new URLSearchParams('w=-7&cm=1.14&nc=11&np=5');
+      const params = new URLSearchParams('w=-7&cm=0.95&nc=11&np=5');
       const state = decodeStateFromUrl(params);
       expect(state.warmth).toBe(-7);
-      expect(state.chromaMultiplier).toBe(1.14);
+      expect(state.chromaMultiplier).toBe(0.95);
       expect(state.numColors).toBe(11);
       expect(state.numPalettes).toBe(5);
     });
@@ -97,31 +97,31 @@ describe('urlUtils', () => {
       expect(state.chromaMultiplier).toBe(0);
     });
 
-    it('ignores out-of-range chroma multiplier from URL', () => {
+    it('clamps out-of-range chroma multiplier from URL', () => {
       const params = new URLSearchParams('cm=1.8');
       const state = decodeStateFromUrl(params);
-      expect(state.chromaMultiplier).toBeUndefined();
+      expect(state.chromaMultiplier).toBe(1);
     });
 
-    it('accepts higher chroma multiplier when gamut is p3', () => {
-      const params = new URLSearchParams('gs=p3&cm=1.55');
+    it('accepts normalized chroma multiplier when gamut is p3', () => {
+      const params = new URLSearchParams('ds=oklch&gs=p3&cm=0.95');
       const state = decodeStateFromUrl(params);
       expect(state.gamutSpace).toBe('p3');
-      expect(state.chromaMultiplier).toBe(1.55);
+      expect(state.chromaMultiplier).toBe(0.95);
     });
 
-    it('accepts higher chroma multiplier when gamut is rec2020', () => {
-      const params = new URLSearchParams('gs=rec2020&cm=1.65');
+    it('accepts normalized chroma multiplier when gamut is rec2020', () => {
+      const params = new URLSearchParams('ds=oklch&gs=rec2020&cm=0.95');
       const state = decodeStateFromUrl(params);
       expect(state.gamutSpace).toBe('rec2020');
-      expect(state.chromaMultiplier).toBe(1.65);
+      expect(state.chromaMultiplier).toBe(0.95);
     });
 
-    it('ignores out-of-range chroma multiplier for p3 gamut', () => {
-      const params = new URLSearchParams('gs=p3&cm=1.8');
+    it('clamps out-of-range chroma multiplier for p3 gamut', () => {
+      const params = new URLSearchParams('ds=oklch&gs=p3&cm=1.8');
       const state = decodeStateFromUrl(params);
       expect(state.gamutSpace).toBe('p3');
-      expect(state.chromaMultiplier).toBeUndefined();
+      expect(state.chromaMultiplier).toBe(1);
     });
 
     it('decodes bezier curve parameters', () => {
@@ -183,6 +183,12 @@ describe('urlUtils', () => {
       expect(encoded).toContain('gs=rec2020');
     });
 
+    it('omits non-sRGB gamut when display color space is hex', () => {
+      const state: UrlColorState = { displayColorSpace: 'hex', gamutSpace: 'p3' };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('gs=');
+    });
+
     it('omits gamut space when default (srgb)', () => {
       const state: UrlColorState = { gamutSpace: 'srgb' };
       const encoded = encodeStateToUrl(state);
@@ -205,6 +211,18 @@ describe('urlUtils', () => {
       const state: UrlColorState = { swatchLabels: 'both' };
       const encoded = encodeStateToUrl(state);
       expect(encoded).not.toContain('sl=');
+    });
+
+    it('encodes swatch gamut warnings when disabled', () => {
+      const state: UrlColorState = { showSwatchGamutWarnings: false };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('gw=0');
+    });
+
+    it('omits swatch gamut warnings when enabled (default)', () => {
+      const state: UrlColorState = { showSwatchGamutWarnings: true };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('gw=');
     });
 
     it('encodes swatch contrast indicators when all levels are hidden', () => {
@@ -284,10 +302,16 @@ describe('urlUtils', () => {
       expect(state.displayColorSpace).toBe('rgb');
     });
 
-    it('decodes gamut space', () => {
-      const params = new URLSearchParams('gs=rec2020');
+    it('decodes gamut space for non-hex display color space', () => {
+      const params = new URLSearchParams('ds=oklch&gs=rec2020');
       const state = decodeStateFromUrl(params);
       expect(state.gamutSpace).toBe('rec2020');
+    });
+
+    it('normalizes legacy non-sRGB gamut to sRGB when display space is implicit hex', () => {
+      const params = new URLSearchParams('gs=rec2020');
+      const state = decodeStateFromUrl(params);
+      expect(state.gamutSpace).toBe('srgb');
     });
 
     it('ignores tp param (themePreference is localStorage only)', () => {
@@ -300,6 +324,12 @@ describe('urlUtils', () => {
       const params = new URLSearchParams('sl=step');
       const state = decodeStateFromUrl(params);
       expect(state.swatchLabels).toBe('step');
+    });
+
+    it('decodes swatch gamut warning visibility', () => {
+      const params = new URLSearchParams('gw=0');
+      const state = decodeStateFromUrl(params);
+      expect(state.showSwatchGamutWarnings).toBe(false);
     });
 
     it('decodes swatch contrast indicator mask', () => {
@@ -396,7 +426,7 @@ describe('urlUtils', () => {
       const original: UrlColorState = {
         baseColor: '#1862e6',
         warmth: -7,
-        chromaMultiplier: 1.14,
+        chromaMultiplier: 0.95,
         numColors: 11,
         numPalettes: 5,
         x1: 0.16,
@@ -434,6 +464,7 @@ describe('urlUtils', () => {
         displayColorSpace: 'oklch',
         gamutSpace: 'p3',
         swatchLabels: 'step',
+        showSwatchGamutWarnings: false,
         swatchContrastIndicators: {
           wcagThreeToOne: true,
           wcagAA: true,
@@ -452,6 +483,7 @@ describe('urlUtils', () => {
       expect(decoded.displayColorSpace).toBe(original.displayColorSpace);
       expect(decoded.gamutSpace).toBe(original.gamutSpace);
       expect(decoded.swatchLabels).toBe(original.swatchLabels);
+      expect(decoded.showSwatchGamutWarnings).toBe(false);
       expect(decoded.swatchContrastIndicators).toEqual(original.swatchContrastIndicators);
       expect(decoded.showSwatchContrastIndicators).toBe(true);
       expect(decoded.contrastAlgorithm).toBe(original.contrastAlgorithm);

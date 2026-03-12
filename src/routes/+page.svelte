@@ -26,6 +26,7 @@
     gamutSpace,
     themePreference,
     swatchLabels,
+    showSwatchGamutWarnings,
     showSwatchContrastIndicators,
     swatchContrastIndicators,
     contrastAlgorithm,
@@ -69,6 +70,7 @@
   let gamutSpaceLocal = $derived($gamutSpace);
   let themePreferenceLocal = $derived($themePreference);
   let swatchLabelsLocal = $derived($swatchLabels);
+  let showSwatchGamutWarningsLocal = $derived($showSwatchGamutWarnings);
   let showSwatchContrastIndicatorsLocal = $derived($showSwatchContrastIndicators);
   let swatchContrastIndicatorsLocal = $derived($swatchContrastIndicators);
   let contrastAlgorithmLocal = $derived($contrastAlgorithm);
@@ -77,7 +79,7 @@
   // Bindable state for controls
   let baseColorLocal = $state('#1862E6');
   let warmthLocal = $state(-7);
-  let chromaMultiplierLocal = $state(1.14);
+  let chromaMultiplierLocal = $state(1);
   let numColorsLocal = $state(11);
   let numPalettesLocal = $state(11);
   let x1Local = $state(0.16);
@@ -270,6 +272,7 @@
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
       swatchLabels: swatchLabelsLocal,
+      showSwatchGamutWarnings: showSwatchGamutWarningsLocal,
       showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
       swatchContrastIndicators: swatchContrastIndicatorsLocal,
       contrastAlgorithm: contrastAlgorithmLocal,
@@ -332,6 +335,9 @@
     if (urlState.displayColorSpace) stateUpdate.displayColorSpace = urlState.displayColorSpace;
     if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
     if (urlState.swatchLabels) stateUpdate.swatchLabels = urlState.swatchLabels;
+    if (urlState.showSwatchGamutWarnings !== undefined) {
+      stateUpdate.showSwatchGamutWarnings = urlState.showSwatchGamutWarnings;
+    }
     if (urlState.swatchContrastIndicators) {
       stateUpdate.swatchContrastIndicators = urlState.swatchContrastIndicators;
       stateUpdate.showSwatchContrastIndicators = Object.values(

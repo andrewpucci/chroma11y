@@ -40,6 +40,7 @@ interface ColorState {
   gamutSpace: GamutSpace;
   themePreference: ThemePreference;
   swatchLabels: SwatchLabels;
+  showSwatchGamutWarnings: boolean;
   showSwatchContrastIndicators: boolean;
   swatchContrastIndicators: SwatchContrastIndicators;
   contrastAlgorithm: ContrastAlgorithm;
@@ -60,7 +61,7 @@ const THEME_PRESETS = {
     y1: 0.0,
     x2: 0.28,
     y2: 0.38,
-    chromaMultiplier: 1.14,
+    chromaMultiplier: 1,
     contrastMode: 'auto' as const,
     lowStep: 0,
     highStep: 10,
@@ -103,6 +104,7 @@ const DEFAULT_STATE = {
   displayColorSpace: 'hex' as DisplayColorSpace,
   gamutSpace: 'srgb' as GamutSpace,
   swatchLabels: 'both' as SwatchLabels,
+  showSwatchGamutWarnings: true,
   showSwatchContrastIndicators: true,
   swatchContrastIndicators: {
     wcagThreeToOne: true,
@@ -115,6 +117,17 @@ const DEFAULT_STATE = {
   contrastAlgorithm: 'WCAG' as ContrastAlgorithm,
   oklchDisplaySignificantDigits: 4 as OklchDisplaySignificantDigits
 };
+
+function normalizeDisplayState(state: ColorState): ColorState {
+  if (state.displayColorSpace === 'hex' && state.gamutSpace !== 'srgb') {
+    return {
+      ...state,
+      gamutSpace: 'srgb'
+    };
+  }
+
+  return state;
+}
 
 // Create the main color store
 export const colorStore = writable<ColorState>({ ...DEFAULT_STATE } as ColorState);
@@ -198,6 +211,12 @@ export const themePreference = derived(colorStore, ($colorStore) => $colorStore.
 // Derived store for swatch labels
 export const swatchLabels = derived(colorStore, ($colorStore) => $colorStore.swatchLabels);
 
+// Derived store for swatch gamut warning visibility
+export const showSwatchGamutWarnings = derived(
+  colorStore,
+  ($colorStore) => $colorStore.showSwatchGamutWarnings
+);
+
 // Derived store for swatch contrast indicator visibility
 export const showSwatchContrastIndicators = derived(
   colorStore,
@@ -267,7 +286,7 @@ export const palettesSwatchDisplay = derived(colorStore, ($colorStore) =>
  */
 export const updateColorState = (newState: Partial<ColorState>) => {
   colorStore.update((currentState) => {
-    return { ...currentState, ...newState };
+    return normalizeDisplayState({ ...currentState, ...newState } as ColorState);
   });
 };
 
@@ -283,12 +302,12 @@ export const setTheme = (theme: 'light' | 'dark') => {
 
   colorStore.update((currentState) => {
     const themePreset = THEME_PRESETS[theme];
-    return {
+    return normalizeDisplayState({
       ...currentState,
       ...themePreset,
       currentTheme: theme,
       _lastUpdated: Date.now()
-    } as ColorState;
+    } as ColorState);
   });
 };
 
@@ -302,14 +321,14 @@ export const setThemePreference = (preference: ThemePreference) => {
     const newState = { ...currentState, themePreference: preference };
     if (preference !== 'auto') {
       const themePreset = THEME_PRESETS[preference];
-      return {
+      return normalizeDisplayState({
         ...newState,
         ...themePreset,
         currentTheme: preference,
         _lastUpdated: Date.now()
-      } as ColorState;
+      } as ColorState);
     }
-    return newState;
+    return normalizeDisplayState(newState as ColorState);
   });
 };
 
@@ -409,12 +428,12 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
       theme && THEME_PRESETS[theme] ? theme : (currentState.currentTheme as 'light' | 'dark');
     const themePreset = THEME_PRESETS[targetTheme];
 
-    return {
+    return normalizeDisplayState({
       ...currentState,
       ...themePreset,
       currentTheme: targetTheme,
       themePreference: 'auto' as ThemePreference,
       _lastUpdated: Date.now()
-    } as ColorState;
+    } as ColorState);
   });
 };

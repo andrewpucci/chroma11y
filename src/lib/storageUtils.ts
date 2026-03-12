@@ -90,6 +90,12 @@ export function loadStateFromStorage(): StoredColorState | null {
       delete state.swatchLabels;
     }
     if (
+      state.showSwatchGamutWarnings !== undefined &&
+      typeof state.showSwatchGamutWarnings !== 'boolean'
+    ) {
+      delete state.showSwatchGamutWarnings;
+    }
+    if (
       state.showSwatchContrastIndicators !== undefined &&
       typeof state.showSwatchContrastIndicators !== 'boolean'
     ) {
@@ -161,6 +167,11 @@ export function loadStateFromStorage(): StoredColorState | null {
       )
     ) {
       delete state.oklchDisplaySignificantDigits;
+    }
+
+    const effectiveDisplaySpace = state.displayColorSpace ?? 'hex';
+    if (state.gamutSpace && state.gamutSpace !== 'srgb' && effectiveDisplaySpace === 'hex') {
+      state.gamutSpace = 'srgb';
     }
 
     return state;

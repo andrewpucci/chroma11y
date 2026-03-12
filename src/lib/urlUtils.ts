@@ -134,8 +134,14 @@ export function encodeStateToUrl(state: UrlColorState): string {
   // Display settings
   if (state.displayColorSpace && state.displayColorSpace !== 'hex')
     params.set('ds', state.displayColorSpace);
-  if (state.gamutSpace && state.gamutSpace !== 'srgb') params.set('gs', state.gamutSpace);
+  const effectiveGamutSpace =
+    state.displayColorSpace === 'hex' && state.gamutSpace && state.gamutSpace !== 'srgb'
+      ? 'srgb'
+      : state.gamutSpace;
+  if (effectiveGamutSpace && effectiveGamutSpace !== 'srgb') params.set('gs', effectiveGamutSpace);
   if (state.swatchLabels && state.swatchLabels !== 'both') params.set('sl', state.swatchLabels);
+  if (state.showSwatchGamutWarnings !== undefined && !state.showSwatchGamutWarnings)
+    params.set('gw', '0');
   if (state.swatchContrastIndicators) {
     if (areNoIndicatorsVisible(state.swatchContrastIndicators)) {
       params.set('si', '0');
@@ -189,8 +195,8 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   if (chromaMultiplier) {
     const parsed = parseFloat(chromaMultiplier);
     const { min, max } = getChromaMultiplierBounds(decodedGamut);
-    if (!isNaN(parsed) && isFinite(parsed) && parsed >= min && parsed <= max) {
-      state.chromaMultiplier = parsed;
+    if (!isNaN(parsed) && isFinite(parsed)) {
+      state.chromaMultiplier = Math.max(min, Math.min(max, parsed));
     }
   }
 
@@ -287,6 +293,10 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   if (sl && VALID_SWATCH_LABELS.includes(sl as SwatchLabels))
     state.swatchLabels = sl as SwatchLabels;
 
+  const gw = searchParams.get('gw');
+  if (gw === '0') state.showSwatchGamutWarnings = false;
+  if (gw === '1') state.showSwatchGamutWarnings = true;
+
   const si = searchParams.get('si');
   if (si) {
     const decodedIndicators = decodeIndicators(si);
@@ -306,6 +316,11 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
     if (VALID_OKLCH_SIG_DIGITS.includes(parsed as OklchDisplaySignificantDigits)) {
       state.oklchDisplaySignificantDigits = parsed as OklchDisplaySignificantDigits;
     }
+  }
+
+  const effectiveDisplaySpace = state.displayColorSpace ?? 'hex';
+  if (state.gamutSpace && state.gamutSpace !== 'srgb' && effectiveDisplaySpace === 'hex') {
+    state.gamutSpace = 'srgb';
   }
 
   return state;

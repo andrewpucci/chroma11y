@@ -50,6 +50,7 @@ export interface SerializableColorState {
   gamutSpace?: GamutSpace;
   themePreference?: ThemePreference;
   swatchLabels?: SwatchLabels;
+  showSwatchGamutWarnings?: boolean;
   showSwatchContrastIndicators?: boolean;
   swatchContrastIndicators?: SwatchContrastIndicators;
   contrastAlgorithm?: ContrastAlgorithm;

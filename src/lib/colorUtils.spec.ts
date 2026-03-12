@@ -18,6 +18,12 @@ import {
   colorToCssRec2020,
   colorToCssRender,
   colorToCssSwatchRender,
+  getGamutSpaceLabel,
+  getRequiredWideGamut,
+  isColorGamutMapped,
+  mapColorToGamut,
+  requiresWideGamutWarning,
+  isStrictlyRepresentableInSrgb,
   clampOklchDisplaySignificantDigits,
   getContrastAPCA,
   getPrintableContrastAPCA,
@@ -471,6 +477,90 @@ describe('colorUtils', () => {
       const blue = new Color('oklch', [0.5, 0.2, 264]);
       const result = colorToCssRender(blue, 'hsl', 'rec2020');
       expect(result).toMatch(/^color\(rec2020/);
+    });
+  });
+
+  describe('gamut mapping helpers', () => {
+    it('returns compact labels for gamut spaces', () => {
+      expect(getGamutSpaceLabel('srgb')).toBe('sRGB');
+      expect(getGamutSpaceLabel('p3')).toBe('P3');
+      expect(getGamutSpaceLabel('rec2020')).toBe('Rec. 2020');
+    });
+
+    it('never reports gamut mapping for sRGB target', () => {
+      const extremeColor = new Color('oklch', [0.7, 0.4, 10]);
+      expect(isColorGamutMapped(extremeColor, 'srgb')).toBe(false);
+    });
+
+    it('reports gamut mapping for out-of-gamut colors in Display P3', () => {
+      const outOfP3 = new Color('oklch', [0.62, 0.4, 35]);
+      expect(isColorGamutMapped(outOfP3, 'p3')).toBe(true);
+    });
+
+    it('does not report gamut mapping for in-gamut colors in Display P3', () => {
+      const inP3 = new Color('#00ff00').to('oklch');
+      expect(isColorGamutMapped(inP3, 'p3')).toBe(false);
+    });
+
+    it('does not report mapping for achromatic white in Display P3', () => {
+      const white = new Color('oklch', [1, 0, 330]);
+      expect(isColorGamutMapped(white, 'p3')).toBe(false);
+    });
+
+    it('ignores near-achromatic numeric noise when checking mapping', () => {
+      const nearWhiteNoise = new Color('oklch', [1, 0.00001, 330]);
+      expect(isColorGamutMapped(nearWhiteNoise, 'p3')).toBe(false);
+    });
+
+    it('uses tolerance to ignore negligible mapping differences', () => {
+      const inRec2020 = new Color('#1862e6').to('oklch');
+      expect(isColorGamutMapped(inRec2020, 'rec2020', 999)).toBe(false);
+    });
+
+    it('maps colors into the active gamut target', () => {
+      const outOfP3 = new Color('oklch', [0.62, 0.4, 35]);
+      const mappedToP3 = mapColorToGamut(outOfP3, 'p3');
+      expect(mappedToP3.inGamut('p3')).toBe(true);
+
+      const outOfRec2020 = new Color('oklch', [0.7, 0.6, 130]);
+      const mappedToRec2020 = mapColorToGamut(outOfRec2020, 'rec2020');
+      expect(mappedToRec2020.inGamut('rec2020')).toBe(true);
+    });
+
+    it('can keep strict sRGB values available when a mapped P3 result is in sRGB', () => {
+      const source = new Color('oklch', [0.05, 0.05, 240]);
+      const mapped = mapColorToGamut(source, 'p3');
+
+      expect(isColorGamutMapped(source, 'p3')).toBe(true);
+      expect(isStrictlyRepresentableInSrgb(source)).toBe(false);
+      expect(isStrictlyRepresentableInSrgb(mapped)).toBe(true);
+    });
+
+    it('warns when the displayed P3 color is outside sRGB even if it is already in P3', () => {
+      const inP3ButNotSrgb = new Color('oklch', [0.95, 0.032, 230]);
+
+      expect(isColorGamutMapped(inP3ButNotSrgb, 'p3')).toBe(false);
+      expect(requiresWideGamutWarning(inP3ButNotSrgb, 'p3')).toBe(true);
+      expect(getRequiredWideGamut(inP3ButNotSrgb, 'p3')).toBe('p3');
+    });
+
+    it('prefers P3 over Rec. 2020 when the displayed Rec. 2020 color fits in P3', () => {
+      const inP3ButNotSrgb = new Color('oklch', [0.95, 0.032, 230]);
+
+      expect(requiresWideGamutWarning(inP3ButNotSrgb, 'rec2020')).toBe(true);
+      expect(getRequiredWideGamut(inP3ButNotSrgb, 'rec2020')).toBe('p3');
+    });
+
+    it('returns Rec. 2020 only when P3 is insufficient for the displayed color', () => {
+      const rec2020Only = new Color('oklch', [0.72, 0.32, 155]);
+
+      expect(requiresWideGamutWarning(rec2020Only, 'rec2020')).toBe(true);
+      expect(getRequiredWideGamut(rec2020Only, 'rec2020')).toBe('rec2020');
+    });
+
+    it('reports strict sRGB representability correctly', () => {
+      expect(isStrictlyRepresentableInSrgb(new Color('#1862e6'))).toBe(true);
+      expect(isStrictlyRepresentableInSrgb(new Color('oklch', [0.7, 0.4, 10]))).toBe(false);
     });
   });
 

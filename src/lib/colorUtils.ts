@@ -110,6 +110,8 @@ export const DEFAULT_OKLCH_DISPLAY_SIGNIFICANT_DIGITS: OklchDisplaySignificantDi
 
 const MIN_OKLCH_DISPLAY_SIGNIFICANT_DIGITS = 1;
 const MAX_OKLCH_DISPLAY_SIGNIFICANT_DIGITS = 6;
+const GAMUT_MAPPING_DELTA_E_TOLERANCE = 0.02;
+const ACHROMATIC_MAPPING_CHROMA_EPSILON = 0.0001;
 
 const significantDigitsFormatters = new Map<number, Intl.NumberFormat>();
 
@@ -397,6 +399,107 @@ function resolveGamutSpaceId(gamut?: GamutSpace): string {
 }
 
 /**
+ * Gamut-maps a color into the selected target gamut using shared mapping options.
+ */
+export function mapColorToGamut(color: Color, gamut: GamutSpace): Color {
+  const targetSpace = resolveGamutSpaceId(gamut);
+  return color.clone().toGamut({
+    space: targetSpace,
+    blackWhiteClamp: { channel: 'oklch.l', min: 0.0001, max: 0.9999 }
+  });
+}
+
+/**
+ * Returns a compact human-readable label for a gamut target.
+ */
+export function getGamutSpaceLabel(gamut: GamutSpace): string {
+  switch (gamut) {
+    case 'p3':
+      return 'P3';
+    case 'rec2020':
+      return 'Rec. 2020';
+    default:
+      return 'sRGB';
+  }
+}
+
+/**
+ * Returns whether a color is materially gamut-mapped in the target gamut.
+ * sRGB is treated as a safe baseline and never reports mapping for warning UI.
+ */
+export function isColorGamutMapped(
+  color: Color,
+  gamut: GamutSpace,
+  tolerance: number = GAMUT_MAPPING_DELTA_E_TOLERANCE
+): boolean {
+  if (gamut === 'srgb') return false;
+
+  try {
+    const targetSpace = resolveGamutSpaceId(gamut);
+    const source = color.clone();
+
+    // If it's already in the target gamut, it is not gamut-mapped.
+    if (source.inGamut(targetSpace)) return false;
+
+    // Suppress false positives from near-achromatic floating-point noise
+    // (common around black/white endpoints where hue/chroma are not meaningful).
+    const sourceOklch = source.to('oklch');
+    const sourceChroma = sourceOklch.oklch.c ?? 0;
+    if (Math.abs(sourceChroma) < ACHROMATIC_MAPPING_CHROMA_EPSILON) return false;
+
+    const mapped = mapColorToGamut(source, gamut);
+    const delta = source.deltaE2000(mapped);
+
+    if (!isFinite(delta)) {
+      return !source.inGamut(targetSpace);
+    }
+
+    return delta > tolerance;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns whether a color can be represented in sRGB without gamut mapping.
+ */
+export function isStrictlyRepresentableInSrgb(color: Color): boolean {
+  try {
+    return color.clone().inGamut('srgb');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns the minimum non-sRGB gamut required to display the current color.
+ * The returned value is based on the displayed color after mapping into the active gamut.
+ */
+export function getRequiredWideGamut(color: Color, gamut: GamutSpace): GamutSpace | null {
+  if (gamut === 'srgb') return null;
+
+  try {
+    const mapped = mapColorToGamut(color, gamut);
+    if (isStrictlyRepresentableInSrgb(mapped)) return null;
+    if (mapped.inGamut('p3')) return 'p3';
+    return 'rec2020';
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns whether the displayed color requires a non-sRGB gamut.
+ */
+export function requiresWideGamutWarning(color: Color, gamut: GamutSpace): boolean {
+  try {
+    return getRequiredWideGamut(color, gamut) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Finds the maximum OKLCH chroma at a given lightness and hue that stays within the target gamut.
  * Uses binary search over chroma with colorjs.io's inGamut() check.
  * @param l - OKLCH lightness (0–1)
@@ -606,11 +709,7 @@ export function colorToCssOklch(color: Color, gamut: GamutSpace = 'srgb'): strin
     if (rawH == null || isNaN(rawH)) clone.oklch.h = 0;
     // Gamut-map to the target space first so the OKLCH values represent the actual
     // rendered color, avoiding browser-induced hue shifts for out-of-gamut colors
-    const gamutSpace = gamut === 'rec2020' ? 'rec2020' : gamut === 'p3' ? 'p3' : 'srgb';
-    const mapped = clone.toGamut({
-      space: gamutSpace,
-      blackWhiteClamp: { channel: 'oklch.l', min: 0.0001, max: 0.9999 }
-    });
+    const mapped = mapColorToGamut(clone, gamut);
     const oklch = mapped.to('oklch');
     const l = oklch.oklch.l ?? 0;
     const c = oklch.oklch.c ?? 0;
@@ -644,11 +743,7 @@ export function colorToCssOklchSwatch(
     if (rawH == null || isNaN(rawH)) clone.oklch.h = 0;
     // Gamut-map to the target space first so the OKLCH values represent the actual
     // rendered color, avoiding browser-induced hue shifts for out-of-gamut colors
-    const gamutSpace = gamut === 'rec2020' ? 'rec2020' : gamut === 'p3' ? 'p3' : 'srgb';
-    const mapped = clone.toGamut({
-      space: gamutSpace,
-      blackWhiteClamp: { channel: 'oklch.l', min: 0.0001, max: 0.9999 }
-    });
+    const mapped = mapColorToGamut(clone, gamut);
     const oklch = mapped.to('oklch');
     const l = oklch.oklch.l ?? 0;
     const c = oklch.oklch.c ?? 0;
