@@ -13,6 +13,7 @@ import {
   gamutSpace,
   themePreference,
   swatchLabels,
+  showSwatchGamutWarnings,
   oklchDisplaySignificantDigits,
   updateColorState,
   setThemePreference
@@ -25,6 +26,7 @@ describe('DisplaySettings', () => {
       displayColorSpace: 'hex',
       gamutSpace: 'srgb',
       swatchLabels: 'both',
+      showSwatchGamutWarnings: true,
       oklchDisplaySignificantDigits: 4
     });
     setThemePreference('auto');
@@ -39,6 +41,7 @@ describe('DisplaySettings', () => {
     expect(screen.getByLabelText('Theme preference')).toBeInTheDocument();
     expect(screen.getByLabelText('Show step labels on swatches')).toBeInTheDocument();
     expect(screen.getByLabelText('Show value labels on swatches')).toBeInTheDocument();
+    expect(screen.getByLabelText('Show gamut warnings on mapped swatches')).toBeInTheDocument();
     expect(screen.queryByLabelText('OKLCH display significant digits')).not.toBeInTheDocument();
   });
 
@@ -98,10 +101,30 @@ describe('DisplaySettings', () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
+    await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
     await user.selectOptions(screen.getByLabelText('Gamut mapping target'), 'p3');
 
     expect(get(gamutSpace)).toBe('p3');
     expect(announce).toHaveBeenCalledWith('Gamut mapping changed to Display P3');
+  });
+
+  it('forces sRGB gamut and disables gamut selector when display color space is hex', async () => {
+    const user = userEvent.setup();
+    updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'p3' });
+    render(DisplaySettings);
+
+    const gamutSelect = screen.getByLabelText('Gamut mapping target');
+    expect(gamutSelect).not.toBeDisabled();
+
+    await user.selectOptions(screen.getByLabelText('Display color space format'), 'hex');
+
+    expect(get(displayColorSpace)).toBe('hex');
+    expect(get(gamutSpace)).toBe('srgb');
+    expect(gamutSelect).toBeDisabled();
+    expect(screen.getByText(/hex output is fixed to srgb/i)).toBeInTheDocument();
+    expect(announce).toHaveBeenCalledWith(
+      'Display color space changed to hex. Gamut mapping fixed to sRGB'
+    );
   });
 
   it('changes theme preference and announces', async () => {
@@ -123,6 +146,16 @@ describe('DisplaySettings', () => {
 
     expect(get(swatchLabels)).toBe('none');
     expect(announce).toHaveBeenCalledWith('Swatch labels changed to hidden');
+  });
+
+  it('changes swatch gamut warnings visibility and announces', async () => {
+    const user = userEvent.setup();
+    render(DisplaySettings);
+
+    await user.click(screen.getByLabelText('Show gamut warnings on mapped swatches'));
+
+    expect(get(showSwatchGamutWarnings)).toBe(false);
+    expect(announce).toHaveBeenCalledWith('Swatch gamut warnings hidden');
   });
 
   it('changes OKLCH significant digits from number input and announces', async () => {

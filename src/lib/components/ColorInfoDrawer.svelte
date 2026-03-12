@@ -14,9 +14,15 @@
     colorToCssHex,
     colorToCssRgb,
     colorToCssOklch,
-    colorToCssHsl
+    colorToCssHsl,
+    colorToCssRender,
+    getGamutSpaceLabel,
+    getRequiredWideGamut,
+    mapColorToGamut,
+    requiresWideGamutWarning,
+    isStrictlyRepresentableInSrgb
   } from '$lib/colorUtils';
-  import { contrastColors } from '$lib/stores';
+  import { contrastColors, displayColorSpace, gamutSpace } from '$lib/stores';
   import { announce } from '$lib/announce';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
@@ -27,23 +33,96 @@
   const data = $derived($drawerData);
 
   const contrastColorsLocal = $derived($contrastColors);
+  const displayColorSpaceLocal = $derived($displayColorSpace);
+  const gamutSpaceLocal = $derived($gamutSpace);
+
+  interface DrawerColorValues {
+    previewCss: string;
+    previewHex: string;
+    hex: string;
+    rgb: string;
+    oklch: string;
+    hsl: string;
+  }
+
+  interface DrawerValueRow {
+    label: 'Hex' | 'RGB' | 'OKLCH' | 'HSL';
+    value: string;
+    unavailable?: boolean;
+    unavailableReason?: string;
+  }
+
+  const sourceOklch = $derived(data ? data.oklch : null);
+  const mappedOklch = $derived.by(() => {
+    if (!sourceOklch) return null;
+    try {
+      return mapColorToGamut(sourceOklch, gamutSpaceLocal);
+    } catch {
+      return sourceOklch;
+    }
+  });
 
   // Computed color values from OKLCH source of truth
   const colorValues = $derived.by(() => {
-    if (!data) return null;
+    if (!data || !mappedOklch) return null as DrawerColorValues | null;
     const oklchValue =
       data.displayValue && /^oklch\(/i.test(data.displayValue)
         ? data.displayValue
-        : colorToCssOklch(data.oklch);
+        : colorToCssOklch(mappedOklch, gamutSpaceLocal);
+    const previewHex = colorToCssHex(mappedOklch);
     return {
-      hex: colorToCssHex(data.oklch),
-      rgb: colorToCssRgb(data.oklch),
+      previewCss: colorToCssRender(mappedOklch, displayColorSpaceLocal, gamutSpaceLocal),
+      previewHex,
+      hex: previewHex,
+      rgb: colorToCssRgb(mappedOklch),
       oklch: oklchValue,
-      hsl: colorToCssHsl(data.oklch)
+      hsl: colorToCssHsl(mappedOklch)
     };
   });
+  const previewColor = $derived(colorValues?.previewCss || '#000000');
+  const isStrictSrgbValueAvailable = $derived(
+    mappedOklch ? isStrictlyRepresentableInSrgb(mappedOklch) : false
+  );
+  const isGamutMapped = $derived(
+    sourceOklch ? requiresWideGamutWarning(sourceOklch, gamutSpaceLocal) : false
+  );
+  const requiredWideGamut = $derived(
+    sourceOklch ? getRequiredWideGamut(sourceOklch, gamutSpaceLocal) : null
+  );
+  const gamutAlertLabel = $derived(requiredWideGamut ? getGamutSpaceLabel(requiredWideGamut) : '');
+  const colorValueRows = $derived.by((): DrawerValueRow[] => {
+    if (!colorValues) return [];
 
-  const colorName = $derived(colorValues ? nearestFriendlyColorName(colorValues.hex) : '');
+    const unavailableReason = 'Out of sRGB gamut';
+    const strictUnavailable = !isStrictSrgbValueAvailable;
+
+    return [
+      {
+        label: 'Hex',
+        value: strictUnavailable ? 'Unavailable' : colorValues.hex,
+        unavailable: strictUnavailable,
+        unavailableReason: strictUnavailable ? unavailableReason : undefined
+      },
+      {
+        label: 'RGB',
+        value: strictUnavailable ? 'Unavailable' : colorValues.rgb,
+        unavailable: strictUnavailable,
+        unavailableReason: strictUnavailable ? unavailableReason : undefined
+      },
+      {
+        label: 'OKLCH',
+        value: colorValues.oklch
+      },
+      {
+        label: 'HSL',
+        value: strictUnavailable ? 'Unavailable' : colorValues.hsl,
+        unavailable: strictUnavailable,
+        unavailableReason: strictUnavailable ? unavailableReason : undefined
+      }
+    ];
+  });
+
+  const colorName = $derived(colorValues ? nearestFriendlyColorName(colorValues.previewHex) : '');
   const lightnessValue = $derived(data ? Math.round((data.oklch.oklch.l ?? 0) * 1000) / 1000 : 0);
 
   const lowContrast = $derived.by(() => {
@@ -58,7 +137,7 @@
         apcaFluent: false,
         apcaBody: false
       };
-    const hex = colorValues?.hex ?? data.hex;
+    const hex = colorValues?.previewHex ?? data.hex;
     const wcag = getContrast(hex, contrastColorsLocal.low);
     const apca = getContrastAPCA(contrastColorsLocal.low, hex);
     return {
@@ -85,7 +164,7 @@
         apcaFluent: false,
         apcaBody: false
       };
-    const hex = colorValues?.hex ?? data.hex;
+    const hex = colorValues?.previewHex ?? data.hex;
     const wcag = getContrast(hex, contrastColorsLocal.high);
     const apca = getContrastAPCA(contrastColorsLocal.high, hex);
     return {
@@ -230,14 +309,15 @@
 
   function handleCopyAll() {
     if (!colorValues || !data) return;
+    const strictUnavailableText = 'Unavailable (Out of sRGB gamut)';
     const block = [
       `Name: ${colorName}`,
       `Step: ${data.step}`,
       `Palette: ${data.paletteName}`,
-      `Hex: ${colorValues.hex}`,
-      `RGB: ${colorValues.rgb}`,
+      `Hex: ${isStrictSrgbValueAvailable ? colorValues.hex : strictUnavailableText}`,
+      `RGB: ${isStrictSrgbValueAvailable ? colorValues.rgb : strictUnavailableText}`,
       `OKLCH: ${colorValues.oklch}`,
-      `HSL: ${colorValues.hsl}`,
+      `HSL: ${isStrictSrgbValueAvailable ? colorValues.hsl : strictUnavailableText}`,
       `Lightness (L): ${lightnessValue}`
     ].join('\n');
     copyToClipboard(block);
@@ -278,10 +358,22 @@
         <!-- Large color preview -->
         <div
           class="color-preview"
-          style="background-color: {colorValues.hex};"
+          class:color-preview--gamut-warning={isGamutMapped}
+          style="background-color: {previewColor};"
           role="img"
-          aria-label="Color preview: {colorName}, {colorValues.hex}"
-        ></div>
+          aria-label="Color preview: {colorName}, {colorValues.previewHex}"
+        >
+          {#if isGamutMapped}
+            <span class="color-preview-gamut-tag" aria-hidden="true">{gamutAlertLabel}</span>
+          {/if}
+        </div>
+
+        {#if isGamutMapped}
+          <div class="gamut-alert" role="alert" aria-label="Gamut mapping warning">
+            This swatch requires {gamutAlertLabel} to display its current color. Hex, RGB, and HSL only
+            appear when the displayed result is directly representable in sRGB.
+          </div>
+        {/if}
 
         <!-- Palette context -->
         <div class="meta-row">
@@ -303,20 +395,32 @@
         <div class="section">
           <h3 class="section-title">Color Values</h3>
           <ul class="color-values" role="list">
-            {#each [{ label: 'Hex', value: colorValues.hex }, { label: 'RGB', value: colorValues.rgb }, { label: 'OKLCH', value: colorValues.oklch }, { label: 'HSL', value: colorValues.hsl }] as { label, value } (label)}
+            {#each colorValueRows as row (row.label)}
               <li class="color-value-row">
-                <span class="color-value-label">{label}</span>
-                <code class="color-value-code">{value}</code>
+                <span class="color-value-label">{row.label}</span>
+                <code class="color-value-code">{row.value}</code>
+                {#if row.unavailable && row.unavailableReason}
+                  <span class="color-value-unavailable-reason">{row.unavailableReason}</span>
+                {/if}
                 <Button
-                  onclick={() => handleCopyValue(label, value)}
-                  ariaLabel="Copy {label} value: {value}"
+                  onclick={() => handleCopyValue(row.label, row.value)}
+                  ariaLabel={row.unavailable
+                    ? `${row.label} value unavailable`
+                    : `Copy ${row.label} value: ${row.value}`}
                   variant="secondary"
+                  disabled={row.unavailable}
                 >
                   <Icon name="copy" />
                 </Button>
               </li>
             {/each}
           </ul>
+          {#if !isStrictSrgbValueAvailable}
+            <p class="color-values-help">
+              Hex, RGB, and HSL are unavailable because this color cannot be represented directly in
+              sRGB.
+            </p>
+          {/if}
           <Button onclick={handleCopyAll} ariaLabel="Copy all color values to clipboard">
             <Icon name="copy" />
             Copy All
@@ -335,7 +439,9 @@
                     class="contrast-mini-swatch"
                     style="background-color: {contrastColorsLocal.low};"
                   ></span>
-                  <span class="contrast-mini-swatch" style="background-color: {colorValues.hex};"
+                  <span
+                    class="contrast-mini-swatch"
+                    style="background-color: {colorValues.previewHex};"
                   ></span>
                 </div>
               </div>
@@ -449,7 +555,9 @@
                     class="contrast-mini-swatch"
                     style="background-color: {contrastColorsLocal.high};"
                   ></span>
-                  <span class="contrast-mini-swatch" style="background-color: {colorValues.hex};"
+                  <span
+                    class="contrast-mini-swatch"
+                    style="background-color: {colorValues.previewHex};"
                   ></span>
                 </div>
               </div>
@@ -705,10 +813,40 @@
   }
 
   .color-preview {
+    position: relative;
     width: 100%;
     height: 120px;
     border-radius: var(--radius-md);
     border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+
+  .color-preview--gamut-warning {
+    border-color: var(--gamut-warning-border);
+    border-width: var(--border-width-medium);
+  }
+
+  .color-preview-gamut-tag {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    line-height: 1;
+    border-top-right-radius: calc(var(--radius-md) - var(--border-width-medium));
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 0;
+    padding: calc(var(--space-xs) * 0.75) var(--space-xs);
+    background: var(--gamut-warning-bg);
+    border-top: 0;
+    border-right: 0;
+    border-left: var(--border-width-medium) solid var(--gamut-warning-border);
+    border-bottom: var(--border-width-medium) solid var(--gamut-warning-border);
+    color: var(--gamut-warning-text);
+    font-family: var(--text-mono);
   }
 
   .meta-row {
@@ -748,6 +886,16 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
+  }
+
+  .gamut-alert {
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+    border: var(--border-width-thin) solid var(--gamut-warning-border);
+    background: var(--gamut-warning-bg);
+    color: var(--gamut-warning-text);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-normal);
   }
 
   .section-title {
@@ -800,6 +948,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .color-value-unavailable-reason {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    flex: 0 1 auto;
+  }
+
+  .color-values-help {
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    line-height: var(--line-height-normal);
   }
 
   .contrast-rows {

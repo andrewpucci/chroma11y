@@ -5,6 +5,7 @@
     gamutSpace,
     themePreference,
     swatchLabels,
+    showSwatchGamutWarnings,
     updateColorState,
     setThemePreference
   } from '$lib/stores';
@@ -32,6 +33,7 @@
   const gamutSpaceLocal = $derived($gamutSpace);
   const themePreferenceLocal = $derived($themePreference);
   const swatchLabelsLocal = $derived($swatchLabels);
+  const showSwatchGamutWarningsLocal = $derived($showSwatchGamutWarnings);
   const swatchStepLabelEnabled = $derived(
     swatchLabelsLocal === 'both' || swatchLabelsLocal === 'step'
   );
@@ -49,6 +51,12 @@
 
   function handleDisplayColorSpaceChange(event: Event) {
     const value = (event.target as HTMLSelectElement).value as DisplayColorSpace;
+    if (value === 'hex') {
+      updateColorState({ displayColorSpace: value, gamutSpace: 'srgb' });
+      announce('Display color space changed to hex. Gamut mapping fixed to sRGB');
+      return;
+    }
+
     updateColorState({ displayColorSpace: value });
     announce(`Display color space changed to ${value}`);
   }
@@ -100,6 +108,12 @@
     updateColorState({ swatchLabels: value });
     announce(`Swatch labels changed to ${describeSwatchLabels(value)}`);
   }
+
+  function handleSwatchGamutWarningsToggle(event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    updateColorState({ showSwatchGamutWarnings: checked });
+    announce(checked ? 'Swatch gamut warnings shown' : 'Swatch gamut warnings hidden');
+  }
 </script>
 
 <section class="display-settings" data-testid="display-settings">
@@ -148,11 +162,32 @@
       value={gamutSpaceLocal}
       onchange={handleGamutSpaceChange}
       aria-label="Gamut mapping target"
+      disabled={displayColorSpaceLocal === 'hex'}
+      aria-describedby={displayColorSpaceLocal === 'hex' ? 'gamut-space-help' : undefined}
     >
       <option value="srgb">sRGB</option>
       <option value="p3">Display P3</option>
       <option value="rec2020">Rec. 2020</option>
     </select>
+    {#if displayColorSpaceLocal === 'hex'}
+      <p id="gamut-space-help" class="field-help">
+        Hex output is fixed to sRGB, so gamut mapping cannot be changed.
+      </p>
+    {/if}
+  </div>
+
+  <div class="field">
+    <span class="label">Gamut Warnings</span>
+    <label class="check-item" for="show-swatch-gamut-warnings">
+      <input
+        id="show-swatch-gamut-warnings"
+        type="checkbox"
+        checked={showSwatchGamutWarningsLocal}
+        onchange={handleSwatchGamutWarningsToggle}
+        aria-label="Show gamut warnings on mapped swatches"
+      />
+      <span>Show warnings on gamut-mapped swatches</span>
+    </label>
   </div>
 
   <div class="field">
@@ -226,5 +261,11 @@
     height: var(--touch-target-min);
     margin: 0;
     accent-color: var(--accent);
+  }
+
+  .field-help {
+    margin: var(--space-xs) 0 0;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
   }
 </style>

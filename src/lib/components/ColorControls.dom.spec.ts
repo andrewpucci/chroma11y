@@ -44,8 +44,8 @@ describe('ColorControls', () => {
     await fireEvent.blur(saturationInput);
 
     const saturationSlider = screen.getByRole('slider', { name: 'Saturation' }) as HTMLInputElement;
-    expect(saturationSlider.value).toBe('1.3');
-    expect(saturationInput.value).toBe('1.3');
+    expect(saturationSlider.value).toBe('1');
+    expect(saturationInput.value).toBe('1');
   });
 
   it('clamps number of colors input during input to prevent oversized render state', async () => {
@@ -95,7 +95,7 @@ describe('ColorControls', () => {
     );
   });
 
-  it('uses saturation slider bounds tuned for visible gamut changes', () => {
+  it('uses normalized saturation slider bounds', () => {
     render(ColorControls, {
       props: {
         chromaMultiplier: 1
@@ -104,10 +104,10 @@ describe('ColorControls', () => {
 
     const saturationSlider = screen.getByRole('slider', { name: 'Saturation' }) as HTMLInputElement;
     expect(saturationSlider.min).toBe('0');
-    expect(saturationSlider.max).toBe('1.3');
+    expect(saturationSlider.max).toBe('1');
   });
 
-  it('uses wider saturation bounds for wider gamuts', () => {
+  it('uses the same normalized saturation bounds for wider gamuts', () => {
     render(ColorControls, {
       props: {
         chromaMultiplier: 1,
@@ -117,7 +117,7 @@ describe('ColorControls', () => {
 
     const saturationSlider = screen.getByRole('slider', { name: 'Saturation' }) as HTMLInputElement;
     expect(saturationSlider.min).toBe('0');
-    expect(saturationSlider.max).toBe('1.6');
+    expect(saturationSlider.max).toBe('1');
   });
 
   it('renders Bezier coordinate inputs with bound values', () => {

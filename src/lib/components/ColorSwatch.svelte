@@ -2,7 +2,10 @@
   import {
     copyToClipboard,
     colorToCssHex,
+    getGamutSpaceLabel,
+    getRequiredWideGamut,
     getContrastForAlgorithm,
+    requiresWideGamutWarning,
     MIN_CONTRAST_RATIO,
     MIN_APCA_LC_FLUENT,
     MIN_APCA_LC_BODY,
@@ -11,6 +14,8 @@
   import {
     contrastColors,
     swatchLabels,
+    gamutSpace,
+    showSwatchGamutWarnings,
     showSwatchContrastIndicators,
     swatchContrastIndicators,
     contrastAlgorithm
@@ -40,6 +45,8 @@
 
   const contrastColorsLocal = $derived($contrastColors);
   const swatchLabelsLocal = $derived($swatchLabels);
+  const gamutSpaceLocal = $derived($gamutSpace);
+  const showSwatchGamutWarningsLocal = $derived($showSwatchGamutWarnings);
   const showSwatchContrastIndicatorsLocal = $derived($showSwatchContrastIndicators);
   const swatchContrastIndicatorsLocal = $derived($swatchContrastIndicators);
   const contrastAlgorithmLocal = $derived($contrastAlgorithm);
@@ -53,14 +60,31 @@
       return color;
     }
   });
-  const drawerOklch = $derived.by(() => {
-    if (!oklchColor) return null;
+  const sourceOklch = $derived.by(() => {
+    if (oklchColor) return oklchColor;
     try {
-      return new Color(renderedColor).to('oklch');
+      return new Color(color).to('oklch');
     } catch {
-      return oklchColor;
+      try {
+        return new Color(renderedColor).to('oklch');
+      } catch {
+        return null;
+      }
     }
   });
+  const warningColorSource = $derived(sourceOklch);
+  const isGamutMapped = $derived.by(() => {
+    if (!warningColorSource) return false;
+    return requiresWideGamutWarning(warningColorSource, gamutSpaceLocal);
+  });
+  const showGamutWarning = $derived(showSwatchGamutWarningsLocal && isGamutMapped);
+  const requiredWideGamut = $derived.by(() => {
+    if (!warningColorSource) return null;
+    return getRequiredWideGamut(warningColorSource, gamutSpaceLocal);
+  });
+  const gamutWarningLabel = $derived(
+    requiredWideGamut ? getGamutSpaceLabel(requiredWideGamut) : ''
+  );
 
   interface IndicatorBadge {
     criterion: '3:1' | 'AA' | 'AAA' | 'Large' | 'Fluent' | 'Body';
@@ -265,13 +289,14 @@
 
 <button
   class="color-swatch"
+  class:color-swatch--gamut-warning={showGamutWarning}
   style="background-color: {renderedColor}; color: {textColor}; --swatch-indicator-tint-alpha: {indicatorTintPercent};"
   onclick={() => {
-    if (drawerOklch) {
+    if (sourceOklch) {
       openDrawer({
         hex: renderedHex,
         displayValue: shownValue,
-        oklch: drawerOklch,
+        oklch: sourceOklch,
         step: label,
         paletteName,
         isNeutral
@@ -286,6 +311,11 @@
     ? ' — view color details'
     : ' — copy to clipboard'}"
 >
+  {#if showGamutWarning}
+    <span class="gamut-warning-tag" aria-label={`Gamut mapped to ${gamutWarningLabel}`}>
+      {gamutWarningLabel}
+    </span>
+  {/if}
   {#if label && (swatchLabelsLocal === 'both' || swatchLabelsLocal === 'step')}
     <span class="step">{label}</span>
   {/if}
@@ -400,6 +430,37 @@
   .color-swatch:hover {
     transform: translateY(-2px);
     border-color: color-mix(in oklab, var(--border) 40%, var(--accent));
+  }
+
+  .color-swatch--gamut-warning {
+    border-color: var(--gamut-warning-border);
+    border-width: var(--border-width-medium);
+    padding-top: calc(var(--space-md) + var(--space-xs));
+    box-shadow: inset 0 0 0 var(--border-width-thin) var(--swatch-inset-shadow-color);
+  }
+
+  .gamut-warning-tag {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
+    line-height: 1;
+    border-top-right-radius: calc(var(--radius-md) - var(--border-width-medium));
+    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 0;
+    padding: calc(var(--space-xs) * 0.75) var(--space-xs);
+    background: var(--gamut-warning-bg);
+    border-top: 0;
+    border-right: 0;
+    border-left: var(--border-width-medium) solid var(--gamut-warning-border);
+    border-bottom: var(--border-width-medium) solid var(--gamut-warning-border);
+    color: var(--gamut-warning-text);
+    font-family: var(--text-mono);
   }
 
   .color-swatch:active {

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
+import Color from 'colorjs.io';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import ColorSwatch from '$lib/components/ColorSwatch.svelte';
@@ -9,6 +10,7 @@ describe('ColorSwatch', () => {
     resetColorState('light');
     updateColorState({
       swatchLabels: 'both',
+      showSwatchGamutWarnings: true,
       showSwatchContrastIndicators: true,
       swatchContrastIndicators: {
         wcagThreeToOne: true,
@@ -18,6 +20,7 @@ describe('ColorSwatch', () => {
         apcaFluent: true,
         apcaBody: true
       },
+      gamutSpace: 'srgb',
       contrastAlgorithm: 'WCAG',
       contrast: { low: '#ffffff', high: '#000000' }
     });
@@ -135,5 +138,134 @@ describe('ColorSwatch', () => {
     const tintMatch = style.match(/--swatch-indicator-tint-alpha:\s*([\d.]+)%/);
     expect(tintMatch).not.toBeNull();
     expect(Number(tintMatch?.[1])).toBe(5);
+  });
+
+  it('shows gamut warning tag and outline for gamut-mapped swatches in Display P3', () => {
+    updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'p3' });
+    const outOfP3Color = new Color('oklch', [0.62, 0.4, 35]);
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#ff5500',
+        label: '50',
+        oklchColor: outOfP3Color
+      }
+    });
+
+    expect(container.querySelector('.color-swatch--gamut-warning')).toBeInTheDocument();
+    expect(screen.getByText('P3')).toBeInTheDocument();
+  });
+
+  it('does not show gamut warning for in-gamut swatches in Display P3', () => {
+    updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'p3' });
+    const inGamutColor = new Color('#00ff00').to('oklch');
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#00ff00',
+        label: '50',
+        oklchColor: inGamutColor
+      }
+    });
+
+    expect(container.querySelector('.color-swatch--gamut-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('P3')).not.toBeInTheDocument();
+  });
+
+  it('shows gamut warning for P3 colors that are still outside sRGB', () => {
+    updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'p3' });
+    const inP3ButNotSrgb = new Color('oklch', [0.95, 0.032, 230]);
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#b9d7e5',
+        displayValue: 'oklch(95% 0.032 230)',
+        label: '10',
+        oklchColor: inP3ButNotSrgb
+      }
+    });
+
+    expect(container.querySelector('.color-swatch--gamut-warning')).toBeInTheDocument();
+    expect(screen.getByText('P3')).toBeInTheDocument();
+  });
+
+  it('shows a P3 label in Rec. 2020 mode when the displayed color still fits in P3', () => {
+    updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'rec2020' });
+    const inP3ButNotSrgb = new Color('oklch', [0.95, 0.032, 230]);
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#b9d7e5',
+        displayValue: 'oklch(95% 0.032 230)',
+        label: '10',
+        oklchColor: inP3ButNotSrgb
+      }
+    });
+
+    expect(container.querySelector('.color-swatch--gamut-warning')).toBeInTheDocument();
+    expect(screen.getByText('P3')).toBeInTheDocument();
+    expect(screen.queryByText('Rec. 2020')).not.toBeInTheDocument();
+  });
+
+  it('shows a Rec. 2020 label only when P3 is insufficient', () => {
+    updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'rec2020' });
+    const rec2020Only = new Color('oklch', [0.72, 0.32, 155]);
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#00d45f',
+        displayValue: 'oklch(72% 0.32 155)',
+        label: '50',
+        oklchColor: rec2020Only
+      }
+    });
+
+    expect(container.querySelector('.color-swatch--gamut-warning')).toBeInTheDocument();
+    expect(screen.getByText('Rec. 2020')).toBeInTheDocument();
+  });
+
+  it('does not show gamut warning for white swatches in Display P3', () => {
+    updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'p3' });
+    const whiteOklch = new Color('oklch', [1, 0, 330]);
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#ffffff',
+        displayValue: 'oklch(100% 0 0)',
+        label: '0',
+        oklchColor: whiteOklch
+      }
+    });
+
+    expect(container.querySelector('.color-swatch--gamut-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('P3')).not.toBeInTheDocument();
+  });
+
+  it('never shows gamut warning in sRGB even for out-of-sRGB colors', () => {
+    updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'srgb' });
+    const outOfSrgbColor = new Color('oklch', [0.62, 0.4, 320]);
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#cc00ff',
+        label: '50',
+        oklchColor: outOfSrgbColor
+      }
+    });
+
+    expect(container.querySelector('.color-swatch--gamut-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('sRGB')).not.toBeInTheDocument();
+  });
+
+  it('hides gamut warning when warning toggle is disabled', () => {
+    updateColorState({
+      displayColorSpace: 'oklch',
+      gamutSpace: 'rec2020',
+      showSwatchGamutWarnings: false
+    });
+    const outOfRec2020Color = new Color('oklch', [0.9, 0.45, 120]);
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#99ff00',
+        label: '50',
+        oklchColor: outOfRec2020Color
+      }
+    });
+
+    expect(container.querySelector('.color-swatch--gamut-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Rec. 2020')).not.toBeInTheDocument();
   });
 });

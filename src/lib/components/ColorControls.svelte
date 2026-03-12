@@ -190,7 +190,7 @@
       max={SATURATION_RANGE.max}
       step={SATURATION_RANGE.step}
       bind:value={chromaMultiplier}
-      groupHelpText="Range follows the selected gamut mapping. Use slider for coarse adjustment and number input for precise adjustment."
+      groupHelpText="Normalized range 0 to 1. Use slider for coarse adjustment and number input for precise adjustment."
       onNumberInput={clampSaturationFromInput}
       onNumberBlur={clampSaturationFromInput}
     />

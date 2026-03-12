@@ -30,6 +30,9 @@
   --swatch-indicator-group-border: #1f2937;
   --swatch-indicator-group-label: #e5e7eb;
   --swatch-inset-shadow-color: color-mix(in oklab, white 8%, transparent);
+  --gamut-warning-border: #facc15;
+  --gamut-warning-bg: #fef08a;
+  --gamut-warning-text: #854d0e;
 }
 
 /* Dark theme color overrides */
@@ -54,6 +57,9 @@
   --swatch-indicator-group-border: #1f2937;
   --swatch-indicator-group-label: #d1d5db;
   --swatch-inset-shadow-color: color-mix(in oklab, white 12%, transparent);
+  --gamut-warning-border: #facc15;
+  --gamut-warning-bg: #713f12;
+  --gamut-warning-text: #fef08a;
 }
 
 /* ============================================================================
