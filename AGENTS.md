@@ -6,13 +6,14 @@ Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG 2
 
 ## Build commands
 
-| Command                 | Description                                   |
-| ----------------------- | --------------------------------------------- |
-| `npm install`           | Install dependencies                          |
-| `npm run dev`           | Start Vite dev server (http://localhost:5173) |
-| `npm run build`         | Build for production                          |
-| `npm run preview`       | Preview production build (port 4173)          |
-| `npm run hooks:install` | Manually reinstall Husky hooks                |
+| Command                     | Description                                   |
+| --------------------------- | --------------------------------------------- |
+| `npm install`               | Install dependencies                          |
+| `npm run dev`               | Start Vite dev server (http://localhost:5173) |
+| `npm run build`             | Build for production                          |
+| `npm run preview`           | Preview production build (port 4173)          |
+| `npm run generate:favicons` | Generate favicons from `static/favicon.svg`   |
+| `npm run hooks:install`     | Manually reinstall Husky hooks                |
 
 ## Running tests
 
@@ -78,6 +79,7 @@ npm run lint       # check (Prettier + ESLint)
 npm run lint:fix   # auto-fix
 npm run format     # Prettier write
 npm run check      # svelte-check (type checking)
+npm run check:watch # svelte-check in watch mode
 ```
 
 ## Code style
