@@ -93,6 +93,7 @@
   <Button
     onclick={exportJSON}
     disabled={neutrals.length === 0 && palettes.length === 0}
+    variant="primary"
     ariaLabel="Export JSON design tokens"
   >
     <Icon name="json" />
@@ -114,7 +115,7 @@
     <Icon name="scss" />
     Export SCSS
   </Button>
-  <Button onclick={handleReset} ariaLabel="Reset all settings to defaults">
+  <Button onclick={handleReset} variant="ghost" ariaLabel="Reset all settings to defaults">
     <Icon name="reset" />
     Reset
   </Button>
