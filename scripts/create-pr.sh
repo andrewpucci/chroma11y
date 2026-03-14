@@ -14,6 +14,10 @@ for arg in "$@"; do
       echo "Do not pass --body/--body-file to this script; use the PR template fields instead." >&2
       exit 1
       ;;
+    --fill|--fill-first|--fill-verbose)
+      echo "Do not pass --fill flags; they can override the PR template body. Fill template fields explicitly." >&2
+      exit 1
+      ;;
   esac
 done
 
