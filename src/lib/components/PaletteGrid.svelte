@@ -91,11 +91,7 @@
   }
 </script>
 
-<Card
-  title="Generated Palettes"
-  subtitle="Click any swatch to view color details"
-  data-testid="generated-palettes"
->
+<Card title="Generated Palettes" subtitle="Adjust hue per palette" data-testid="generated-palettes">
   <div class="color-display">
     {#if palettesHex.length > 0}
       {#each palettesHex as palette, paletteIndex (paletteIndex)}
@@ -158,17 +154,18 @@
 
   .color-display {
     display: grid;
-    gap: var(--space-lg);
+    gap: var(--space-md);
     container-type: inline-size;
   }
 
   .palette-block {
     display: grid;
     gap: var(--space-sm);
-    padding: var(--space-md);
-    background: color-mix(in oklab, var(--bg-secondary) 88%, transparent);
-    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 65%, transparent);
-    border-radius: var(--radius-md);
+    padding-block: var(--space-sm);
+  }
+
+  .palette-block + .palette-block {
+    border-top: var(--border-width-thin) solid color-mix(in oklab, var(--border) 42%, transparent);
   }
 
   .palette-header {

@@ -19,9 +19,8 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: color-mix(in oklab, var(--bg-primary) 88%, transparent);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    background: var(--bg-primary);
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
   }
 
   .topbar-inner {

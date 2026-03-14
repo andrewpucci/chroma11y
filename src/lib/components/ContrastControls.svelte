@@ -440,10 +440,7 @@
   .checklist {
     display: grid;
     gap: var(--space-xs);
-    padding: var(--space-sm);
-    border: var(--border-width-thin) solid var(--border);
-    border-radius: var(--radius-md);
-    background: color-mix(in oklab, var(--bg-primary) 88%, transparent);
+    padding: var(--space-xs) 0;
   }
 
   .check-item {
@@ -578,6 +575,6 @@
   .auto-controls {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: var(--space-md);
   }
 </style>
