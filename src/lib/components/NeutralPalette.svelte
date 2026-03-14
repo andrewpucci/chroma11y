@@ -60,11 +60,7 @@
   }
 </script>
 
-<Card
-  title="Neutral Palette"
-  subtitle="Adjust nudgers to fine-tune each neutral step's lightness"
-  data-testid="neutral-palette"
->
+<Card title="Neutral Palette" subtitle="Fine-tune neutral lightness" data-testid="neutral-palette">
   {#if neutralsHex.length > 0}
     <div class="neutral-grid">
       {#each neutralsHex as color, index (index)}
@@ -167,17 +163,6 @@
     display: flex;
     flex-direction: column;
     width: var(--neutral-item-width, 148px);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    transition: transform var(--transition-fast);
-  }
-
-  .neutral-item:hover {
-    transform: translateY(-2px);
-  }
-
-  .neutral-item:focus-within {
-    transform: translateY(-2px);
   }
 
   .no-colors {

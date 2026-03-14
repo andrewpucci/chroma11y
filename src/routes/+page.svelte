@@ -417,7 +417,7 @@
   <div class="layout-container">
     <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
       <Sidebar>
-        <Card title="Generation" subtitle="Control how colors are distributed across the palette">
+        <Card title="Generation" subtitle="Core palette controls">
           <ColorControls
             bind:baseColor={baseColorLocal}
             bind:warmth={warmthLocal}
@@ -434,15 +434,15 @@
           />
         </Card>
 
-        <Card title="Contrast" subtitle="Configure contrast reference points">
+        <Card title="Contrast" subtitle="Contrast and indicators">
           <ContrastControls />
         </Card>
 
-        <Card title="Settings" subtitle="Display preferences">
+        <Card title="Settings" subtitle="Display and labels">
           <DisplaySettings />
         </Card>
 
-        <Card title="Export" subtitle="Download tokens in common formats">
+        <Card title="Export" subtitle="Share or export">
           <ExportButtons
             neutrals={neutralsHexLocal}
             palettes={palettesHexLocal}
@@ -484,13 +484,7 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background:
-      radial-gradient(
-        1200px 600px at 0% 0%,
-        color-mix(in oklab, var(--accent) 14%, transparent),
-        transparent
-      ),
-      var(--bg-primary);
+    background: var(--bg-primary);
   }
 
   .layout-container {

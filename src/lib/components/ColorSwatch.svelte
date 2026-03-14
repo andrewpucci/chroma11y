@@ -368,7 +368,6 @@
     border-bottom-right-radius: var(--swatch-border-bottom-right-radius, var(--radius-md));
     cursor: pointer;
     transition:
-      transform var(--transition-fast),
       border-color var(--transition-fast),
       box-shadow var(--transition-fast);
     width: var(--swatch-width, 148px);
@@ -378,19 +377,6 @@
     overflow: hidden;
     /* Subtle inset shadow for better swatch visibility against backgrounds */
     box-shadow: inset 0 0 0 var(--border-width-thin) var(--swatch-inset-shadow-color);
-  }
-
-  .color-swatch::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to top,
-      color-mix(in oklab, black 34%, transparent),
-      transparent 60%
-    );
-    opacity: 0.35;
-    pointer-events: none;
   }
 
   /* Touch-friendly tap targets on mobile (44x44px minimum) */
@@ -428,7 +414,6 @@
   }
 
   .color-swatch:hover {
-    transform: translateY(-2px);
     border-color: color-mix(in oklab, var(--border) 40%, var(--accent));
   }
 
@@ -461,10 +446,6 @@
     border-bottom: var(--border-width-medium) solid var(--gamut-warning-border);
     color: var(--gamut-warning-text);
     font-family: var(--text-mono);
-  }
-
-  .color-swatch:active {
-    transform: translateY(-1px);
   }
 
   .hex {
@@ -568,14 +549,14 @@
   }
 
   .badge--pass {
-    background: var(--badge-pass-bg);
+    background: color-mix(in oklab, var(--badge-pass-bg) 70%, transparent);
     color: var(--badge-pass-text);
-    border: 1px solid var(--badge-pass-border);
+    border: 1px solid color-mix(in oklab, var(--badge-pass-border) 76%, transparent);
   }
 
   .badge--fail {
-    background: var(--badge-fail-bg);
+    background: color-mix(in oklab, var(--badge-fail-bg) 70%, transparent);
     color: var(--badge-fail-text);
-    border: 1px solid var(--badge-fail-border);
+    border: 1px solid color-mix(in oklab, var(--badge-fail-border) 76%, transparent);
   }
 </style>

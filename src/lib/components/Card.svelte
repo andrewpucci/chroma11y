@@ -48,14 +48,14 @@
 
 <style>
   .card {
-    background: var(--bg-secondary);
-    border: var(--border-width-thin) solid var(--border);
-    border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--bg-secondary) 94%, transparent);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 60%, transparent);
+    border-radius: var(--radius-sm);
   }
 
   .card-header {
-    padding: var(--space-md) var(--space-lg) var(--space-md) var(--space-lg);
-    border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    padding: var(--space-md) var(--space-md) var(--space-sm) var(--space-md);
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 42%, transparent);
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
@@ -68,10 +68,10 @@
 
   .card-subtitle {
     color: var(--text-secondary);
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
   }
 
   .card-body {
-    padding: var(--space-lg);
+    padding: var(--space-md);
   }
 </style>
