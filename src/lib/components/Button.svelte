@@ -4,7 +4,7 @@
   interface Props {
     onclick?: () => void;
     disabled?: boolean;
-    variant?: 'primary' | 'secondary';
+    variant?: 'primary' | 'secondary' | 'ghost';
     type?: 'button' | 'submit' | 'reset';
     ariaLabel?: string;
     children: Snippet;
@@ -73,5 +73,16 @@
 
   .btn-secondary:hover:not(:disabled) {
     border-color: color-mix(in oklab, var(--border) 40%, var(--accent));
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px dashed color-mix(in oklab, var(--border) 72%, transparent);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--text-primary);
+    border-color: color-mix(in oklab, var(--border) 45%, var(--accent));
   }
 </style>
