@@ -26,6 +26,28 @@ describe('ColorSwatch', () => {
     });
   });
 
+  it('uses black text for very light swatches in light theme when step and value labels are shown', () => {
+    const { container } = render(ColorSwatch, { props: { color: '#ffffff', label: '0' } });
+
+    const swatch = container.querySelector('.color-swatch');
+    expect(swatch).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('#ffffff')).toBeInTheDocument();
+    expect(window.getComputedStyle(swatch as HTMLElement).color).toBe('rgb(0, 0, 0)');
+  });
+
+  it('uses white text for very dark swatches in dark theme when step and value labels are shown', () => {
+    resetColorState('dark');
+
+    const { container } = render(ColorSwatch, { props: { color: '#161719', label: '0' } });
+
+    const swatch = container.querySelector('.color-swatch');
+    expect(swatch).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('#161719')).toBeInTheDocument();
+    expect(window.getComputedStyle(swatch as HTMLElement).color).toBe('rgb(255, 255, 255)');
+  });
+
   it('renders WCAG 3:1, AA, and AAA indicator badges for low and high contrast groups', () => {
     render(ColorSwatch, { props: { color: '#ffffff', label: '0' } });
 
