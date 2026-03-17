@@ -209,6 +209,14 @@ test.describe('URL State Persistence', () => {
 
     await expect(page.locator('#gamut-space')).toHaveValue('srgb');
     await expect(page.locator('#gamut-space')).toBeDisabled();
+    await page.waitForFunction(
+      () => {
+        const params = new URL(window.location.href).searchParams;
+        return !params.has('ds') && !params.has('gs');
+      },
+      { timeout: 5000 }
+    );
+
     expect(page.url()).not.toContain('gs=');
   });
 });
