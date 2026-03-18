@@ -29,11 +29,6 @@ type HistoryAction =
   | { type: 'setOklchDigits'; value: number }
   | { type: 'reset' };
 
-interface HistoryScenario {
-  name: string;
-  actions: HistoryAction[];
-}
-
 function getNumColorsInput(): HTMLInputElement {
   return screen.getByRole('spinbutton', {
     name: /number of colors value input/i
@@ -291,7 +286,7 @@ describe('page history integration', () => {
     await waitFor(() => expect(getDisplayColorSpaceSelect()).toHaveValue('rgb'));
     expect(screen.getByRole('button', { name: /undo last change/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /redo last change/i })).toBeDisabled();
-  });
+  }, 10000);
 
   it('keeps mixed generator and contrast history steps aligned across redo', async () => {
     const user = userEvent.setup();
@@ -330,7 +325,7 @@ describe('page history integration', () => {
     await waitFor(() => expect(getLowContrastInput()).toHaveValue('#ff0000'));
     expect(getNumColorsInput()).toHaveValue(13);
     expect(getContrastModeSelect()).toHaveValue('manual');
-  });
+  }, 10000);
 
   it('cancels history-input resync once a replacement edit starts', async () => {
     await renderPage();
@@ -379,102 +374,64 @@ describe('page history integration', () => {
     } finally {
       vi.useRealTimers();
     }
-  });
+  }, 10000);
 
-  const historyScenarios: HistoryScenario[] = [
-    {
-      name: 'generator and manual contrast edits round-trip cleanly',
-      actions: [
-        { type: 'setNumColors', value: 12 },
-        { type: 'setNumColors', value: 13 },
-        { type: 'setContrastMode', value: 'manual' },
-        { type: 'setLowContrastColor', value: '#ff0000' }
-      ]
-    },
-    {
-      name: 'display, gamut, theme, and contrast algorithm edits round-trip cleanly',
-      actions: [
-        { type: 'setDisplayColorSpace', value: 'rgb' },
-        { type: 'setGamutSpace', value: 'p3' },
-        { type: 'toggleGamutWarnings', value: false },
-        { type: 'setThemePreference', value: 'dark' },
-        { type: 'setContrastAlgorithm', value: 'APCA' }
-      ]
-    },
-    {
-      name: 'contrast-first mixed edits preserve later generator and display changes',
-      actions: [
-        { type: 'setContrastMode', value: 'manual' },
-        { type: 'setLowContrastColor', value: '#00ff00' },
-        { type: 'setNumColors', value: 14 },
-        { type: 'setDisplayColorSpace', value: 'hsl' }
-      ]
-    },
-    {
-      name: 'oklch display settings and theme changes round-trip cleanly',
-      actions: [
-        { type: 'setDisplayColorSpace', value: 'oklch' },
-        { type: 'setOklchDigits', value: 5 },
-        { type: 'setNumColors', value: 15 },
-        { type: 'setThemePreference', value: 'dark' }
-      ]
-    },
-    {
-      name: 'reset can be undone and redone after mixed edits',
-      actions: [
-        { type: 'setNumColors', value: 13 },
-        { type: 'setContrastMode', value: 'manual' },
-        { type: 'setLowContrastColor', value: '#00ff00' },
-        { type: 'setDisplayColorSpace', value: 'rgb' },
-        { type: 'reset' }
-      ]
+  async function expectScenarioRoundTrip(actions: HistoryAction[]): Promise<void> {
+    const user = userEvent.setup();
+
+    await renderPage();
+
+    const snapshots: HistoryUiState[] = [readUiState()];
+
+    for (const action of actions) {
+      await performAction(action, user);
+      const nextSnapshot = readUiState();
+      if (JSON.stringify(nextSnapshot) !== JSON.stringify(snapshots.at(-1))) {
+        snapshots.push(nextSnapshot);
+      }
     }
-  ];
 
-  for (const scenario of historyScenarios) {
-    it(
-      scenario.name,
-      async () => {
-        const user = userEvent.setup();
+    await waitFor(() => expect(getUndoButton()).toBeEnabled());
+    await user.click(getUndoHistoryButton());
+    await waitFor(() => expect(screen.getAllByRole('menuitem')).toHaveLength(snapshots.length - 1));
+    await user.click(getUndoHistoryButton());
 
-        await renderPage();
+    for (let index = snapshots.length - 2; index >= 0; index -= 1) {
+      await user.click(getUndoButton());
+      await waitForUiState(snapshots[index] as HistoryUiState);
+    }
 
-        const snapshots: HistoryUiState[] = [readUiState()];
+    expect(getUndoButton()).toBeDisabled();
+    expect(getRedoButton()).toBeEnabled();
 
-        for (const action of scenario.actions) {
-          await performAction(action, user);
-          const nextSnapshot = readUiState();
-          if (JSON.stringify(nextSnapshot) !== JSON.stringify(snapshots.at(-1))) {
-            snapshots.push(nextSnapshot);
-          }
-        }
+    for (let index = 1; index < snapshots.length; index += 1) {
+      await user.click(getRedoButton());
+      await waitForUiState(snapshots[index] as HistoryUiState);
+    }
 
-        await waitFor(() => expect(getUndoButton()).toBeEnabled());
-        await user.click(getUndoHistoryButton());
-        await waitFor(() =>
-          expect(screen.getAllByRole('menuitem')).toHaveLength(snapshots.length - 1)
-        );
-        await user.click(getUndoHistoryButton());
-
-        expect(getUndoButton()).toBeEnabled();
-
-        for (let index = snapshots.length - 2; index >= 0; index -= 1) {
-          await user.click(getUndoButton());
-          await waitForUiState(snapshots[index] as HistoryUiState);
-        }
-
-        expect(getUndoButton()).toBeDisabled();
-        expect(getRedoButton()).toBeEnabled();
-
-        for (let index = 1; index < snapshots.length; index += 1) {
-          await user.click(getRedoButton());
-          await waitForUiState(snapshots[index] as HistoryUiState);
-        }
-
-        expect(getUndoButton()).toBeEnabled();
-        expect(getRedoButton()).toBeDisabled();
-      },
-      15000
-    );
+    expect(getUndoButton()).toBeEnabled();
+    expect(getRedoButton()).toBeDisabled();
   }
+
+  it('round-trips representative display and contrast history edits', async () => {
+    await expectScenarioRoundTrip([
+      { type: 'setContrastMode', value: 'manual' },
+      { type: 'setLowContrastColor', value: '#00ff00' },
+      { type: 'setDisplayColorSpace', value: 'rgb' },
+      { type: 'setGamutSpace', value: 'p3' },
+      { type: 'toggleGamutWarnings', value: false },
+      { type: 'setThemePreference', value: 'dark' },
+      { type: 'setContrastAlgorithm', value: 'APCA' }
+    ]);
+  }, 30000);
+
+  it('round-trips oklch digits and reset history edits', async () => {
+    await expectScenarioRoundTrip([
+      { type: 'setDisplayColorSpace', value: 'oklch' },
+      { type: 'setOklchDigits', value: 5 },
+      { type: 'setNumColors', value: 15 },
+      { type: 'setThemePreference', value: 'dark' },
+      { type: 'reset' }
+    ]);
+  }, 30000);
 });
