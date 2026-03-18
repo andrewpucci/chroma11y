@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Page from './+page.svelte';
 
@@ -107,21 +107,20 @@ function readUiState(): HistoryUiState {
   };
 }
 
-async function waitForUiState(expected: HistoryUiState): Promise<void> {
-  await waitFor(() => {
-    expect(readUiState()).toEqual(expected);
-  });
-}
-
 async function renderPage(): Promise<void> {
   render(Page);
-  await tick();
-  await tick();
+  await flushAppState();
   await waitFor(() => expect(getUndoButton()).toBeDisabled());
   await waitFor(() => expect(getRedoButton()).toBeDisabled());
 }
 
 async function flushHistoryCommit(): Promise<void> {
+  await flushAppState();
+}
+
+async function flushAppState(time: number = 600): Promise<void> {
+  await tick();
+  await vi.advanceTimersByTimeAsync(time);
   await tick();
   await tick();
 }
@@ -133,22 +132,19 @@ async function performAction(action: HistoryAction, user: ReturnType<typeof user
       numColorsInput.value = `${action.value}`;
       await fireEvent.input(numColorsInput);
       await fireEvent.change(numColorsInput);
-      await waitFor(() => expect(getNumColorsInput()).toHaveValue(action.value));
       await flushHistoryCommit();
+      expect(getNumColorsInput()).toHaveValue(action.value);
       return;
     }
     case 'setContrastMode':
       await fireEvent.change(getContrastModeSelect(), { target: { value: action.value } });
-      await waitFor(() => expect(getContrastModeSelect()).toHaveValue(action.value));
-      await waitFor(() => {
-        if (action.value === 'manual') {
-          expect(getLowContrastInput()).not.toBeNull();
-          return;
-        }
-
-        expect(getLowContrastInput()).toBeNull();
-      });
       await flushHistoryCommit();
+      expect(getContrastModeSelect()).toHaveValue(action.value);
+      if (action.value === 'manual') {
+        expect(getLowContrastInput()).not.toBeNull();
+      } else {
+        expect(getLowContrastInput()).toBeNull();
+      }
       return;
     case 'setLowContrastColor': {
       const lowContrastInput = getLowContrastInput();
@@ -157,46 +153,43 @@ async function performAction(action: HistoryAction, user: ReturnType<typeof user
       }
       lowContrastInput.value = action.value;
       await fireEvent.change(lowContrastInput);
-      await waitFor(() => expect(getLowContrastInput()).toHaveValue(action.value));
       await flushHistoryCommit();
+      expect(getLowContrastInput()).toHaveValue(action.value);
       return;
     }
     case 'setDisplayColorSpace':
       await fireEvent.change(getDisplayColorSpaceSelect(), { target: { value: action.value } });
-      await waitFor(() => expect(getDisplayColorSpaceSelect()).toHaveValue(action.value));
-      await waitFor(() => {
-        if (action.value === 'oklch') {
-          expect(getOklchDigitsInput()).not.toBeNull();
-          return;
-        }
-
-        expect(getOklchDigitsInput()).toBeNull();
-      });
       await flushHistoryCommit();
+      expect(getDisplayColorSpaceSelect()).toHaveValue(action.value);
+      if (action.value === 'oklch') {
+        expect(getOklchDigitsInput()).not.toBeNull();
+      } else {
+        expect(getOklchDigitsInput()).toBeNull();
+      }
       return;
     case 'setGamutSpace':
       await fireEvent.change(getGamutSpaceSelect(), { target: { value: action.value } });
-      await waitFor(() => expect(getGamutSpaceSelect()).toHaveValue(action.value));
       await flushHistoryCommit();
+      expect(getGamutSpaceSelect()).toHaveValue(action.value);
       return;
     case 'toggleGamutWarnings': {
       const gamutWarningsCheckbox = getGamutWarningsCheckbox();
       if (gamutWarningsCheckbox.checked !== action.value) {
         await user.click(gamutWarningsCheckbox);
       }
-      await waitFor(() => expect(getGamutWarningsCheckbox().checked).toBe(action.value));
       await flushHistoryCommit();
+      expect(getGamutWarningsCheckbox().checked).toBe(action.value);
       return;
     }
     case 'setThemePreference':
       await fireEvent.change(getThemeSelect(), { target: { value: action.value } });
-      await waitFor(() => expect(getThemeSelect()).toHaveValue(action.value));
       await flushHistoryCommit();
+      expect(getThemeSelect()).toHaveValue(action.value);
       return;
     case 'setContrastAlgorithm':
       await fireEvent.change(getContrastAlgorithmSelect(), { target: { value: action.value } });
-      await waitFor(() => expect(getContrastAlgorithmSelect()).toHaveValue(action.value));
       await flushHistoryCommit();
+      expect(getContrastAlgorithmSelect()).toHaveValue(action.value);
       return;
     case 'setOklchDigits': {
       const oklchDigitsInput = getOklchDigitsInput();
@@ -206,20 +199,21 @@ async function performAction(action: HistoryAction, user: ReturnType<typeof user
       oklchDigitsInput.value = `${action.value}`;
       await fireEvent.input(oklchDigitsInput);
       await fireEvent.change(oklchDigitsInput);
-      await waitFor(() => expect(getOklchDigitsInput()).toHaveValue(action.value));
       await flushHistoryCommit();
+      expect(getOklchDigitsInput()).toHaveValue(action.value);
       return;
     }
     case 'reset':
       await user.click(screen.getByRole('button', { name: /reset all settings to defaults/i }));
-      await waitFor(() => expect(getThemeSelect()).toHaveValue('auto'));
       await flushHistoryCommit();
+      expect(getThemeSelect()).toHaveValue('auto');
       return;
   }
 }
 
 describe('page history integration', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: vi.fn().mockImplementation(() => ({
@@ -244,8 +238,12 @@ describe('page history integration', () => {
     window.history.replaceState({}, '', '/');
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('supports button undo/redo and multi-step menu jumps', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
 
     await renderPage();
 
@@ -256,25 +254,27 @@ describe('page history integration', () => {
 
     const themeSelect = getThemeSelect();
     await fireEvent.change(themeSelect, { target: { value: 'dark' } });
+    await flushHistoryCommit();
     expect(themeSelect).toHaveValue('dark');
 
     await fireEvent.change(getDisplayColorSpaceSelect(), { target: { value: 'rgb' } });
+    await flushHistoryCommit();
     expect(getDisplayColorSpaceSelect()).toHaveValue('rgb');
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /undo last change/i })).toBeEnabled()
-    );
+    expect(screen.getByRole('button', { name: /undo last change/i })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: /undo last change/i }));
-    await waitFor(() => expect(getDisplayColorSpaceSelect()).toHaveValue('hex'));
+    await flushHistoryCommit();
+    expect(getDisplayColorSpaceSelect()).toHaveValue('hex');
 
     await user.click(screen.getByRole('button', { name: /redo last change/i }));
-    await waitFor(() => expect(getDisplayColorSpaceSelect()).toHaveValue('rgb'));
+    await flushHistoryCommit();
+    expect(getDisplayColorSpaceSelect()).toHaveValue('rgb');
 
     await user.click(screen.getByRole('button', { name: /show undo history/i }));
     await user.click(screen.getByRole('menuitem', { name: /undo to theme preference changed/i }));
-
-    await waitFor(() => expect(getThemeSelect()).toHaveValue('dark'));
+    await flushHistoryCommit();
+    expect(getThemeSelect()).toHaveValue('dark');
     expect(getDisplayColorSpaceSelect()).toHaveValue('hex');
     expect(screen.getByRole('button', { name: /show redo history/i })).toBeEnabled();
 
@@ -282,47 +282,51 @@ describe('page history integration', () => {
     await user.click(
       screen.getByRole('menuitem', { name: /redo to display color space changed/i })
     );
-
-    await waitFor(() => expect(getDisplayColorSpaceSelect()).toHaveValue('rgb'));
+    await flushHistoryCommit();
+    expect(getDisplayColorSpaceSelect()).toHaveValue('rgb');
     expect(screen.getByRole('button', { name: /undo last change/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /redo last change/i })).toBeDisabled();
   }, 10000);
 
   it('keeps mixed generator and contrast history steps aligned across redo', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
 
     await renderPage();
     await performAction({ type: 'setNumColors', value: 12 }, user);
-    await waitFor(() => expect(getNumColorsInput()).toHaveValue(12));
+    expect(getNumColorsInput()).toHaveValue(12);
 
     await performAction({ type: 'setNumColors', value: 13 }, user);
-    await waitFor(() => expect(getNumColorsInput()).toHaveValue(13));
+    expect(getNumColorsInput()).toHaveValue(13);
 
     await performAction({ type: 'setContrastMode', value: 'manual' }, user);
-    await waitFor(() => expect(getContrastModeSelect()).toHaveValue('manual'));
-    await waitFor(() => expect(getLowContrastInput()).not.toBeNull());
+    expect(getContrastModeSelect()).toHaveValue('manual');
+    expect(getLowContrastInput()).not.toBeNull();
     const manualLowColorBeforeEdit = getLowContrastInput()?.value;
 
     await performAction({ type: 'setLowContrastColor', value: '#ff0000' }, user);
-    await waitFor(() => expect(getLowContrastInput()).toHaveValue('#ff0000'));
+    expect(getLowContrastInput()).toHaveValue('#ff0000');
 
     await user.click(getUndoButton());
-    await waitFor(() => expect(getContrastModeSelect()).toHaveValue('manual'));
+    await flushHistoryCommit();
+    expect(getContrastModeSelect()).toHaveValue('manual');
     expect(getNumColorsInput()).toHaveValue(13);
     expect(getLowContrastInput()).toHaveValue(manualLowColorBeforeEdit);
 
     await user.click(getUndoButton());
-    await waitFor(() => expect(getContrastModeSelect()).toHaveValue('auto'));
+    await flushHistoryCommit();
+    expect(getContrastModeSelect()).toHaveValue('auto');
     expect(getNumColorsInput()).toHaveValue(13);
     expect(getLowContrastInput()).toBeNull();
 
     await user.click(getRedoButton());
-    await waitFor(() => expect(getContrastModeSelect()).toHaveValue('manual'));
+    await flushHistoryCommit();
+    expect(getContrastModeSelect()).toHaveValue('manual');
     expect(getNumColorsInput()).toHaveValue(13);
     expect(getLowContrastInput()).toHaveValue(manualLowColorBeforeEdit);
 
     await user.click(getRedoButton());
-    await waitFor(() => expect(getLowContrastInput()).toHaveValue('#ff0000'));
+    await flushHistoryCommit();
+    expect(getLowContrastInput()).toHaveValue('#ff0000');
     expect(getNumColorsInput()).toHaveValue(13);
     expect(getContrastModeSelect()).toHaveValue('manual');
   }, 10000);
@@ -341,43 +345,33 @@ describe('page history integration', () => {
     await fireEvent.click(getUndoButton());
     await waitFor(() => expect(getBaseColorHexInput()).toHaveValue(initialBaseColor));
 
-    vi.useFakeTimers();
+    const currentBaseColorInput = getBaseColorHexInput();
+    currentBaseColorInput.focus();
+    expect(currentBaseColorInput).toHaveFocus();
 
-    try {
-      const currentBaseColorInput = getBaseColorHexInput();
-      currentBaseColorInput.focus();
-      expect(currentBaseColorInput).toHaveFocus();
+    const historyUndoInputEvent = new InputEvent('input', {
+      bubbles: true,
+      inputType: 'historyUndo'
+    });
+    await fireEvent(currentBaseColorInput, historyUndoInputEvent);
+    await flushAppState(20);
 
-      const historyUndoInputEvent = new InputEvent('input', {
-        bubbles: true,
-        inputType: 'historyUndo'
-      });
-      await fireEvent(currentBaseColorInput, historyUndoInputEvent);
-      await tick();
-      await tick();
+    const replacementInput = getBaseColorHexInput();
+    replacementInput.focus();
+    replacementInput.value = '#ff0000';
+    await fireEvent.input(replacementInput);
+    await fireEvent.change(replacementInput);
+    await flushAppState(20);
 
-      const replacementInput = getBaseColorHexInput();
-      replacementInput.focus();
-      replacementInput.value = '#ff0000';
-      await fireEvent.input(replacementInput);
-      await fireEvent.change(replacementInput);
-      await tick();
-      await tick();
+    expect(getBaseColorHexInput()).toHaveValue('#ff0000');
 
-      expect(getBaseColorHexInput()).toHaveValue('#ff0000');
+    await flushAppState(1000);
 
-      await vi.advanceTimersByTimeAsync(1000);
-      await tick();
-      await tick();
-
-      expect(getBaseColorHexInput()).toHaveValue('#ff0000');
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(getBaseColorHexInput()).toHaveValue('#ff0000');
   }, 10000);
 
   async function expectScenarioRoundTrip(actions: HistoryAction[]): Promise<void> {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
 
     await renderPage();
 
@@ -391,14 +385,17 @@ describe('page history integration', () => {
       }
     }
 
-    await waitFor(() => expect(getUndoButton()).toBeEnabled());
+    expect(getUndoButton()).toBeEnabled();
     await user.click(getUndoHistoryButton());
-    await waitFor(() => expect(screen.getAllByRole('menuitem')).toHaveLength(snapshots.length - 1));
+    await flushAppState(20);
+    expect(screen.getAllByRole('menuitem')).toHaveLength(snapshots.length - 1);
     await user.click(getUndoHistoryButton());
+    await flushAppState(20);
 
     for (let index = snapshots.length - 2; index >= 0; index -= 1) {
       await user.click(getUndoButton());
-      await waitForUiState(snapshots[index] as HistoryUiState);
+      await flushHistoryCommit();
+      expect(readUiState()).toEqual(snapshots[index] as HistoryUiState);
     }
 
     expect(getUndoButton()).toBeDisabled();
@@ -406,7 +403,8 @@ describe('page history integration', () => {
 
     for (let index = 1; index < snapshots.length; index += 1) {
       await user.click(getRedoButton());
-      await waitForUiState(snapshots[index] as HistoryUiState);
+      await flushHistoryCommit();
+      expect(readUiState()).toEqual(snapshots[index] as HistoryUiState);
     }
 
     expect(getUndoButton()).toBeEnabled();
