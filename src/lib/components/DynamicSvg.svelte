@@ -16,22 +16,35 @@
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- plain cache, no reactivity needed
   const svgCache = new Map<string, string>();
 
+  function resolveSvgUrl(url: string): string {
+    if (typeof window === 'undefined') {
+      return url;
+    }
+
+    try {
+      return new URL(url, window.location.href).toString();
+    } catch {
+      return url;
+    }
+  }
+
   async function loadSvg(url: string) {
     try {
-      const cached = svgCache.get(url);
+      const resolvedUrl = resolveSvgUrl(url);
+      const cached = svgCache.get(resolvedUrl);
       if (cached) {
         svgContent = cached;
         error = false;
         return;
       }
-      const response = await fetch(url);
+      const response = await fetch(resolvedUrl);
       if (!response.ok) throw new Error(`Failed to load SVG: ${response.status}`);
       const raw = await response.text();
       const sanitized = DOMPurify.sanitize(raw, {
         USE_PROFILES: { svg: true },
         ADD_TAGS: ['style']
       });
-      svgCache.set(url, sanitized);
+      svgCache.set(resolvedUrl, sanitized);
       svgContent = sanitized;
       error = false;
     } catch (err) {
