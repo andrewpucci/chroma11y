@@ -20,6 +20,12 @@
     OklchDisplaySignificantDigits
   } from '$lib/types';
 
+  interface Props {
+    onHistoryCommit?: (label: string) => void;
+  }
+
+  let { onHistoryCommit }: Props = $props();
+
   interface RangeConfig {
     min: number;
     max: number;
@@ -46,6 +52,7 @@
     updateColorState({ oklchDisplaySignificantDigits: clampedValue });
     if (shouldAnnounce) {
       announce(`OKLCH significant digits changed to ${clampedValue}`);
+      onHistoryCommit?.('OKLCH significant digits changed');
     }
   }
 
@@ -54,11 +61,13 @@
     if (value === 'hex') {
       updateColorState({ displayColorSpace: value, gamutSpace: 'srgb' });
       announce('Display color space changed to hex. Gamut mapping fixed to sRGB');
+      onHistoryCommit?.('Display color space changed');
       return;
     }
 
     updateColorState({ displayColorSpace: value });
     announce(`Display color space changed to ${value}`);
+    onHistoryCommit?.('Display color space changed');
   }
 
   function handleGamutSpaceChange(event: Event) {
@@ -67,6 +76,7 @@
     announce(
       `Gamut mapping changed to ${value === 'srgb' ? 'sRGB' : value === 'p3' ? 'Display P3' : 'Rec. 2020'}`
     );
+    onHistoryCommit?.('Gamut mapping changed');
   }
 
   function handleOklchSignificantDigitsInput(event: Event) {
@@ -83,6 +93,7 @@
     const value = (event.target as HTMLSelectElement).value as ThemePreference;
     setThemePreference(value);
     announce(`Theme preference changed to ${value === 'auto' ? 'auto (system)' : value}`);
+    onHistoryCommit?.('Theme preference changed');
   }
 
   function toSwatchLabels(stepEnabled: boolean, valueEnabled: boolean): SwatchLabels {
@@ -107,12 +118,14 @@
 
     updateColorState({ swatchLabels: value });
     announce(`Swatch labels changed to ${describeSwatchLabels(value)}`);
+    onHistoryCommit?.('Swatch labels changed');
   }
 
   function handleSwatchGamutWarningsToggle(event: Event) {
     const checked = (event.target as HTMLInputElement).checked;
     updateColorState({ showSwatchGamutWarnings: checked });
     announce(checked ? 'Swatch gamut warnings shown' : 'Swatch gamut warnings hidden');
+    onHistoryCommit?.('Gamut warnings changed');
   }
 </script>
 

@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
+  import { get } from 'svelte/store';
   import {
+    colorStore,
     neutrals,
     palettes,
     neutralsHex,
@@ -19,6 +21,7 @@
     lightnessNudgers,
     hueNudgers,
     currentTheme,
+    contrastColors,
     contrastMode,
     lowStep,
     highStep,
@@ -42,6 +45,7 @@
   import { generatePalettes } from '$lib/colorUtils';
   import type { ColorGenParams } from '$lib/colorUtils';
   import { clampChromaMultiplier } from '$lib/chromaMultiplier';
+  import { createHistoryManager, type HistorySnapshot, type HistoryViewModel } from '$lib/history';
   import ColorControls from '$lib/components/ColorControls.svelte';
   import ExportButtons from '$lib/components/ExportButtons.svelte';
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
@@ -63,6 +67,7 @@
   let lightnessNudgerValues = $derived($lightnessNudgers);
   let hueNudgerValues = $derived($hueNudgers);
   let currentThemeLocal = $derived($currentTheme);
+  let contrastColorsLocal = $derived($contrastColors);
   let contrastModeLocal = $derived($contrastMode);
   let lowStepLocal = $derived($lowStep);
   let highStepLocal = $derived($highStep);
@@ -91,9 +96,522 @@
   let urlUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
   let colorGenTimeout: ReturnType<typeof setTimeout> | null = null;
   let colorGenId = 0; // Track latest generation request
+  let appShellEl: HTMLDivElement | undefined = $state();
   let layoutEl: HTMLElement | undefined = $state();
   let topbarInnerEl: HTMLElement | undefined = $state();
   let isDraggingSlider = $state(false);
+  let isDeferringBezierStoreSync = $state(false);
+  let skipAutoThemeSync = $state(false);
+  let historyManager: ReturnType<typeof createHistoryManager> | null = null;
+  let historyShortcutResyncTimeout: number | null = null;
+  let historyShortcutResyncRevision = 0;
+  let historyRestoreRevision = $state(0);
+  let pendingNativeHistoryInput: 'historyUndo' | 'historyRedo' | null = null;
+  let suppressedEditableHistoryTarget: HTMLInputElement | HTMLTextAreaElement | null = null;
+  let suppressedEditableHistoryTimeout: number | null = null;
+  let isApplyingHistorySnapshot = $state(false);
+  let pendingHistoryGeneratorSnapshot: Pick<
+    HistorySnapshot,
+    | 'baseColor'
+    | 'warmth'
+    | 'chromaMultiplier'
+    | 'numColors'
+    | 'numPalettes'
+    | 'x1'
+    | 'y1'
+    | 'x2'
+    | 'y2'
+  > | null = null;
+  let historyView = $state<HistoryViewModel>({
+    canUndo: false,
+    canRedo: false,
+    position: 0,
+    undoEntries: [],
+    redoEntries: []
+  });
+  const dirtyEditableElements = new WeakSet<HTMLElement>();
+
+  function refreshHistoryView(): void {
+    historyView = historyManager
+      ? historyManager.getViewModel()
+      : {
+          canUndo: false,
+          canRedo: false,
+          position: 0,
+          undoEntries: [],
+          redoEntries: []
+        };
+  }
+
+  function captureHistorySnapshot(preferStoreState: boolean = false): HistorySnapshot {
+    if (preferStoreState) {
+      const storeState = get(colorStore);
+
+      return {
+        baseColor: storeState.baseColor,
+        warmth: storeState.warmth,
+        chromaMultiplier: storeState.chromaMultiplier,
+        numColors: storeState.numColors,
+        numPalettes: storeState.numPalettes,
+        x1: storeState.x1,
+        y1: storeState.y1,
+        x2: storeState.x2,
+        y2: storeState.y2,
+        contrastMode: storeState.contrastMode,
+        lowStep: storeState.lowStep,
+        highStep: storeState.highStep,
+        contrast: {
+          low: storeState.contrast.low,
+          high: storeState.contrast.high
+        },
+        lightnessNudgers: [...storeState.lightnessNudgers],
+        hueNudgers: [...storeState.hueNudgers],
+        currentTheme: storeState.currentTheme,
+        displayColorSpace: storeState.displayColorSpace,
+        gamutSpace: storeState.gamutSpace,
+        themePreference: storeState.themePreference,
+        swatchLabels: storeState.swatchLabels,
+        showSwatchGamutWarnings: storeState.showSwatchGamutWarnings,
+        showSwatchContrastIndicators: storeState.showSwatchContrastIndicators,
+        swatchContrastIndicators: structuredClone(storeState.swatchContrastIndicators),
+        contrastAlgorithm: storeState.contrastAlgorithm,
+        oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits
+      };
+    }
+
+    return {
+      baseColor: baseColorLocal,
+      warmth: warmthLocal,
+      chromaMultiplier: chromaMultiplierLocal,
+      numColors: numColorsLocal,
+      numPalettes: numPalettesLocal,
+      x1: x1Local,
+      y1: y1Local,
+      x2: x2Local,
+      y2: y2Local,
+      contrastMode: contrastModeLocal,
+      lowStep: lowStepLocal,
+      highStep: highStepLocal,
+      contrast: {
+        low: contrastColorsLocal.low,
+        high: contrastColorsLocal.high
+      },
+      lightnessNudgers: [...lightnessNudgerValues],
+      hueNudgers: [...hueNudgerValues],
+      currentTheme: currentThemeLocal,
+      displayColorSpace: displayColorSpaceLocal,
+      gamutSpace: gamutSpaceLocal,
+      themePreference: themePreferenceLocal,
+      swatchLabels: swatchLabelsLocal,
+      showSwatchGamutWarnings: showSwatchGamutWarningsLocal,
+      showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
+      swatchContrastIndicators: structuredClone(swatchContrastIndicatorsLocal),
+      contrastAlgorithm: contrastAlgorithmLocal,
+      oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal
+    };
+  }
+
+  function applyHistorySnapshot(snapshot: HistorySnapshot): void {
+    skipAutoThemeSync = true;
+    isApplyingHistorySnapshot = true;
+    pendingHistoryGeneratorSnapshot = {
+      baseColor: snapshot.baseColor,
+      warmth: snapshot.warmth,
+      chromaMultiplier: snapshot.chromaMultiplier,
+      numColors: snapshot.numColors,
+      numPalettes: snapshot.numPalettes,
+      x1: snapshot.x1,
+      y1: snapshot.y1,
+      x2: snapshot.x2,
+      y2: snapshot.y2
+    };
+    historyRestoreRevision += 1;
+    baseColorLocal = snapshot.baseColor;
+    warmthLocal = snapshot.warmth;
+    chromaMultiplierLocal = snapshot.chromaMultiplier;
+    numColorsLocal = snapshot.numColors;
+    numPalettesLocal = snapshot.numPalettes;
+    x1Local = snapshot.x1;
+    y1Local = snapshot.y1;
+    x2Local = snapshot.x2;
+    y2Local = snapshot.y2;
+
+    updateColorState({
+      baseColor: snapshot.baseColor,
+      warmth: snapshot.warmth,
+      chromaMultiplier: snapshot.chromaMultiplier,
+      numColors: snapshot.numColors,
+      numPalettes: snapshot.numPalettes,
+      x1: snapshot.x1,
+      y1: snapshot.y1,
+      x2: snapshot.x2,
+      y2: snapshot.y2,
+      contrastMode: snapshot.contrastMode,
+      lowStep: snapshot.lowStep,
+      highStep: snapshot.highStep,
+      contrast: snapshot.contrast,
+      lightnessNudgers: snapshot.lightnessNudgers,
+      hueNudgers: snapshot.hueNudgers,
+      currentTheme: snapshot.currentTheme,
+      displayColorSpace: snapshot.displayColorSpace,
+      gamutSpace: snapshot.gamutSpace,
+      themePreference: snapshot.themePreference,
+      swatchLabels: snapshot.swatchLabels,
+      showSwatchGamutWarnings: snapshot.showSwatchGamutWarnings,
+      showSwatchContrastIndicators: snapshot.showSwatchContrastIndicators,
+      swatchContrastIndicators: snapshot.swatchContrastIndicators,
+      contrastAlgorithm: snapshot.contrastAlgorithm,
+      oklchDisplaySignificantDigits: snapshot.oklchDisplaySignificantDigits
+    });
+
+    void tick().then(() => {
+      isApplyingHistorySnapshot = false;
+      skipAutoThemeSync = false;
+    });
+  }
+
+  function initializeHistory(preferStoreGeneratorState: boolean = false): void {
+    historyManager = createHistoryManager(captureHistorySnapshot(preferStoreGeneratorState));
+    refreshHistoryView();
+  }
+
+  function beginBezierInteraction(): void {
+    isDeferringBezierStoreSync = true;
+  }
+
+  function handleBezierCommit(): void {
+    updateColorState({
+      x1: x1Local,
+      y1: y1Local,
+      x2: x2Local,
+      y2: y2Local
+    });
+    isDeferringBezierStoreSync = false;
+    scheduleHistoryCommit('Bezier curve changed');
+  }
+
+  function scheduleHistoryCommit(label: string): void {
+    if (!historyManager || !urlStateLoaded) {
+      return;
+    }
+
+    void tick().then(() => {
+      if (!historyManager) {
+        return;
+      }
+
+      const committed = historyManager.commit(captureHistorySnapshot(true), label);
+      if (committed) {
+        refreshHistoryView();
+      }
+    });
+  }
+
+  function announceHistoryAction(prefix: 'Undid' | 'Redid', label: string, steps: number): void {
+    if (steps > 1) {
+      announce(`${prefix} ${steps} steps to ${label}`);
+      return;
+    }
+
+    announce(`${prefix} ${label}`);
+  }
+
+  function handleUndo(): void {
+    if (!historyManager) {
+      return;
+    }
+
+    const result = historyManager.undo();
+    if (!result) {
+      return;
+    }
+
+    refreshHistoryView();
+    applyHistorySnapshot(result.snapshot);
+    announceHistoryAction('Undid', result.entry.displayText, result.steps);
+  }
+
+  function handleRedo(): void {
+    if (!historyManager) {
+      return;
+    }
+
+    const result = historyManager.redo();
+    if (!result) {
+      return;
+    }
+
+    refreshHistoryView();
+    applyHistorySnapshot(result.snapshot);
+    announceHistoryAction('Redid', result.entry.displayText, result.steps);
+  }
+
+  function handleHistoryJump(position: number): void {
+    if (!historyManager) {
+      return;
+    }
+
+    const previousPosition = historyView.position;
+    const result = historyManager.go(position);
+    if (!result) {
+      return;
+    }
+
+    refreshHistoryView();
+    applyHistorySnapshot(result.snapshot);
+    announceHistoryAction(
+      position < previousPosition ? 'Undid' : 'Redid',
+      result.entry.displayText,
+      result.steps
+    );
+  }
+
+  function isEditableHistoryTarget(
+    target: EventTarget | null
+  ): target is HTMLInputElement | HTMLTextAreaElement {
+    if (target instanceof HTMLTextAreaElement) {
+      return true;
+    }
+
+    if (!(target instanceof HTMLInputElement)) {
+      return false;
+    }
+
+    return ['text', 'number', 'color', 'search', 'email', 'url', 'tel', 'password'].includes(
+      target.type
+    );
+  }
+
+  function handleDocumentInput(event: Event): void {
+    if (event.target === suppressedEditableHistoryTarget) {
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+      scheduleHistoryShortcutResync();
+      return;
+    }
+
+    if (
+      event instanceof InputEvent &&
+      historyManager &&
+      (event.inputType === 'historyUndo' || event.inputType === 'historyRedo') &&
+      (pendingNativeHistoryInput === event.inputType || isEditableHistoryTarget(event.target))
+    ) {
+      pendingNativeHistoryInput = null;
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+      scheduleHistoryShortcutResync();
+      return;
+    }
+
+    if (isEditableHistoryTarget(event.target)) {
+      cancelHistoryShortcutResync();
+      dirtyEditableElements.add(event.target);
+    }
+  }
+
+  function handleDocumentChange(event: Event): void {
+    if (event.target === suppressedEditableHistoryTarget) {
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+      scheduleHistoryShortcutResync();
+      clearDirtyEditableTarget(event.target);
+      return;
+    }
+
+    if (historyManager && pendingNativeHistoryInput && isEditableHistoryTarget(event.target)) {
+      pendingNativeHistoryInput = null;
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+      scheduleHistoryShortcutResync();
+      clearDirtyEditableTarget(event.target);
+      return;
+    }
+
+    if (isEditableHistoryTarget(event.target)) {
+      cancelHistoryShortcutResync();
+    }
+
+    clearDirtyEditableTarget(event.target);
+  }
+
+  function handleDocumentFocusOut(event: FocusEvent): void {
+    clearDirtyEditableTarget(event.target);
+  }
+
+  function handleDocumentPointerDown(event: PointerEvent): void {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    const historyActionTarget = event.target.closest('[aria-label]');
+    if (!historyActionTarget) {
+      return;
+    }
+
+    const ariaLabel = historyActionTarget.getAttribute('aria-label');
+    if (
+      ariaLabel === 'Undo last change' ||
+      ariaLabel === 'Redo last change' ||
+      ariaLabel?.startsWith('Undo to ') ||
+      ariaLabel?.startsWith('Redo to ')
+    ) {
+      suppressEditableHistoryTarget(getActiveEditableHistoryTarget());
+    }
+  }
+
+  function clearDirtyEditableTarget(target: EventTarget | null): void {
+    if (isEditableHistoryTarget(target)) {
+      dirtyEditableElements.delete(target);
+    }
+  }
+
+  function getActiveEditableHistoryTarget(): HTMLInputElement | HTMLTextAreaElement | null {
+    return isEditableHistoryTarget(document.activeElement) ? document.activeElement : null;
+  }
+
+  function runHistoryShortcut(action: 'undo' | 'redo'): void {
+    if (action === 'undo') {
+      handleUndo();
+      return;
+    }
+
+    handleRedo();
+  }
+
+  function focusHistoryShortcutTarget(): void {
+    appShellEl?.focus({ preventScroll: true });
+  }
+
+  function suppressEditableHistoryTarget(
+    target: HTMLInputElement | HTMLTextAreaElement | null
+  ): void {
+    suppressedEditableHistoryTarget = target;
+
+    if (suppressedEditableHistoryTimeout !== null) {
+      window.clearTimeout(suppressedEditableHistoryTimeout);
+    }
+
+    suppressedEditableHistoryTimeout = window.setTimeout(() => {
+      suppressedEditableHistoryTarget = null;
+      suppressedEditableHistoryTimeout = null;
+    }, 250);
+  }
+
+  function cancelHistoryShortcutResync(): void {
+    historyShortcutResyncRevision += 1;
+
+    if (historyShortcutResyncTimeout !== null) {
+      window.clearTimeout(historyShortcutResyncTimeout);
+      historyShortcutResyncTimeout = null;
+    }
+  }
+
+  function scheduleHistoryShortcutResync(): void {
+    if (!historyManager) {
+      return;
+    }
+
+    cancelHistoryShortcutResync();
+
+    const resyncRevision = historyShortcutResyncRevision;
+
+    let remainingPasses = 5;
+    const runResync = () => {
+      if (!historyManager || resyncRevision !== historyShortcutResyncRevision) {
+        return;
+      }
+
+      applyHistorySnapshot(historyManager.getCurrentSnapshot());
+      remainingPasses -= 1;
+
+      if (remainingPasses === 0) {
+        historyShortcutResyncTimeout = null;
+        return;
+      }
+
+      historyShortcutResyncTimeout = window.setTimeout(runResync, 120);
+    };
+
+    void tick().then(() => {
+      if (resyncRevision !== historyShortcutResyncRevision) {
+        return;
+      }
+
+      runResync();
+    });
+  }
+
+  function handleHistoryKeydown(event: KeyboardEvent): void {
+    const lowerKey = event.key.toLowerCase();
+    const modifierPressed = event.metaKey || event.ctrlKey;
+    const isUndoShortcut = modifierPressed && !event.shiftKey && lowerKey === 'z';
+    const isRedoShortcut =
+      modifierPressed &&
+      ((event.shiftKey && lowerKey === 'z') || (!event.metaKey && lowerKey === 'y'));
+
+    if ((!isUndoShortcut && !isRedoShortcut) || event.altKey || !historyManager) {
+      return;
+    }
+
+    const activeEditableTarget = getActiveEditableHistoryTarget();
+    if (activeEditableTarget && dirtyEditableElements.has(activeEditableTarget)) {
+      return;
+    }
+
+    if (activeEditableTarget) {
+      pendingNativeHistoryInput = isUndoShortcut ? 'historyUndo' : 'historyRedo';
+      suppressEditableHistoryTarget(activeEditableTarget);
+      window.setTimeout(() => {
+        if (pendingNativeHistoryInput === (isUndoShortcut ? 'historyUndo' : 'historyRedo')) {
+          pendingNativeHistoryInput = null;
+        }
+      }, 200);
+      focusHistoryShortcutTarget();
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+      window.setTimeout(() => {
+        runHistoryShortcut(isUndoShortcut ? 'undo' : 'redo');
+        scheduleHistoryShortcutResync();
+      }, 0);
+      return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+    runHistoryShortcut(isUndoShortcut ? 'undo' : 'redo');
+  }
+
+  function handleHistoryBeforeInput(event: Event): void {
+    if (!(event instanceof InputEvent) || !historyManager) {
+      return;
+    }
+
+    if (event.inputType !== 'historyUndo' && event.inputType !== 'historyRedo') {
+      return;
+    }
+
+    if (pendingNativeHistoryInput === event.inputType) {
+      pendingNativeHistoryInput = null;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+      scheduleHistoryShortcutResync();
+      return;
+    }
+
+    const activeEditableTarget = getActiveEditableHistoryTarget();
+    if (activeEditableTarget && dirtyEditableElements.has(activeEditableTarget)) {
+      return;
+    }
+
+    focusHistoryShortcutTarget();
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.stopPropagation();
+    runHistoryShortcut(event.inputType === 'historyUndo' ? 'undo' : 'redo');
+  }
 
   function freezeLayout() {
     isDraggingSlider = true;
@@ -137,13 +655,14 @@
       setThemePreference(storedState.themePreference);
     }
 
-    urlStateLoaded = true;
-
     // Set up matchMedia listener for auto theme preference
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
     const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
       if ($themePreference === 'auto') {
-        setTheme(e.matches ? 'dark' : 'light');
+        const resolvedTheme = e.matches ? 'dark' : 'light';
+        if ($currentTheme !== resolvedTheme) {
+          setTheme(resolvedTheme);
+        }
       }
     };
     // Apply initial auto theme if preference is auto
@@ -151,23 +670,70 @@
       handleMediaChange(mql);
     }
     mql.addEventListener('change', handleMediaChange);
+    document.addEventListener('input', handleDocumentInput, true);
+    document.addEventListener('beforeinput', handleHistoryBeforeInput, true);
+    document.addEventListener('change', handleDocumentChange, true);
+    document.addEventListener('focusout', handleDocumentFocusOut, true);
+    document.addEventListener('pointerdown', handleDocumentPointerDown, true);
+    document.addEventListener('keydown', handleHistoryKeydown, true);
+
+    urlStateLoaded = true;
+    initializeHistory(true);
 
     return () => {
       if (urlUpdateTimeout) clearTimeout(urlUpdateTimeout);
+      if (historyShortcutResyncTimeout !== null) window.clearTimeout(historyShortcutResyncTimeout);
+      if (suppressedEditableHistoryTimeout !== null) {
+        window.clearTimeout(suppressedEditableHistoryTimeout);
+      }
       mql.removeEventListener('change', handleMediaChange);
+      document.removeEventListener('input', handleDocumentInput, true);
+      document.removeEventListener('beforeinput', handleHistoryBeforeInput, true);
+      document.removeEventListener('change', handleDocumentChange, true);
+      document.removeEventListener('focusout', handleDocumentFocusOut, true);
+      document.removeEventListener('pointerdown', handleDocumentPointerDown, true);
+      document.removeEventListener('keydown', handleHistoryKeydown, true);
     };
   });
 
   // React to themePreference changes to apply auto theme
   $effect(() => {
-    if (themePreferenceLocal === 'auto' && typeof window !== 'undefined') {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setTheme(isDark ? 'dark' : 'light');
+    if (!skipAutoThemeSync && themePreferenceLocal === 'auto' && typeof window !== 'undefined') {
+      const resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+
+      if (currentThemeLocal !== resolvedTheme) {
+        setTheme(resolvedTheme);
+      }
     }
   });
 
   // Sync local bindable state to stores when they change
   $effect(() => {
+    if (isApplyingHistorySnapshot) {
+      return;
+    }
+
+    if (pendingHistoryGeneratorSnapshot) {
+      const storeMatchesPendingSnapshot =
+        $baseColor === pendingHistoryGeneratorSnapshot.baseColor &&
+        $warmth === pendingHistoryGeneratorSnapshot.warmth &&
+        $chromaMultiplier === pendingHistoryGeneratorSnapshot.chromaMultiplier &&
+        $numColors === pendingHistoryGeneratorSnapshot.numColors &&
+        $numPalettes === pendingHistoryGeneratorSnapshot.numPalettes &&
+        $x1 === pendingHistoryGeneratorSnapshot.x1 &&
+        $y1 === pendingHistoryGeneratorSnapshot.y1 &&
+        $x2 === pendingHistoryGeneratorSnapshot.x2 &&
+        $y2 === pendingHistoryGeneratorSnapshot.y2;
+
+      if (!storeMatchesPendingSnapshot) {
+        return;
+      }
+
+      pendingHistoryGeneratorSnapshot = null;
+    }
+
     const storeBaseColor = $baseColor;
     const storeWarmth = $warmth;
     const storeChroma = $chromaMultiplier;
@@ -187,6 +753,45 @@
     y1Local = storeY1;
     x2Local = storeX2;
     y2Local = storeY2;
+  });
+
+  // Keep generator settings in the shared store so history, persistence,
+  // and derived UI state read from the same source of truth.
+  $effect(() => {
+    if (
+      isApplyingHistorySnapshot ||
+      pendingHistoryGeneratorSnapshot ||
+      isDeferringBezierStoreSync
+    ) {
+      return;
+    }
+
+    const generatorStateChanged =
+      baseColorLocal !== $baseColor ||
+      warmthLocal !== $warmth ||
+      chromaMultiplierLocal !== $chromaMultiplier ||
+      numColorsLocal !== $numColors ||
+      numPalettesLocal !== $numPalettes ||
+      x1Local !== $x1 ||
+      y1Local !== $y1 ||
+      x2Local !== $x2 ||
+      y2Local !== $y2;
+
+    if (!generatorStateChanged) {
+      return;
+    }
+
+    updateColorState({
+      baseColor: baseColorLocal,
+      warmth: warmthLocal,
+      chromaMultiplier: chromaMultiplierLocal,
+      numColors: numColorsLocal,
+      numPalettes: numPalettesLocal,
+      x1: x1Local,
+      y1: y1Local,
+      x2: x2Local,
+      y2: y2Local
+    });
   });
 
   // Keep saturation within the valid bounds for the active gamut.
@@ -361,10 +966,7 @@
 
     // Apply stored values after theme preference to ensure they override any defaults
     if (Object.keys(stateUpdate).length > 0) {
-      // Use setTimeout to ensure this runs after setThemePreference's store update completes
-      setTimeout(() => {
-        updateColorState(stateUpdate);
-      }, 0);
+      updateColorState(stateUpdate);
     }
   }
 
@@ -408,38 +1010,63 @@
 <a href="#main-content" class="skip-link">Skip to main content</a>
 <div
   class="app-shell"
+  bind:this={appShellEl}
+  tabindex="-1"
   role="application"
   aria-label="Chroma11y"
   style="--num-colors: {numColorsLocal};"
 >
-  <AppHeader bind:bindInner={topbarInnerEl} />
+  <AppHeader
+    bind:bindInner={topbarInnerEl}
+    canUndo={historyView.canUndo}
+    canRedo={historyView.canRedo}
+    undoEntries={historyView.undoEntries}
+    redoEntries={historyView.redoEntries}
+    onUndo={handleUndo}
+    onRedo={handleRedo}
+    onUndoJump={handleHistoryJump}
+    onRedoJump={handleHistoryJump}
+  />
 
   <div class="layout-container">
     <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
       <Sidebar>
         <Card title="Generation" subtitle="Core palette controls">
-          <ColorControls
-            bind:baseColor={baseColorLocal}
-            bind:warmth={warmthLocal}
-            bind:chromaMultiplier={chromaMultiplierLocal}
-            gamutSpace={gamutSpaceLocal}
-            bind:numColors={numColorsLocal}
-            bind:numPalettes={numPalettesLocal}
-            bind:x1={x1Local}
-            bind:y1={y1Local}
-            bind:x2={x2Local}
-            bind:y2={y2Local}
-            onRangeDragStart={freezeLayout}
-            onRangeDragEnd={unfreezeLayout}
-          />
+          {#key `generation-${historyRestoreRevision}`}
+            <ColorControls
+              bind:baseColor={baseColorLocal}
+              bind:warmth={warmthLocal}
+              bind:chromaMultiplier={chromaMultiplierLocal}
+              gamutSpace={gamutSpaceLocal}
+              bind:numColors={numColorsLocal}
+              bind:numPalettes={numPalettesLocal}
+              bind:x1={x1Local}
+              bind:y1={y1Local}
+              bind:x2={x2Local}
+              bind:y2={y2Local}
+              onRangeDragStart={freezeLayout}
+              onRangeDragEnd={unfreezeLayout}
+              onBaseColorCommit={() => scheduleHistoryCommit('Base color changed')}
+              onWarmthCommit={() => scheduleHistoryCommit('Warmth changed')}
+              onSaturationCommit={() => scheduleHistoryCommit('Saturation changed')}
+              onNumColorsCommit={() => scheduleHistoryCommit('Number of colors changed')}
+              onNumPalettesCommit={() => scheduleHistoryCommit('Number of palettes changed')}
+              onBezierInteractionStart={beginBezierInteraction}
+              onBezierCommit={handleBezierCommit}
+            />
+          {/key}
         </Card>
 
         <Card title="Contrast" subtitle="Contrast and indicators">
-          <ContrastControls />
+          {#key `contrast-${historyRestoreRevision}`}
+            <ContrastControls onHistoryCommit={scheduleHistoryCommit} />
+          {/key}
         </Card>
 
         <Card title="Settings" subtitle="Display and labels">
-          <DisplaySettings />
+          {#key `settings-${historyRestoreRevision}`}
+            <DisplaySettings onHistoryCommit={scheduleHistoryCommit} />
+          {/key}
         </Card>
 
         <Card title="Export" subtitle="Share or export">
@@ -448,6 +1075,7 @@
             palettes={palettesHexLocal}
             displayNeutrals={neutralsSwatchDisplayLocal}
             displayPalettes={palettesSwatchDisplayLocal}
+            onResetCommit={() => scheduleHistoryCommit('Settings reset')}
           />
         </Card>
       </Sidebar>
@@ -459,18 +1087,24 @@
         data-testid="app-content"
       >
         <div class="content-inner">
-          <NeutralPalette
-            neutrals={neutralsLocal}
-            neutralsHex={neutralsHexLocal}
-            neutralsDisplay={neutralsSwatchDisplayLocal}
-            {lightnessNudgerValues}
-          />
-          <PaletteGrid
-            palettes={palettesLocal}
-            palettesHex={palettesHexLocal}
-            palettesDisplay={palettesSwatchDisplayLocal}
-            {hueNudgerValues}
-          />
+          {#key `neutral-palette-${historyRestoreRevision}`}
+            <NeutralPalette
+              neutrals={neutralsLocal}
+              neutralsHex={neutralsHexLocal}
+              neutralsDisplay={neutralsSwatchDisplayLocal}
+              {lightnessNudgerValues}
+              onHistoryCommit={scheduleHistoryCommit}
+            />
+          {/key}
+          {#key `palette-grid-${historyRestoreRevision}`}
+            <PaletteGrid
+              palettes={palettesLocal}
+              palettesHex={palettesHexLocal}
+              palettesDisplay={palettesSwatchDisplayLocal}
+              {hueNudgerValues}
+              onHistoryCommit={scheduleHistoryCommit}
+            />
+          {/key}
         </div>
       </main>
     </div>

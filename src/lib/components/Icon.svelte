@@ -1,9 +1,12 @@
 <script lang="ts">
   import {
+    IconArrowBackUp,
+    IconArrowForwardUp,
     IconAlertCircle,
     IconBraces,
     IconBrandSass,
     IconCheck,
+    IconChevronDown,
     IconCopy,
     IconFileTypeCss,
     IconRefresh,
@@ -19,6 +22,9 @@
     | 'scss'
     | 'share'
     | 'reset'
+    | 'undo'
+    | 'redo'
+    | 'chevron-down'
     | 'status-pass'
     | 'status-fail';
 
@@ -35,6 +41,9 @@
     css: IconFileTypeCss,
     share: IconShare,
     reset: IconRefresh,
+    undo: IconArrowBackUp,
+    redo: IconArrowForwardUp,
+    'chevron-down': IconChevronDown,
     scss: IconBrandSass,
     'status-pass': IconCheck,
     'status-fail': IconX

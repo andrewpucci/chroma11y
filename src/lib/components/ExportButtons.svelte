@@ -12,13 +12,15 @@
     palettes?: string[][];
     displayNeutrals?: string[];
     displayPalettes?: string[][];
+    onResetCommit?: () => void;
   }
 
   let {
     neutrals = [],
     palettes = [],
     displayNeutrals = [],
-    displayPalettes = []
+    displayPalettes = [],
+    onResetCommit
   }: Props = $props();
 
   const theme = $derived($currentTheme);
@@ -78,6 +80,7 @@
     if (confirmed) {
       resetColorState(theme as 'light' | 'dark');
       announce('Settings reset to defaults');
+      onResetCommit?.();
     }
   }
 </script>

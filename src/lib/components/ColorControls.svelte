@@ -18,6 +18,13 @@
     y2?: number;
     onRangeDragStart?: () => void;
     onRangeDragEnd?: () => void;
+    onBaseColorCommit?: () => void;
+    onWarmthCommit?: () => void;
+    onSaturationCommit?: () => void;
+    onNumColorsCommit?: () => void;
+    onNumPalettesCommit?: () => void;
+    onBezierInteractionStart?: () => void;
+    onBezierCommit?: () => void;
   }
 
   let {
@@ -32,7 +39,14 @@
     x2 = $bindable(1),
     y2 = $bindable(1),
     onRangeDragStart,
-    onRangeDragEnd
+    onRangeDragEnd,
+    onBaseColorCommit,
+    onWarmthCommit,
+    onSaturationCommit,
+    onNumColorsCommit,
+    onNumPalettesCommit,
+    onBezierInteractionStart,
+    onBezierCommit
   }: Props = $props();
 
   interface RangeConfig {
@@ -157,6 +171,7 @@
           bind:value={baseColor}
           aria-describedby="baseColorHex"
           tabindex="0"
+          onchange={onBaseColorCommit}
         />
         <input
           id="baseColorHex"
@@ -165,6 +180,8 @@
           bind:value={baseColor}
           placeholder="#1862E6"
           aria-label="Base color hex value"
+          onchange={onBaseColorCommit}
+          onblur={onBaseColorCommit}
         />
       </div>
     </div>
@@ -178,7 +195,9 @@
       step={WARMTH_RANGE.step}
       bind:value={warmth}
       groupHelpText={`Range ${WARMTH_RANGE.min} to ${WARMTH_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+      onRangeChange={onWarmthCommit}
       onNumberInput={clampWarmthFromInput}
+      onNumberChange={onWarmthCommit}
       onNumberBlur={clampWarmthFromInput}
     />
 
@@ -191,7 +210,9 @@
       step={SATURATION_RANGE.step}
       bind:value={chromaMultiplier}
       groupHelpText="Normalized range 0 to 1. Use slider for coarse adjustment and number input for precise adjustment."
+      onRangeChange={onSaturationCommit}
       onNumberInput={clampSaturationFromInput}
+      onNumberChange={onSaturationCommit}
       onNumberBlur={clampSaturationFromInput}
     />
 
@@ -206,7 +227,9 @@
       groupHelpText={`Range ${NUM_COLORS_RANGE.min} to ${NUM_COLORS_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
       onRangePointerDown={handlePointerDown}
       onRangeInput={handleKeyboardInput}
+      onRangeChange={onNumColorsCommit}
       onNumberInput={clampNumColorsFromInput}
+      onNumberChange={onNumColorsCommit}
       onNumberBlur={clampNumColorsFromInput}
     />
 
@@ -221,7 +244,9 @@
       groupHelpText={`Range ${NUM_PALETTES_RANGE.min} to ${NUM_PALETTES_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
       onRangePointerDown={handlePointerDown}
       onRangeInput={handleKeyboardInput}
+      onRangeChange={onNumPalettesCommit}
       onNumberInput={clampNumPalettesFromInput}
+      onNumberChange={onNumPalettesCommit}
       onNumberBlur={clampNumPalettesFromInput}
     />
   </div>
@@ -230,7 +255,14 @@
 
   <div class="bezier-section">
     <div class="bezier-title">Bezier Curve</div>
-    <BezierEditor bind:x1 bind:y1 bind:x2 bind:y2 />
+    <BezierEditor
+      bind:x1
+      bind:y1
+      bind:x2
+      bind:y2
+      onInteractionStart={onBezierInteractionStart}
+      onCommit={onBezierCommit}
+    />
   </div>
 </section>
 
