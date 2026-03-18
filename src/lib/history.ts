@@ -77,6 +77,10 @@ function cloneSnapshot(snapshot: HistorySnapshot): HistorySnapshot {
   return structuredClone(snapshot);
 }
 
+function overwriteSnapshot(target: HistorySnapshot, snapshot: HistorySnapshot): void {
+  Object.assign(target, cloneSnapshot(snapshot));
+}
+
 function snapshotsEqual(left: HistorySnapshot, right: HistorySnapshot): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
@@ -106,7 +110,6 @@ function withPositions(entries: HistoryEntryMeta[]): HistoryEntryMeta[] {
  */
 export function createHistoryManager(initialSnapshot: HistorySnapshot) {
   const travels = createTravels<HistorySnapshot>(cloneSnapshot(initialSnapshot), {
-    autoArchive: false,
     maxHistory: MAX_HISTORY
   });
 
@@ -160,15 +163,13 @@ export function createHistoryManager(initialSnapshot: HistorySnapshot) {
         ? metadata.slice(0, previousPosition + 1)
         : metadata.slice();
 
-    travels.setState(cloneSnapshot(snapshot));
-    if (!travels.canArchive()) {
-      return false;
-    }
+    travels.setState((draft) => {
+      overwriteSnapshot(draft, snapshot);
+    });
 
-    travels.archive();
-
+    const nextPosition = getPosition();
     const historyLength = travels.getHistory().length;
-    const nextMetadata = [...nextMetadataBase, createEntry(label, previousPosition + 1)];
+    const nextMetadata = [...nextMetadataBase, createEntry(label, nextPosition)];
     metadata =
       nextMetadata.length > historyLength
         ? withPositions(nextMetadata.slice(nextMetadata.length - historyLength))
