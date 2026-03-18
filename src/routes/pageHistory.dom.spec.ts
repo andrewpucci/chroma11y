@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -110,8 +110,8 @@ function readUiState(): HistoryUiState {
 async function renderPage(): Promise<void> {
   render(Page);
   await flushAppState();
-  await waitFor(() => expect(getUndoButton()).toBeDisabled());
-  await waitFor(() => expect(getRedoButton()).toBeDisabled());
+  expect(getUndoButton()).toBeDisabled();
+  expect(getRedoButton()).toBeDisabled();
 }
 
 async function flushHistoryCommit(): Promise<void> {
@@ -339,11 +339,12 @@ describe('page history integration', () => {
     await fireEvent.input(baseColorInput);
     await fireEvent.change(baseColorInput);
     await fireEvent.blur(baseColorInput);
-    await waitFor(() => expect(getBaseColorHexInput()).toHaveValue('#00ff00'));
     await flushHistoryCommit();
+    expect(getBaseColorHexInput()).toHaveValue('#00ff00');
 
     await fireEvent.click(getUndoButton());
-    await waitFor(() => expect(getBaseColorHexInput()).toHaveValue(initialBaseColor));
+    await flushHistoryCommit();
+    expect(getBaseColorHexInput()).toHaveValue(initialBaseColor);
 
     const currentBaseColorInput = getBaseColorHexInput();
     currentBaseColorInput.focus();
