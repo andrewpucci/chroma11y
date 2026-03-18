@@ -4,13 +4,17 @@
     y1?: number;
     x2?: number;
     y2?: number;
+    onInteractionStart?: () => void;
+    onCommit?: () => void;
   }
 
   let {
     x1 = $bindable(0),
     y1 = $bindable(0),
     x2 = $bindable(1),
-    y2 = $bindable(1)
+    y2 = $bindable(1),
+    onInteractionStart,
+    onCommit
   }: Props = $props();
 
   // SVG coordinate system: viewBox is padded to allow handle lines to extend
@@ -36,16 +40,23 @@
     return Math.round(Math.min(1, Math.max(0, value)) * 100) / 100;
   }
 
-  function setPointCoordinates(point: 'p1' | 'p2', nextX: number, nextY: number) {
+  function setPointCoordinates(point: 'p1' | 'p2', nextX: number, nextY: number): boolean {
     const normalizedX = normalizeCoordinate(nextX);
     const normalizedY = normalizeCoordinate(nextY);
     if (point === 'p1') {
+      if (x1 === normalizedX && y1 === normalizedY) {
+        return false;
+      }
       x1 = normalizedX;
       y1 = normalizedY;
-      return;
+      return true;
+    }
+    if (x2 === normalizedX && y2 === normalizedY) {
+      return false;
     }
     x2 = normalizedX;
     y2 = normalizedY;
+    return true;
   }
 
   function setPointCoordinate(point: 'p1' | 'p2', axis: 'x' | 'y', value: number) {
@@ -87,6 +98,7 @@
   let dragRect: DOMRect | null = $state(null);
   let capturedPointerId: number | null = $state(null);
   let capturedElement: Element | null = $state(null);
+  let hasPendingKeyboardCommit = false;
 
   import { getLastInteractionWasKeyboard, initializeGlobalFocusListeners } from '$lib/focusUtils';
 
@@ -123,6 +135,8 @@
   }
 
   function onPointerDown(point: 'p1' | 'p2', e: PointerEvent) {
+    hasPendingKeyboardCommit = false;
+    onInteractionStart?.();
     activePoint = point;
     const el = e.currentTarget as Element;
 
@@ -162,6 +176,7 @@
   }
 
   function onPointerUp() {
+    const shouldCommit = activePoint !== null;
     if (capturedElement && capturedPointerId !== null) {
       if (
         'releasePointerCapture' in capturedElement &&
@@ -177,6 +192,9 @@
     dragRect = null;
     capturedPointerId = null;
     capturedElement = null;
+    if (shouldCommit) {
+      onCommit?.();
+    }
   }
 
   function onKeyDown(point: 'p1' | 'p2', e: KeyboardEvent) {
@@ -204,11 +222,31 @@
         return;
     }
     e.preventDefault();
+    if (!hasPendingKeyboardCommit) {
+      onInteractionStart?.();
+    }
     if (point === 'p1') {
-      setPointCoordinates('p1', x1 + dx, y1 + dy);
+      hasPendingKeyboardCommit =
+        setPointCoordinates('p1', x1 + dx, y1 + dy) || hasPendingKeyboardCommit;
       return;
     }
-    setPointCoordinates('p2', x2 + dx, y2 + dy);
+    hasPendingKeyboardCommit =
+      setPointCoordinates('p2', x2 + dx, y2 + dy) || hasPendingKeyboardCommit;
+  }
+
+  function onPointBlur(point: 'p1' | 'p2'): void {
+    if (point === 'p1') {
+      p1FocusVisible = false;
+    } else {
+      p2FocusVisible = false;
+    }
+
+    if (!hasPendingKeyboardCommit) {
+      return;
+    }
+
+    hasPendingKeyboardCommit = false;
+    onCommit?.();
   }
 
   function onCoordinateInput(point: 'p1' | 'p2', axis: 'x' | 'y', e: Event) {
@@ -225,6 +263,7 @@
   }
 
   function onCoordinateBlur(point: 'p1' | 'p2', axis: 'x' | 'y', e: FocusEvent) {
+    hasPendingKeyboardCommit = false;
     const target = e.target as HTMLInputElement;
     const rawValue = target.value;
     const currentValue = getPointCoordinate(point, axis);
@@ -243,6 +282,7 @@
     const normalized = normalizeCoordinate(parsed);
     setPointCoordinate(point, axis, normalized);
     target.value = `${normalized}`;
+    onCommit?.();
   }
 </script>
 
@@ -348,7 +388,7 @@
       onpointerdown={(e) => onPointerDown('p1', e)}
       onkeydown={(e) => onKeyDown('p1', e)}
       onfocus={() => (p1FocusVisible = getLastInteractionWasKeyboard())}
-      onblur={() => (p1FocusVisible = false)}
+      onblur={() => onPointBlur('p1')}
     />
     <rect
       x={p2x - 12}
@@ -368,7 +408,7 @@
       onpointerdown={(e) => onPointerDown('p2', e)}
       onkeydown={(e) => onKeyDown('p2', e)}
       onfocus={() => (p2FocusVisible = getLastInteractionWasKeyboard())}
-      onblur={() => (p2FocusVisible = false)}
+      onblur={() => onPointBlur('p2')}
     />
 
     <!-- Control point labels -->
