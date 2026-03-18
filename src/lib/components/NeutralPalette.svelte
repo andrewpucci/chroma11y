@@ -11,13 +11,15 @@
     neutralsHex?: string[];
     neutralsDisplay?: string[];
     lightnessNudgerValues?: number[];
+    onHistoryCommit?: (label: string) => void;
   }
 
   let {
     neutrals = [],
     neutralsHex = [],
     neutralsDisplay = [],
-    lightnessNudgerValues = []
+    lightnessNudgerValues = [],
+    onHistoryCommit
   }: Props = $props();
 
   const neutralName = $derived(
@@ -47,6 +49,7 @@
         const newValueUp = Math.min(0.5, Math.round((currentValue + step) * 100) / 100);
         target.value = newValueUp.toString();
         updateLightnessNudger(index, newValueUp);
+        onHistoryCommit?.('Neutral lightness adjusted');
         break;
       }
       case 'ArrowDown': {
@@ -54,6 +57,7 @@
         const newValueDown = Math.max(-0.5, Math.round((currentValue - step) * 100) / 100);
         target.value = newValueDown.toString();
         updateLightnessNudger(index, newValueDown);
+        onHistoryCommit?.('Neutral lightness adjusted');
         break;
       }
     }
@@ -115,6 +119,9 @@
                   if (isNaN(newValue) || !isFinite(newValue)) {
                     (e.target as HTMLInputElement).value = '0';
                     updateLightnessNudger(index, 0);
+                    onHistoryCommit?.('Neutral lightness adjusted');
+                  } else {
+                    onHistoryCommit?.('Neutral lightness adjusted');
                   }
                 }
               }}

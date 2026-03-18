@@ -11,13 +11,15 @@
     palettesHex?: string[][];
     palettesDisplay?: string[][];
     hueNudgerValues?: number[];
+    onHistoryCommit?: (label: string) => void;
   }
 
   let {
     palettes = [],
     palettesHex = [],
     palettesDisplay = [],
-    hueNudgerValues = []
+    hueNudgerValues = [],
+    onHistoryCommit
   }: Props = $props();
 
   // Cache palette names to avoid repeated calculations during render
@@ -50,6 +52,7 @@
         const newValueUp = Math.min(180, currentValue + step);
         target.value = newValueUp.toString();
         updateHueNudger(paletteIndex, newValueUp);
+        onHistoryCommit?.('Palette hue adjusted');
         break;
       }
       case 'ArrowDown': {
@@ -57,6 +60,7 @@
         const newValueDown = Math.max(-180, currentValue - step);
         target.value = newValueDown.toString();
         updateHueNudger(paletteIndex, newValueDown);
+        onHistoryCommit?.('Palette hue adjusted');
         break;
       }
     }
@@ -88,6 +92,7 @@
       target.value = '0';
       updateHueNudger(paletteIndex, 0);
     }
+    onHistoryCommit?.('Palette hue adjusted');
   }
 </script>
 

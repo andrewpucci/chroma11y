@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { tick } from 'svelte';
+
   interface Props {
     id: string;
     label: string;
@@ -49,6 +51,64 @@
     const ids = [describedBy, infoTooltipId, helpId].filter(Boolean);
     return ids.length > 0 ? ids.join(' ') : undefined;
   });
+  let numberInputEl: HTMLInputElement | undefined = $state();
+  let numberInputRevision = $state(0);
+
+  function updateValueFromInput(target: EventTarget | null): void {
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const nextValue = target.valueAsNumber;
+    if (Number.isNaN(nextValue)) {
+      return;
+    }
+
+    value = nextValue;
+  }
+
+  function handleRangeInput(event: Event): void {
+    updateValueFromInput(event.currentTarget);
+    onRangeInput?.(event);
+  }
+
+  function handleRangeChange(event: Event): void {
+    updateValueFromInput(event.currentTarget);
+    onRangeChange?.(event);
+  }
+
+  function handleNumberInput(event: Event): void {
+    updateValueFromInput(event.currentTarget);
+    onNumberInput?.(event);
+  }
+
+  function handleNumberChange(event: Event): void {
+    updateValueFromInput(event.currentTarget);
+    onNumberChange?.(event);
+    void refreshCommittedNumberInput(event.currentTarget);
+  }
+
+  function handleNumberBlur(event: FocusEvent): void {
+    onNumberBlur?.(event);
+
+    if (event.currentTarget instanceof HTMLInputElement) {
+      event.currentTarget.value = `${value}`;
+    }
+  }
+
+  async function refreshCommittedNumberInput(target: EventTarget | null): Promise<void> {
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const shouldRestoreFocus = document.activeElement === target;
+    numberInputRevision += 1;
+    await tick();
+
+    if (shouldRestoreFocus) {
+      numberInputEl?.focus({ preventScroll: true });
+    }
+  }
 </script>
 
 <div class="field">
@@ -79,28 +139,31 @@
         {min}
         {max}
         {step}
-        bind:value
+        {value}
         aria-label={rangeAriaLabel}
         aria-describedby={combinedDescribedBy}
-        oninput={onRangeInput}
-        onchange={onRangeChange}
+        oninput={handleRangeInput}
+        onchange={handleRangeChange}
         onpointerdown={onRangePointerDown}
         tabindex="0"
       />
     </div>
-    <input
-      class="input mono slider-number-input"
-      type="number"
-      {min}
-      {max}
-      {step}
-      bind:value
-      aria-label={valueInputLabel}
-      aria-describedby={combinedDescribedBy}
-      oninput={onNumberInput}
-      onchange={onNumberChange}
-      onblur={onNumberBlur}
-    />
+    {#key `${id}-number-${numberInputRevision}`}
+      <input
+        bind:this={numberInputEl}
+        class="input mono slider-number-input"
+        type="number"
+        {min}
+        {max}
+        {step}
+        {value}
+        aria-label={valueInputLabel}
+        aria-describedby={combinedDescribedBy}
+        oninput={handleNumberInput}
+        onchange={handleNumberChange}
+        onblur={handleNumberBlur}
+      />
+    {/key}
   </div>
 
   {#if groupHelpText && helpId}

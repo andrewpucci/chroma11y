@@ -13,6 +13,12 @@
   import { isValidHexColor } from '$lib/colorUtils';
   import type { ContrastAlgorithm, SwatchContrastIndicators } from '$lib/types';
 
+  interface Props {
+    onHistoryCommit?: (label: string) => void;
+  }
+
+  let { onHistoryCommit }: Props = $props();
+
   // Derived values from stores
   let contrastModeLocal = $derived($contrastMode);
   let contrastColorsLocal = $derived($contrastColors);
@@ -40,6 +46,7 @@
     updateColorState({
       contrastMode: newMode
     });
+    onHistoryCommit?.('Contrast mode changed');
   }
 
   function getVisibleIndicatorLabels(
@@ -71,10 +78,12 @@
     const visibleLabels = getVisibleIndicatorLabels(contrastAlgorithmLocal, nextIndicators);
     if (visibleLabels.length === 0) {
       announce('Swatch contrast indicators hidden');
+      onHistoryCommit?.('Contrast indicators changed');
       return;
     }
 
     announce(`Swatch contrast indicators showing ${visibleLabels.join(' and ')}`);
+    onHistoryCommit?.('Contrast indicators changed');
   }
 
   function handleContrastAlgorithmChange(event: Event): void {
@@ -84,12 +93,14 @@
     const visibleLabels = getVisibleIndicatorLabels(value, swatchContrastIndicatorsLocal);
     if (visibleLabels.length === 0) {
       announce(`Contrast algorithm changed to ${value === 'WCAG' ? 'WCAG 2.2' : 'APCA'}`);
+      onHistoryCommit?.('Contrast algorithm changed');
       return;
     }
 
     announce(
       `Contrast algorithm changed to ${value === 'WCAG' ? 'WCAG 2.2' : 'APCA'} with ${visibleLabels.join(' and ')} indicators`
     );
+    onHistoryCommit?.('Contrast algorithm changed');
   }
 
   function handleIndicatorToggle(key: keyof SwatchContrastIndicators, event: Event): void {
@@ -115,6 +126,7 @@
         },
         contrastMode: 'manual'
       });
+      onHistoryCommit?.('Low contrast color changed');
     }
   }
 
@@ -131,6 +143,7 @@
         },
         contrastMode: 'manual'
       });
+      onHistoryCommit?.('High contrast color changed');
     }
   }
 
@@ -138,12 +151,14 @@
     const target = event.target as HTMLSelectElement;
     const newStep = parseInt(target.value);
     updateContrastStep('low', newStep);
+    onHistoryCommit?.('Low contrast step changed');
   }
 
   function handleHighStepChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     const newStep = parseInt(target.value);
     updateContrastStep('high', newStep);
+    onHistoryCommit?.('High contrast step changed');
   }
 
   // Generate step options (0-10 for 11 color steps)
