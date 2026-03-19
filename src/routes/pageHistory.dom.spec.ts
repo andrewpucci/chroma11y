@@ -115,10 +115,10 @@ function readUiState(): HistoryUiState {
 function createImmediatePageScheduler(): PageScheduler {
   return {
     scheduleColorGeneration(task: () => void): void {
-      task();
+      void task;
     },
     schedulePersistence(task: () => void): void {
-      task();
+      void task;
     },
     scheduleEditableHistorySuppressionReset(task: () => void): void {
       task();
