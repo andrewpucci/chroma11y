@@ -1,6 +1,7 @@
 import { writable, derived } from 'svelte/store';
 import type Color from 'colorjs.io';
 import { colorToCssHex, colorToCssRender, colorToCssSwatchRender } from '$lib/colorUtils';
+import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from '$lib/paletteNameUtils';
 import type {
   DisplayColorSpace,
   GamutSpace,
@@ -45,6 +46,8 @@ interface ColorState {
   swatchContrastIndicators: SwatchContrastIndicators;
   contrastAlgorithm: ContrastAlgorithm;
   oklchDisplaySignificantDigits: OklchDisplaySignificantDigits;
+  customNeutralName?: string;
+  customPaletteNames?: string[];
   _lastUpdated?: number;
 }
 
@@ -119,14 +122,20 @@ const DEFAULT_STATE = {
 };
 
 function normalizeDisplayState(state: ColorState): ColorState {
-  if (state.displayColorSpace === 'hex' && state.gamutSpace !== 'srgb') {
+  const normalizedState: ColorState = {
+    ...state,
+    customNeutralName: normalizeCustomPaletteName(state.customNeutralName),
+    customPaletteNames: normalizeCustomPaletteNames(state.customPaletteNames, state.numPalettes)
+  };
+
+  if (normalizedState.displayColorSpace === 'hex' && normalizedState.gamutSpace !== 'srgb') {
     return {
-      ...state,
+      ...normalizedState,
       gamutSpace: 'srgb'
     };
   }
 
-  return state;
+  return normalizedState;
 }
 
 // Create the main color store
@@ -239,6 +248,18 @@ export const contrastAlgorithm = derived(
 export const oklchDisplaySignificantDigits = derived(
   colorStore,
   ($colorStore) => $colorStore.oklchDisplaySignificantDigits
+);
+
+// Derived store for custom neutral palette name
+export const customNeutralName = derived(
+  colorStore,
+  ($colorStore) => $colorStore.customNeutralName
+);
+
+// Derived store for custom generated palette names
+export const customPaletteNames = derived(
+  colorStore,
+  ($colorStore) => $colorStore.customPaletteNames
 );
 
 // Derived store for neutrals formatted in the selected display color space
@@ -433,6 +454,8 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
       ...themePreset,
       currentTheme: targetTheme,
       themePreference: 'auto' as ThemePreference,
+      customNeutralName: undefined,
+      customPaletteNames: undefined,
       _lastUpdated: Date.now()
     } as ColorState);
   });

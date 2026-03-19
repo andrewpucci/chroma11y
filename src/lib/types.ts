@@ -55,4 +55,6 @@ export interface SerializableColorState {
   swatchContrastIndicators?: SwatchContrastIndicators;
   contrastAlgorithm?: ContrastAlgorithm;
   oklchDisplaySignificantDigits?: OklchDisplaySignificantDigits;
+  customNeutralName?: string;
+  customPaletteNames?: string[];
 }
