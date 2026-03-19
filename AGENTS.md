@@ -44,12 +44,11 @@ npm test                      # unit + e2e
 
 Test layers - **all must pass before commit**:
 
-| Layer         | What                                              | File pattern                                                          |
-| ------------- | ------------------------------------------------- | --------------------------------------------------------------------- |
-| Unit (server) | Pure functions, algorithms                        | `src/**/*.{test,spec}.{js,ts}` (excluding `.dom` and `.svelte` tests) |
-| Unit (dom)    | Component rendering, user events, ARIA            | `src/**/*.dom.{test,spec}.{js,ts}`                                    |
-| Unit (client) | Browser-based Svelte component tests (Playwright) | `src/**/*.svelte.{test,spec}.{js,ts}`                                 |
-| E2E           | Full user flows, visual output, drag interactions | `e2e/*.spec.ts`                                                       |
+| Layer         | What                                              | File pattern                                            |
+| ------------- | ------------------------------------------------- | ------------------------------------------------------- |
+| Unit (server) | Pure functions, algorithms, isolated modules      | `src/**/*.{test,spec}.{js,ts}` (excluding `.dom` tests) |
+| Unit (dom)    | Component rendering, user events, ARIA            | `src/**/*.dom.{test,spec}.{js,ts}`                      |
+| E2E           | Full user flows, visual output, drag interactions | `e2e/*.spec.ts`                                         |
 
 **Testing principles:**
 
@@ -63,7 +62,6 @@ Test layers - **all must pass before commit**:
 
 - Unit (server): Pure functions, algorithms, data transformations — NOT DOM interactions
 - Unit (dom): Component rendering, user events, ARIA attributes — NOT pointer capture or SVG transforms
-- Unit (client): Browser-mode Svelte component behavior (`.svelte.spec.ts`) — NOT full app flows
 - E2E: Full user flows, visual output, cross-browser behavior, drag interactions
 
 **Intentional coverage gaps:**

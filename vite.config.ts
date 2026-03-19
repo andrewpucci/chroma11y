@@ -1,12 +1,11 @@
 import { defineConfig } from 'vitest/config';
-import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { faviconPlugin } from './scripts/vite-plugin-favicons.js';
 import { browserslistToTargets } from 'lightningcss';
 import browserslist from 'browserslist';
 
 export default defineConfig({
-  plugins: [sveltekit(), faviconPlugin()],
+  plugins: [sveltekit(), ...(process.env.VITEST ? [] : [faviconPlugin()])],
 
   css: {
     transformer: 'lightningcss',
@@ -46,27 +45,10 @@ export default defineConfig({
         extends: './vite.config.ts',
 
         test: {
-          name: 'client',
-
-          browser: {
-            enabled: true,
-            provider: playwright(),
-            instances: [{ browser: 'chromium', headless: true }]
-          },
-
-          include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-          exclude: ['src/lib/server/**']
-        }
-      },
-
-      {
-        extends: './vite.config.ts',
-
-        test: {
           name: 'server',
           environment: 'node',
           include: ['src/**/*.{test,spec}.{js,ts}'],
-          exclude: ['src/**/*.svelte.{test,spec}.{js,ts}', 'src/**/*.dom.{test,spec}.{js,ts}']
+          exclude: ['src/**/*.dom.{test,spec}.{js,ts}']
         }
       }
     ]
