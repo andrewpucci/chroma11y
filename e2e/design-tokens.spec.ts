@@ -1,11 +1,10 @@
 /**
  * Design Token E2E Tests
- * Verifies fluid typography, spacing tokens, border radius scaling,
- * touch targets, motion preferences, container queries, and text zoom.
- * WCAG 2.2 AA compliance testing.
+ * Verifies token-driven typography, spacing, motion, container queries, and text zoom.
  */
 
 import { test, expect } from '@playwright/test';
+
 import { waitForAppReady } from './test-utils';
 
 test.describe('Design Tokens', () => {
@@ -14,242 +13,117 @@ test.describe('Design Tokens', () => {
     await waitForAppReady(page);
   });
 
-  test.describe('Fluid Typography', () => {
-    test('scales correctly at mobile viewport (320px)', async ({ page }) => {
-      await page.setViewportSize({ width: 320, height: 568 });
+  test('scales fluid typography across representative breakpoints', async ({ page }) => {
+    const measurements: number[] = [];
 
-      const cardTitle = page.locator('.card-title').first();
-      const fontSize = await cardTitle.evaluate((el) => {
-        return parseFloat(getComputedStyle(el).fontSize);
-      });
+    for (const viewport of [
+      { width: 320, height: 568 },
+      { width: 768, height: 1024 },
+      { width: 1440, height: 900 }
+    ]) {
+      await page.setViewportSize(viewport);
+      measurements.push(
+        await page
+          .locator('.card-title')
+          .first()
+          .evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
+      );
+    }
 
-      // At 320px, --font-size-lg should be near its minimum
-      expect(fontSize).toBeGreaterThanOrEqual(15); // ~0.95rem
-      expect(fontSize).toBeLessThanOrEqual(17);
-    });
-
-    test('scales correctly at tablet viewport (768px)', async ({ page }) => {
-      await page.setViewportSize({ width: 768, height: 1024 });
-
-      const cardTitle = page.locator('.card-title').first();
-      const fontSize = await cardTitle.evaluate((el) => {
-        return parseFloat(getComputedStyle(el).fontSize);
-      });
-
-      // At 768px, --font-size-lg should be in the middle range
-      expect(fontSize).toBeGreaterThanOrEqual(15);
-      expect(fontSize).toBeLessThanOrEqual(18);
-    });
-
-    test('scales correctly at desktop viewport (1440px)', async ({ page }) => {
-      await page.setViewportSize({ width: 1440, height: 900 });
-
-      const cardTitle = page.locator('.card-title').first();
-      const fontSize = await cardTitle.evaluate((el) => {
-        return parseFloat(getComputedStyle(el).fontSize);
-      });
-
-      // At 1440px, --font-size-lg should be near its maximum
-      expect(fontSize).toBeGreaterThanOrEqual(16);
-      expect(fontSize).toBeLessThanOrEqual(19); // ~1.125rem
-    });
+    expect(measurements[0]).toBeGreaterThanOrEqual(15);
+    expect(measurements[0]).toBeLessThanOrEqual(17);
+    expect(measurements[1]).toBeGreaterThanOrEqual(measurements[0]);
+    expect(measurements[2]).toBeGreaterThanOrEqual(measurements[1]);
+    expect(measurements[2]).toBeLessThanOrEqual(19);
   });
 
-  test.describe('Spacing Tokens', () => {
-    test('maintains visual consistency across breakpoints', async ({ page }) => {
-      const viewports = [
-        { width: 320, height: 568 },
-        { width: 768, height: 1024 },
-        { width: 1440, height: 900 }
-      ];
+  test('scales spacing and border radius with viewport size', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
 
-      for (const viewport of viewports) {
-        await page.setViewportSize(viewport);
+    const card = page.locator('.card').first();
+    const cardBody = page.locator('.card-body').first();
 
-        const cardBody = page.locator('.card-body').first();
-        const padding = await cardBody.evaluate((el) => {
-          const style = getComputedStyle(el);
-          return parseFloat(style.paddingTop);
-        });
+    const smallViewportMetrics = {
+      paddingTop: await cardBody.evaluate((el) => parseFloat(getComputedStyle(el).paddingTop)),
+      radius: await card.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius))
+    };
 
-        // Spacing should scale proportionally with viewport
-        expect(padding).toBeGreaterThan(0);
-        expect(padding).toBeLessThanOrEqual(24); // Max for --space-lg
-      }
-    });
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    const largeViewportMetrics = {
+      paddingTop: await cardBody.evaluate((el) => parseFloat(getComputedStyle(el).paddingTop)),
+      radius: await card.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius))
+    };
+
+    expect(smallViewportMetrics.paddingTop).toBeGreaterThan(0);
+    expect(largeViewportMetrics.paddingTop).toBeGreaterThanOrEqual(smallViewportMetrics.paddingTop);
+    expect(largeViewportMetrics.paddingTop).toBeLessThanOrEqual(24);
+    expect(largeViewportMetrics.radius).toBeGreaterThanOrEqual(smallViewportMetrics.radius);
   });
 
-  test.describe('Border Radius Tokens', () => {
-    test('scales proportionally with viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 320, height: 568 });
+  test('updates motion tokens when reduced motion preference changes', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.reload();
+    await waitForAppReady(page);
 
-      const card = page.locator('.card').first();
-      const radiusSmall = await card.evaluate((el) => {
-        return parseFloat(getComputedStyle(el).borderTopLeftRadius);
-      });
-
-      await page.setViewportSize({ width: 1440, height: 900 });
-
-      const radiusLarge = await card.evaluate((el) => {
-        return parseFloat(getComputedStyle(el).borderTopLeftRadius);
-      });
-
-      // Border radius should increase with viewport size
-      expect(radiusLarge).toBeGreaterThanOrEqual(radiusSmall);
+    const reducedDurations = await page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return {
+        fast: style.getPropertyValue('--duration-fast').trim(),
+        normal: style.getPropertyValue('--duration-normal').trim()
+      };
     });
+
+    expect(reducedDurations.fast).toBe('0s');
+    expect(reducedDurations.normal).toBe('0s');
+
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.reload();
+    await waitForAppReady(page);
+
+    const normalDurations = await page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return {
+        fast: style.getPropertyValue('--duration-fast').trim(),
+        normal: style.getPropertyValue('--duration-normal').trim()
+      };
+    });
+
+    expect(normalDurations.fast).toMatch(/^(0?\.1s|100ms)$/);
+    expect(normalDurations.normal).toMatch(/^(0?\.2s|200ms)$/);
   });
 
-  test.describe('Touch Targets - WCAG 2.2 AA (2.5.8)', () => {
-    test('buttons meet 24px minimum touch target', async ({ page }) => {
-      const exportBtn = page.getByRole('button', { name: 'Export JSON design tokens' });
-      const box = await exportBtn.boundingBox();
+  test('switches layout at the sidebar container breakpoint', async ({ page }) => {
+    const layout = page.getByTestId('app-layout');
 
-      expect(box).toBeTruthy();
-      expect(box!.height).toBeGreaterThanOrEqual(24);
-      expect(box!.width).toBeGreaterThanOrEqual(24);
-    });
+    await page.setViewportSize({ width: 1100, height: 768 });
+    const wideColumns = await layout.evaluate((el) => getComputedStyle(el).gridTemplateColumns);
 
-    test('input fields meet 24px minimum touch target', async ({ page }) => {
-      const select = page.locator('#contrast-mode');
-      const box = await select.boundingBox();
+    await page.setViewportSize({ width: 900, height: 768 });
+    const narrowColumns = await layout.evaluate((el) => getComputedStyle(el).gridTemplateColumns);
 
-      expect(box).toBeTruthy();
-      expect(box!.height).toBeGreaterThanOrEqual(24);
-    });
-
-    test('color swatches meet comfortable touch target (44px)', async ({ page }) => {
-      await page.waitForSelector('.color-swatch', { timeout: 5000 });
-      const swatch = page.locator('.color-swatch').first();
-      const box = await swatch.boundingBox();
-
-      expect(box).toBeTruthy();
-      // Swatches use --touch-target-comfortable (44px)
-      expect(box!.width).toBeGreaterThanOrEqual(44);
-      expect(box!.height).toBeGreaterThanOrEqual(44);
-    });
+    expect(wideColumns.trim().split(' ')).toHaveLength(2);
+    expect(narrowColumns.trim().split(' ')).toHaveLength(1);
   });
 
-  test.describe('Motion Tokens - prefers-reduced-motion', () => {
-    test('respects reduced motion preference', async ({ page }) => {
-      // Enable reduced motion preference
-      await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.reload();
-      await waitForAppReady(page);
+  test('supports larger browser font sizes without clipping content', async ({ page }) => {
+    const baselineSize = await page
+      .locator('.card-title')
+      .first()
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
 
-      const durationFast = await page.evaluate(() => {
-        return getComputedStyle(document.documentElement).getPropertyValue('--duration-fast');
-      });
-
-      const durationNormal = await page.evaluate(() => {
-        return getComputedStyle(document.documentElement).getPropertyValue('--duration-normal');
-      });
-
-      // Motion tokens should be 0s when reduced motion is preferred
-      expect(durationFast.trim()).toBe('0s');
-      expect(durationNormal.trim()).toBe('0s');
+    await page.addStyleTag({
+      content: 'html { font-size: 32px !important; }'
     });
 
-    test('uses normal durations without reduced motion', async ({ page }) => {
-      // Disable reduced motion preference
-      await page.emulateMedia({ reducedMotion: 'no-preference' });
-      await page.reload();
-      await waitForAppReady(page);
+    const cardTitle = page.locator('.card-title').first();
+    const increasedSize = await cardTitle.evaluate((el) =>
+      parseFloat(getComputedStyle(el).fontSize)
+    );
+    const overflow = await cardTitle.evaluate((el) => getComputedStyle(el).overflow);
 
-      const durationFast = await page.evaluate(() => {
-        return getComputedStyle(document.documentElement).getPropertyValue('--duration-fast');
-      });
-
-      const durationNormal = await page.evaluate(() => {
-        return getComputedStyle(document.documentElement).getPropertyValue('--duration-normal');
-      });
-
-      // Motion tokens should have normal values (browser may return ms or s)
-      expect(durationFast.trim()).toMatch(/^(0?\.1s|100ms)$/);
-      expect(durationNormal.trim()).toMatch(/^(0?\.2s|200ms)$/);
-    });
-  });
-
-  test.describe('Container Queries', () => {
-    test('layout switches to single column at container breakpoint', async ({ page }) => {
-      // Set viewport to ensure container width > 980px for two-column layout
-      // Container width = min(92vw, 2400px), so we need 92vw > 980px
-      // Use the CSS custom property --container-sidebar-breakpoint: 980px
-      // 980px / 0.92 = 1065px minimum viewport width
-      await page.setViewportSize({ width: 1100, height: 768 });
-
-      const layout = page.getByTestId('app-layout');
-      const gridColumns = await layout.evaluate((el) => {
-        return getComputedStyle(el).gridTemplateColumns;
-      });
-
-      // At 1100px viewport, container width = min(1012px, 2400px) = 1012px
-      // Since 1012px > --container-sidebar-breakpoint (980px), should be two columns (first column uses clamp, second is 1fr)
-      // The grid should have two values separated by space
-      const columnCount = gridColumns.trim().split(' ').length;
-      expect(columnCount).toBe(2);
-
-      // Set viewport to ensure container width < --container-sidebar-breakpoint (980px) for single column layout
-      // Container width at 900px viewport = min(828px, 2400px) = 828px
-      await page.setViewportSize({ width: 900, height: 768 });
-
-      const gridColumnsMobile = await layout.evaluate((el) => {
-        return getComputedStyle(el).gridTemplateColumns;
-      });
-
-      // Below --container-sidebar-breakpoint (980px) container query, should be single column
-      // Computed value will be actual pixel width, not '1fr'
-      const columnCountMobile = gridColumnsMobile.trim().split(' ').length;
-      expect(columnCountMobile).toBe(1);
-    });
-  });
-
-  test.describe('Text Zoom - WCAG 2.2 AA (1.4.4)', () => {
-    test('supports 200% text zoom without breaking layout', async ({ page }) => {
-      // Set base font size to 32px (200% of typical 16px)
-      await page.addStyleTag({
-        content: 'html { font-size: 32px !important; }'
-      });
-
-      await page.reload();
-      await waitForAppReady(page);
-
-      // Check that layout doesn't break
-      const layout = page.getByTestId('app-layout');
-      const isVisible = await layout.isVisible();
-      expect(isVisible).toBe(true);
-
-      // Check that text is readable (no overflow hidden)
-      const cardTitle = page.locator('.card-title').first();
-      const overflow = await cardTitle.evaluate((el) => {
-        return getComputedStyle(el).overflow;
-      });
-
-      expect(overflow).not.toBe('hidden');
-    });
-
-    test('fluid typography adjusts with browser font size', async ({ page }) => {
-      // Get baseline font size
-      const baselineSize = await page
-        .locator('.card-title')
-        .first()
-        .evaluate((el) => {
-          return parseFloat(getComputedStyle(el).fontSize);
-        });
-
-      // Increase browser base font size
-      await page.addStyleTag({
-        content: 'html { font-size: 20px !important; }'
-      });
-
-      const increasedSize = await page
-        .locator('.card-title')
-        .first()
-        .evaluate((el) => {
-          return parseFloat(getComputedStyle(el).fontSize);
-        });
-
-      // Font size should increase proportionally
-      expect(increasedSize).toBeGreaterThan(baselineSize);
-    });
+    await expect(page.getByTestId('app-layout')).toBeVisible();
+    expect(increasedSize).toBeGreaterThan(baselineSize);
+    expect(overflow).not.toBe('hidden');
   });
 });

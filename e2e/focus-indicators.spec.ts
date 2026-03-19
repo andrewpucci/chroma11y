@@ -75,11 +75,10 @@ test.describe('Focus Indicators', () => {
     });
 
     test('focus indicator is visible after keyboard navigation', async ({ page }) => {
-      // Focus hex input and use keyboard to trigger :focus-visible
       const hexInput = page.locator('#baseColorHex');
       await hexInput.focus();
       await page.keyboard.press('Tab');
-      await page.keyboard.press('Shift+Tab'); // Tab back to hex input via keyboard
+      await page.keyboard.press('Shift+Tab');
 
       const outline = await hexInput.evaluate((el) => {
         const style = getComputedStyle(el);
@@ -89,13 +88,10 @@ test.describe('Focus Indicators', () => {
         };
       });
 
-      // After keyboard navigation, focus indicator should be visible
       expect(outline.outlineStyle).toBe('solid');
       expect(outline.outlineWidth).toBeGreaterThanOrEqual(2);
     });
-  });
 
-  test.describe('Dark theme focus indicators', () => {
     test('focus indicator adapts to dark mode', async ({ page }) => {
       // Switch to dark theme
       await page.locator('#theme-preference').selectOption('dark');

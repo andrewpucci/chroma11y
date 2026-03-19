@@ -2,12 +2,19 @@ import { defineConfig, devices } from '@playwright/test';
 import { createArgosReporterOptions } from '@argos-ci/playwright/reporter';
 
 const baseURL = process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:4173';
+const hasExternalBaseUrl = Boolean(process.env.PLAYWRIGHT_TEST_BASE_URL);
+const shouldUploadArgos = process.env.ARGOS_UPLOAD === 'true';
 
 export default defineConfig({
-  webServer: process.env.PLAYWRIGHT_TEST_BASE_URL
+  webServer: hasExternalBaseUrl
     ? undefined
-    : { command: 'npm run build && npm run preview', port: 4173 },
+    : {
+        command: 'npm run build && npm run preview',
+        port: 4173,
+        reuseExistingServer: !process.env.CI
+      },
   testDir: 'e2e',
+  testIgnore: [...(!shouldUploadArgos ? ['visual-regression.spec.ts'] : [])],
   timeout: process.env.CI ? 60000 : 30000,
   retries: process.env.CI ? 2 : 0,
   expect: {

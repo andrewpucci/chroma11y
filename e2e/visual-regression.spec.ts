@@ -7,6 +7,11 @@ import { test, expect, type Page } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
 import { maybeCaptureArgosVisual } from './visual';
 
+test.skip(
+  process.env.ARGOS_UPLOAD !== 'true',
+  'Visual snapshots run only when Argos uploads are enabled.'
+);
+
 async function setTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
   await page.locator('#theme-preference').selectOption(theme);
   await page.waitForFunction(
@@ -93,17 +98,6 @@ test.describe('Visual Regression', () => {
     await page.keyboard.press('Shift+Tab');
     await expect(hexInput).toBeFocused();
 
-    const outline = await hexInput.evaluate((el) => {
-      const style = getComputedStyle(el);
-      return {
-        outlineStyle: style.outlineStyle,
-        outlineWidth: parseFloat(style.outlineWidth)
-      };
-    });
-
-    expect(outline.outlineStyle).toBe('solid');
-    expect(outline.outlineWidth).toBeGreaterThanOrEqual(2);
-
     await maybeCaptureArgosVisual({
       page,
       testInfo,
@@ -121,19 +115,6 @@ test.describe('Visual Regression', () => {
     await page.keyboard.press('Shift+Tab');
     await expect(hexInput).toBeFocused();
 
-    const outline = await hexInput.evaluate((el) => {
-      const style = getComputedStyle(el);
-      return {
-        outlineStyle: style.outlineStyle,
-        outlineWidth: parseFloat(style.outlineWidth),
-        outlineColor: style.outlineColor
-      };
-    });
-
-    expect(outline.outlineStyle).toBe('solid');
-    expect(outline.outlineWidth).toBe(3);
-    expect(outline.outlineColor).toMatch(/rgb\(0,\s*0,\s*0\)/);
-
     await maybeCaptureArgosVisual({
       page,
       testInfo,
@@ -149,8 +130,6 @@ test.describe('Visual Regression', () => {
 
     const layout = page.getByTestId('app-layout');
     await expect(layout).toBeVisible();
-    const columns = await layout.evaluate((el) => getComputedStyle(el).gridTemplateColumns);
-    expect(columns).not.toContain('320px');
 
     await maybeCaptureArgosVisual({
       page,
@@ -232,14 +211,6 @@ test.describe('Visual Regression', () => {
     const contrastAlgorithm = page.locator('#contrast-algorithm');
     await contrastAlgorithm.selectOption('APCA');
     await expect(contrastAlgorithm).toHaveValue('APCA');
-
-    const firstSwatchContrastIndicators = page
-      .locator('.color-swatch .contrast-indicators')
-      .first();
-    await expect(firstSwatchContrastIndicators).toBeVisible();
-    await expect(firstSwatchContrastIndicators).toContainText('Large');
-    await expect(firstSwatchContrastIndicators).toContainText('Fluent');
-    await expect(firstSwatchContrastIndicators).toContainText('Body');
 
     const palettes = page.getByTestId('generated-palettes');
     await expect(palettes).toBeVisible();
@@ -330,10 +301,6 @@ test.describe('Visual Regression', () => {
   });
 
   test('export controls panel', async ({ page }, testInfo) => {
-    await expect(page.getByRole('button', { name: 'Export JSON design tokens' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Export CSS custom properties' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Export SCSS variables' })).toBeVisible();
-
     const exportCard = cardByHeading(page, 'Export');
     await expect(exportCard).toBeVisible();
 

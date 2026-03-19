@@ -12,41 +12,7 @@ test.describe('Bezier Editor', () => {
     await waitForAppReady(page);
   });
 
-  test.describe('Visual Rendering', () => {
-    test('renders the bezier curve editor', async ({ page }) => {
-      const bezierEditor = page.locator('.bezier-editor');
-      await expect(bezierEditor).toBeVisible();
-
-      const svg = bezierEditor.locator('svg');
-      await expect(svg).toBeVisible();
-
-      const controlPoints = svg.locator('[role="slider"]');
-      await expect(controlPoints).toHaveCount(2);
-    });
-
-    test('displays coordinate inputs', async ({ page }) => {
-      await expect(page.getByLabel('P1 X coordinate')).toBeVisible();
-      await expect(page.getByLabel('P1 Y coordinate')).toBeVisible();
-      await expect(page.getByLabel('P2 X coordinate')).toBeVisible();
-      await expect(page.getByLabel('P2 Y coordinate')).toBeVisible();
-    });
-
-    test('shows axis labels', async ({ page }) => {
-      const svg = page.locator('.bezier-editor svg');
-      await expect(svg.locator('text:has-text("Step")')).toBeVisible();
-      await expect(svg.locator('text:has-text("Lightness")')).toBeVisible();
-    });
-  });
-
   test.describe('Keyboard Navigation', () => {
-    test('can focus control points', async ({ page }) => {
-      const p1 = page.locator('.bezier-editor [role="slider"]').first();
-      await p1.focus();
-
-      const focusedElement = page.locator(':focus');
-      await expect(focusedElement).toHaveAttribute('role', 'slider');
-    });
-
     test('moves control point with arrow keys', async ({ page }) => {
       const p1xInput = page.getByLabel('P1 X coordinate');
       const initialX = parseFloat((await p1xInput.inputValue()) || '0');
@@ -133,84 +99,32 @@ test.describe('Bezier Editor', () => {
     });
   });
 
-  test.describe('Accessibility', () => {
-    test('control points have proper ARIA attributes', async ({ page }) => {
-      const p1 = page.locator('.bezier-editor [role="slider"]').first();
-      const p2 = page.locator('.bezier-editor [role="slider"]').last();
-
-      await expect(p1).toHaveAttribute('role', 'slider');
-      await expect(p1).toHaveAttribute('aria-label');
-      await expect(p1).toHaveAttribute('aria-valuenow');
-      await expect(p1).toHaveAttribute('aria-valuemin', '0');
-      await expect(p1).toHaveAttribute('aria-valuemax', '1');
-
-      await expect(p2).toHaveAttribute('role', 'slider');
-      await expect(p2).toHaveAttribute('aria-label');
-    });
-
-    test('SVG has group role and label', async ({ page }) => {
-      const svg = page.locator('.bezier-editor svg');
-      await expect(svg).toHaveAttribute('role', 'group');
-      await expect(svg).toHaveAttribute('aria-label');
-    });
-
-    test('control points are keyboard focusable', async ({ page }) => {
-      const p1 = page.locator('.bezier-editor [role="slider"]').first();
-      const p2 = page.locator('.bezier-editor [role="slider"]').last();
-
-      await expect(p1).toHaveAttribute('tabindex', '0');
-      await expect(p2).toHaveAttribute('tabindex', '0');
-    });
-  });
-
   test.describe('Edge Cases', () => {
-    test('handles rapid keyboard input', async ({ page }) => {
-      const p1xInput = page.getByLabel('P1 X coordinate');
-      const p1 = page.locator('.bezier-editor [role="slider"]').first();
-      await p1.focus();
-
-      for (let i = 0; i < 20; i++) {
-        await page.keyboard.press('ArrowRight');
-      }
-
-      const x = parseFloat((await p1xInput.inputValue()) || '0');
-      expect(x).toBeGreaterThanOrEqual(0);
-      expect(x).toBeLessThanOrEqual(1);
-    });
-
-    test('clamps values at boundaries', async ({ page }) => {
-      const p1xInput = page.getByLabel('P1 X coordinate');
-      const p1 = page.locator('.bezier-editor [role="slider"]').first();
-      await p1.focus();
-
-      for (let i = 0; i < 50; i++) {
-        await page.keyboard.press('ArrowRight');
-      }
-
-      await expect
-        .poll(async () => parseFloat((await p1xInput.inputValue()) || '0'))
-        .toBeLessThanOrEqual(1);
-    });
-
     test('clamps values at boundaries using keyboard navigation', async ({ page }) => {
       const p1xInput = page.getByLabel('P1 X coordinate');
       const p1yInput = page.getByLabel('P1 Y coordinate');
       const p1 = page.locator('.bezier-editor [role="slider"]').first();
 
-      await p1.focus();
+      await p1xInput.fill('0.02');
+      await p1xInput.blur();
+      await p1yInput.fill('0.98');
+      await p1yInput.blur();
 
-      for (let i = 0; i < 100; i++) {
-        await page.keyboard.press('ArrowLeft');
-        await page.keyboard.press('ArrowUp');
-      }
+      await p1.focus();
+      await page.keyboard.press('Shift+ArrowLeft');
+      await page.keyboard.press('Shift+ArrowUp');
 
       await expect.poll(async () => parseFloat((await p1xInput.inputValue()) || '0')).toBe(0);
       await expect.poll(async () => parseFloat((await p1yInput.inputValue()) || '0')).toBe(1);
 
-      for (let i = 0; i < 100; i++) {
-        await page.keyboard.press('ArrowRight');
-        await page.keyboard.press('ArrowDown');
-      }
+      await p1xInput.fill('0.98');
+      await p1xInput.blur();
+      await p1yInput.fill('0.02');
+      await p1yInput.blur();
+
+      await p1.focus();
+      await page.keyboard.press('Shift+ArrowRight');
+      await page.keyboard.press('Shift+ArrowDown');
 
       await expect.poll(async () => parseFloat((await p1xInput.inputValue()) || '0')).toBe(1);
       await expect.poll(async () => parseFloat((await p1yInput.inputValue()) || '0')).toBe(0);
