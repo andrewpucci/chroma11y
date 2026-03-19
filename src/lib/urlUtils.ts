@@ -13,6 +13,7 @@ import type {
   SwatchContrastIndicators
 } from './types';
 import { getChromaMultiplierBounds } from './chromaMultiplier';
+import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
 
 export type UrlColorState = SerializableColorState;
 
@@ -125,6 +126,26 @@ export function encodeStateToUrl(state: UrlColorState): string {
       .filter(Boolean)
       .join(',');
     if (nudgerStr) params.set('hn', nudgerStr);
+  }
+
+  const customNeutralName = normalizeCustomPaletteName(state.customNeutralName);
+  if (customNeutralName) {
+    params.set('nn', customNeutralName);
+  }
+
+  const customPaletteNames = normalizeCustomPaletteNames(
+    state.customPaletteNames,
+    state.numPalettes
+  );
+  if (customPaletteNames?.length) {
+    const encodedNames = customPaletteNames
+      .map((name, index) => (name ? `${index}:${encodeNameToken(name)}` : null))
+      .filter(Boolean)
+      .join(',');
+
+    if (encodedNames) {
+      params.set('pn', encodedNames);
+    }
   }
 
   // Theme preference
@@ -280,6 +301,16 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
     state.hueNudgers = parseNudgers(hueNudgers, 11, -180, 180);
   }
 
+  const neutralName = searchParams.get('nn');
+  if (neutralName) {
+    state.customNeutralName = normalizeCustomPaletteName(neutralName);
+  }
+
+  const paletteNames = searchParams.get('pn');
+  if (paletteNames) {
+    state.customPaletteNames = parsePaletteNames(paletteNames, state.numPalettes ?? 11);
+  }
+
   // Theme preference
   const theme = searchParams.get('t');
   if (theme === 'light' || theme === 'dark' || theme === 'auto') state.themePreference = theme;
@@ -358,6 +389,56 @@ function parseNudgers(
     }
   });
   return result;
+}
+
+function parsePaletteNames(value: string, length: number): string[] | undefined {
+  const result = new Array(length).fill('');
+
+  value.split(',').forEach((pair) => {
+    const delimiterIndex = pair.indexOf(':');
+    if (delimiterIndex === -1) {
+      return;
+    }
+
+    const index = parseInt(pair.slice(0, delimiterIndex), 10);
+    if (Number.isNaN(index) || index < 0 || index >= length) {
+      return;
+    }
+
+    try {
+      const decodedValue = decodeNameToken(pair.slice(delimiterIndex + 1));
+      result[index] = normalizeCustomPaletteName(decodedValue) ?? '';
+    } catch {
+      result[index] = '';
+    }
+  });
+
+  return normalizeCustomPaletteNames(result, length);
+}
+
+function encodeNameToken(value: string): string {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(value, 'utf8').toString('base64url');
+  }
+
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function decodeNameToken(value: string): string {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(value, 'base64url').toString('utf8');
+  }
+
+  const padded = value + '==='.slice((value.length + 3) % 4);
+  const binary = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
 }
 
 /**

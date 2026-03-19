@@ -34,6 +34,8 @@
     swatchContrastIndicators,
     contrastAlgorithm,
     oklchDisplaySignificantDigits,
+    customNeutralName,
+    customPaletteNames,
     updateColorState,
     updateContrastFromNeutrals,
     setTheme,
@@ -87,6 +89,8 @@
   let swatchContrastIndicatorsLocal = $derived($swatchContrastIndicators);
   let contrastAlgorithmLocal = $derived($contrastAlgorithm);
   let oklchDisplaySignificantDigitsLocal = $derived($oklchDisplaySignificantDigits);
+  let customNeutralNameLocal = $derived($customNeutralName);
+  let customPaletteNamesLocal = $derived($customPaletteNames);
 
   // Bindable state for controls
   let baseColorLocal = $state('#1862E6');
@@ -177,7 +181,9 @@
         showSwatchContrastIndicators: storeState.showSwatchContrastIndicators,
         swatchContrastIndicators: structuredClone(storeState.swatchContrastIndicators),
         contrastAlgorithm: storeState.contrastAlgorithm,
-        oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits
+        oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits,
+        customNeutralName: storeState.customNeutralName,
+        customPaletteNames: storeState.customPaletteNames
       };
     }
 
@@ -209,7 +215,9 @@
       showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
       swatchContrastIndicators: structuredClone(swatchContrastIndicatorsLocal),
       contrastAlgorithm: contrastAlgorithmLocal,
-      oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal
+      oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
+      customNeutralName: customNeutralNameLocal,
+      customPaletteNames: customPaletteNamesLocal
     };
   }
 
@@ -263,7 +271,9 @@
       showSwatchContrastIndicators: snapshot.showSwatchContrastIndicators,
       swatchContrastIndicators: snapshot.swatchContrastIndicators,
       contrastAlgorithm: snapshot.contrastAlgorithm,
-      oklchDisplaySignificantDigits: snapshot.oklchDisplaySignificantDigits
+      oklchDisplaySignificantDigits: snapshot.oklchDisplaySignificantDigits,
+      customNeutralName: snapshot.customNeutralName,
+      customPaletteNames: snapshot.customPaletteNames
     });
 
     void tick().then(() => {
@@ -846,7 +856,9 @@
       swatchContrastIndicators: swatchContrastIndicatorsLocal,
       contrastAlgorithm: contrastAlgorithmLocal,
       oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
-      themePreference: themePreferenceLocal
+      themePreference: themePreferenceLocal,
+      customNeutralName: customNeutralNameLocal,
+      customPaletteNames: customPaletteNamesLocal
     };
 
     // theme (resolved theme) is persisted to localStorage only, not the URL
@@ -912,6 +924,12 @@
     if (urlState.contrastAlgorithm) stateUpdate.contrastAlgorithm = urlState.contrastAlgorithm;
     if (urlState.oklchDisplaySignificantDigits !== undefined) {
       stateUpdate.oklchDisplaySignificantDigits = urlState.oklchDisplaySignificantDigits;
+    }
+    if (urlState.customNeutralName !== undefined) {
+      stateUpdate.customNeutralName = urlState.customNeutralName;
+    }
+    if (urlState.customPaletteNames !== undefined) {
+      stateUpdate.customPaletteNames = urlState.customPaletteNames;
     }
 
     // Apply stored values after theme preference to ensure they override any defaults
@@ -1023,8 +1041,11 @@
           <ExportButtons
             neutrals={neutralsHexLocal}
             palettes={palettesHexLocal}
+            lowContrastColor={contrastColorsLocal.low}
             displayNeutrals={neutralsSwatchDisplayLocal}
             displayPalettes={palettesSwatchDisplayLocal}
+            customNeutralName={customNeutralNameLocal}
+            customPaletteNames={customPaletteNamesLocal}
             onResetCommit={() => scheduleHistoryCommit('Settings reset')}
           />
         </Card>

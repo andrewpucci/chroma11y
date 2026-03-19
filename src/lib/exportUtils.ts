@@ -3,12 +3,7 @@
  */
 
 import Color from 'colorjs.io';
-import { getPaletteName } from './colorUtils';
-
-/** Converts a kebab-case slug to Title Case (e.g. "blue-ribbon" → "Blue Ribbon") */
-function slugToTitle(slug: string): string {
-  return slug.replace(/(^|-)\w/g, (m) => m.replace('-', ' ').toUpperCase()).trim();
-}
+import { resolveExportPaletteNames } from './paletteNameUtils';
 
 /**
  * Parse a hex string to normalized sRGB [r, g, b] (0–1 range), or null on failure.
@@ -27,44 +22,14 @@ function hexToSrgbComponents(hex: string): [number, number, number] | null {
   }
 }
 
-/** Default palette names used as fallbacks when color naming fails */
-const DEFAULT_PALETTE_NAMES = [
-  'blue',
-  'purple',
-  'orchid',
-  'pink',
-  'red',
-  'orange',
-  'gold',
-  'lime',
-  'green',
-  'turquoise',
-  'skyblue'
-];
+function escapeCommentLabel(label: string): string {
+  return label.replace(/\*\//g, '* /');
+}
 
-/**
- * Gets the name for a palette, using dynamic color detection with fallback.
- * @param palette - Array of hex colors in the palette
- * @param index - Palette index for fallback naming
- * @returns Palette name string
- *
- * Note: The index-based fallback (`palette-${index + 1}`) is defensive code for
- * when both color detection fails AND the palette index exceeds DEFAULT_PALETTE_NAMES
- * (11 entries). In practice, the app limits palettes to 11, so this path is rarely
- * triggered. The grayscale palette test covers the DEFAULT_PALETTE_NAMES fallback.
- */
-function getPaletteNameForExport(palette: string[], index: number): string {
-  // Try to get dynamic name from color detection
-  const dynamicName = getPaletteName(palette);
-  if (dynamicName && dynamicName !== 'Unnamed') {
-    // Slugify: lowercase, replace non-alphanumeric with hyphens, collapse multiple hyphens, trim
-    return dynamicName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-  }
-  // Fall back to default names or index-based naming
-  return DEFAULT_PALETTE_NAMES[index] || `palette-${index + 1}`;
+export interface ExportNameOptions {
+  lowContrastColor: string;
+  customNeutralName?: string;
+  customPaletteNames?: string[];
 }
 
 /**
@@ -94,8 +59,19 @@ export interface DesignTokens {
  * @see https://www.designtokens.org/tr/2025.10/
  * Exports colors as design tokens JSON format compliant with Design Tokens specification
  */
-export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): DesignTokens {
+export function exportAsDesignTokens(
+  neutrals: string[],
+  palettes: string[][],
+  options: ExportNameOptions = { lowContrastColor: '#ffffff' }
+): DesignTokens {
   const tokens: DesignTokens = {};
+  const exportNames = resolveExportPaletteNames({
+    neutrals,
+    palettes,
+    lowContrastColor: options.lowContrastColor,
+    customNeutralName: options.customNeutralName,
+    customPaletteNames: options.customPaletteNames
+  });
 
   // Export neutral colors
   const neutralTokens: DesignTokens = {};
@@ -110,18 +86,18 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
           components: rgb,
           hex: color
         },
-        $description: `Neutral color step ${step}`
+        $description: `${exportNames.neutral.label} color step ${step}`
       };
     }
   });
 
   if (Object.keys(neutralTokens).length > 0) {
-    tokens.gray = neutralTokens;
+    tokens[exportNames.neutral.slug] = neutralTokens;
   }
 
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
-    const paletteName = getPaletteNameForExport(palette, paletteIndex);
+    const paletteName = exportNames.palettes[paletteIndex];
     const paletteTokens: DesignTokens = {};
 
     palette.forEach((color, index) => {
@@ -135,13 +111,13 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
             components: rgb,
             hex: color
           },
-          $description: `${slugToTitle(paletteName)} color step ${step}`
+          $description: `${paletteName.label} color step ${step}`
         };
       }
     });
 
     if (Object.keys(paletteTokens).length > 0) {
-      tokens[paletteName] = paletteTokens;
+      tokens[paletteName.slug] = paletteTokens;
     }
   });
 
@@ -156,28 +132,36 @@ export function exportAsDesignTokens(neutrals: string[], palettes: string[][]): 
 export function exportAsCSS(
   neutrals: string[],
   palettes: string[][],
+  options: ExportNameOptions = { lowContrastColor: '#ffffff' },
   displayNeutrals?: string[],
   displayPalettes?: string[][]
 ): string {
   let css = ':root {\n';
+  const exportNames = resolveExportPaletteNames({
+    neutrals,
+    palettes,
+    lowContrastColor: options.lowContrastColor,
+    customNeutralName: options.customNeutralName,
+    customPaletteNames: options.customPaletteNames
+  });
 
   // Export neutral colors
-  css += '  /* Neutral Colors */\n';
+  css += `  /* ${escapeCommentLabel(exportNames.neutral.label)} Palette */\n`;
   neutrals.forEach((color, index) => {
     const step = index * 10;
     const value = displayNeutrals?.[index] ?? color;
-    css += `  --color-gray-${step}: ${value};\n`;
+    css += `  --color-${exportNames.neutral.slug}-${step}: ${value};\n`;
   });
 
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
-    const paletteName = getPaletteNameForExport(palette, paletteIndex);
-    css += `\n  /* ${slugToTitle(paletteName)} Palette */\n`;
+    const paletteName = exportNames.palettes[paletteIndex];
+    css += `\n  /* ${escapeCommentLabel(paletteName.label)} Palette */\n`;
 
     palette.forEach((color, index) => {
       const step = index * 10;
       const value = displayPalettes?.[paletteIndex]?.[index] ?? color;
-      css += `  --color-${paletteName}-${step}: ${value};\n`;
+      css += `  --color-${paletteName.slug}-${step}: ${value};\n`;
     });
   });
 
@@ -193,28 +177,36 @@ export function exportAsCSS(
 export function exportAsSCSS(
   neutrals: string[],
   palettes: string[][],
+  options: ExportNameOptions = { lowContrastColor: '#ffffff' },
   displayNeutrals?: string[],
   displayPalettes?: string[][]
 ): string {
   let scss = '// Color Variables\n';
+  const exportNames = resolveExportPaletteNames({
+    neutrals,
+    palettes,
+    lowContrastColor: options.lowContrastColor,
+    customNeutralName: options.customNeutralName,
+    customPaletteNames: options.customPaletteNames
+  });
 
   // Export neutral colors
-  scss += '// Neutral Colors\n';
+  scss += `// ${escapeCommentLabel(exportNames.neutral.label)} Palette\n`;
   neutrals.forEach((color, index) => {
     const step = index * 10;
     const value = displayNeutrals?.[index] ?? color;
-    scss += `$color-gray-${step}: ${value};\n`;
+    scss += `$color-${exportNames.neutral.slug}-${step}: ${value};\n`;
   });
 
   // Export color palettes
   palettes.forEach((palette, paletteIndex) => {
-    const paletteName = getPaletteNameForExport(palette, paletteIndex);
-    scss += `\n// ${slugToTitle(paletteName)} Palette\n`;
+    const paletteName = exportNames.palettes[paletteIndex];
+    scss += `\n// ${escapeCommentLabel(paletteName.label)} Palette\n`;
 
     palette.forEach((color, index) => {
       const step = index * 10;
       const value = displayPalettes?.[paletteIndex]?.[index] ?? color;
-      scss += `$color-${paletteName}-${step}: ${value};\n`;
+      scss += `$color-${paletteName.slug}-${step}: ${value};\n`;
     });
   });
 
@@ -285,8 +277,12 @@ export function downloadFile(content: string, filename: string, mimeType: string
 /**
  * Exports and downloads design tokens
  */
-export function downloadDesignTokens(neutrals: string[], palettes: string[][]) {
-  const tokens = exportAsDesignTokens(neutrals, palettes);
+export function downloadDesignTokens(
+  neutrals: string[],
+  palettes: string[][],
+  options: ExportNameOptions = { lowContrastColor: '#ffffff' }
+) {
+  const tokens = exportAsDesignTokens(neutrals, palettes, options);
   const json = JSON.stringify(tokens, null, 2);
   downloadFile(json, 'color-tokens.json', 'application/json');
 }
@@ -297,10 +293,11 @@ export function downloadDesignTokens(neutrals: string[], palettes: string[][]) {
 export function downloadCSS(
   neutrals: string[],
   palettes: string[][],
+  options: ExportNameOptions = { lowContrastColor: '#ffffff' },
   displayNeutrals?: string[],
   displayPalettes?: string[][]
 ) {
-  const css = exportAsCSS(neutrals, palettes, displayNeutrals, displayPalettes);
+  const css = exportAsCSS(neutrals, palettes, options, displayNeutrals, displayPalettes);
   downloadFile(css, 'colors.css', 'text/css');
 }
 
@@ -310,9 +307,10 @@ export function downloadCSS(
 export function downloadSCSS(
   neutrals: string[],
   palettes: string[][],
+  options: ExportNameOptions = { lowContrastColor: '#ffffff' },
   displayNeutrals?: string[],
   displayPalettes?: string[][]
 ) {
-  const scss = exportAsSCSS(neutrals, palettes, displayNeutrals, displayPalettes);
+  const scss = exportAsSCSS(neutrals, palettes, options, displayNeutrals, displayPalettes);
   downloadFile(scss, 'colors.scss', 'text/plain');
 }

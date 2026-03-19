@@ -10,20 +10,32 @@
   interface Props {
     neutrals?: string[];
     palettes?: string[][];
+    lowContrastColor?: string;
     displayNeutrals?: string[];
     displayPalettes?: string[][];
+    customNeutralName?: string;
+    customPaletteNames?: string[];
     onResetCommit?: () => void;
   }
 
   let {
     neutrals = [],
     palettes = [],
+    lowContrastColor = '#ffffff',
     displayNeutrals = [],
     displayPalettes = [],
+    customNeutralName,
+    customPaletteNames,
     onResetCommit
   }: Props = $props();
 
   const theme = $derived($currentTheme);
+
+  const exportNameOptions = $derived({
+    lowContrastColor,
+    customNeutralName,
+    customPaletteNames
+  });
   let copyConfirmed = $state(false);
   let copyFeedbackTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -35,17 +47,17 @@
   });
 
   function exportJSON() {
-    downloadDesignTokens(neutrals, palettes);
+    downloadDesignTokens(neutrals, palettes, exportNameOptions);
     announce('Downloaded JSON design tokens');
   }
 
   function exportCSS() {
-    downloadCSS(neutrals, palettes, displayNeutrals, displayPalettes);
+    downloadCSS(neutrals, palettes, exportNameOptions, displayNeutrals, displayPalettes);
     announce('Downloaded CSS variables');
   }
 
   function exportSCSS() {
-    downloadSCSS(neutrals, palettes, displayNeutrals, displayPalettes);
+    downloadSCSS(neutrals, palettes, exportNameOptions, displayNeutrals, displayPalettes);
     announce('Downloaded SCSS variables');
   }
 

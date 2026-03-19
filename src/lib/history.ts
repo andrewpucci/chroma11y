@@ -46,6 +46,8 @@ export interface HistorySnapshot {
   swatchContrastIndicators: SwatchContrastIndicators;
   contrastAlgorithm: ContrastAlgorithm;
   oklchDisplaySignificantDigits: OklchDisplaySignificantDigits;
+  customNeutralName?: string;
+  customPaletteNames?: string[];
 }
 
 export interface HistoryEntryMeta {

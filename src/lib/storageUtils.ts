@@ -13,6 +13,7 @@ import type {
   OklchDisplaySignificantDigits,
   SwatchContrastIndicators
 } from './types';
+import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
 
 export type StoredColorState = SerializableColorState;
 
@@ -168,6 +169,12 @@ export function loadStateFromStorage(): StoredColorState | null {
     ) {
       delete state.oklchDisplaySignificantDigits;
     }
+
+    state.customNeutralName = normalizeCustomPaletteName(state.customNeutralName);
+    state.customPaletteNames = normalizeCustomPaletteNames(
+      state.customPaletteNames,
+      state.numPalettes
+    );
 
     const effectiveDisplaySpace = state.displayColorSpace ?? 'hex';
     if (state.gamutSpace && state.gamutSpace !== 'srgb' && effectiveDisplaySpace === 'hex') {

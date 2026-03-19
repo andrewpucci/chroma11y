@@ -1,7 +1,14 @@
 <script lang="ts">
-  import { getPaletteName } from '$lib/colorUtils';
-  import { contrastColors, updateLightnessNudger } from '$lib/stores';
+  import { announce } from '$lib/announce';
+  import { resolveNeutralPaletteName } from '$lib/paletteNameUtils';
+  import {
+    contrastColors,
+    customNeutralName,
+    updateColorState,
+    updateLightnessNudger
+  } from '$lib/stores';
   import Card from '$lib/components/Card.svelte';
+  import PaletteNameEditor from '$lib/components/PaletteNameEditor.svelte';
   import ColorSwatch from './ColorSwatch.svelte';
   import '$lib/styles/nudger.css';
   import type Color from 'colorjs.io';
@@ -22,8 +29,13 @@
     onHistoryCommit
   }: Props = $props();
 
+  const generatedNeutralName = $derived(
+    neutralsHex.length > 0 ? resolveNeutralPaletteName(neutralsHex, $contrastColors.low) : 'Gray'
+  );
   const neutralName = $derived(
-    neutralsHex.length > 0 ? getPaletteName(neutralsHex, $contrastColors.low) : 'Neutral'
+    neutralsHex.length > 0
+      ? resolveNeutralPaletteName(neutralsHex, $contrastColors.low, $customNeutralName)
+      : 'Gray'
   );
 
   let inputEls: HTMLInputElement[] = $state([]);
@@ -62,10 +74,39 @@
       }
     }
   }
+
+  function handleNeutralNameCommit(nextValue: string | undefined): void {
+    if (nextValue === $customNeutralName || (!nextValue && !$customNeutralName)) {
+      return;
+    }
+
+    updateColorState({ customNeutralName: nextValue });
+
+    if (nextValue) {
+      announce(`Neutral palette renamed to ${nextValue}`);
+      onHistoryCommit?.('Neutral palette name changed');
+      return;
+    }
+
+    announce(`Neutral palette name reset to ${generatedNeutralName}`);
+    onHistoryCommit?.('Neutral palette name reset');
+  }
 </script>
 
 <Card title="Neutral Palette" subtitle="Fine-tune neutral lightness" data-testid="neutral-palette">
   {#if neutralsHex.length > 0}
+    <div class="neutral-header">
+      <h3 class="neutral-name-heading">
+        <PaletteNameEditor
+          value={$customNeutralName}
+          fallbackValue={generatedNeutralName}
+          editButtonAriaLabel="Edit name for neutral palette"
+          inputAriaLabel="Neutral palette name"
+          data-testid="neutral-palette-name"
+          onCommit={handleNeutralNameCommit}
+        />
+      </h3>
+    </div>
     <div class="neutral-grid">
       {#each neutralsHex as color, index (index)}
         <div
@@ -164,6 +205,17 @@
     flex-wrap: wrap;
     gap: var(--space-sm);
     container-type: inline-size;
+  }
+
+  .neutral-header {
+    margin-bottom: var(--space-md);
+  }
+
+  .neutral-name-heading {
+    color: var(--text-primary);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    margin: 0;
   }
 
   .neutral-item {

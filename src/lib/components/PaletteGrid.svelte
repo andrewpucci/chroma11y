@@ -1,7 +1,14 @@
 <script lang="ts">
-  import { getPaletteName } from '$lib/colorUtils';
-  import { contrastColors, updateHueNudger } from '$lib/stores';
+  import { announce } from '$lib/announce';
+  import { resolveGeneratedPaletteNames } from '$lib/paletteNameUtils';
+  import {
+    contrastColors,
+    customPaletteNames,
+    updateColorState,
+    updateHueNudger
+  } from '$lib/stores';
   import Card from '$lib/components/Card.svelte';
+  import PaletteNameEditor from '$lib/components/PaletteNameEditor.svelte';
   import ColorSwatch from './ColorSwatch.svelte';
   import '$lib/styles/nudger.css';
   import type Color from 'colorjs.io';
@@ -22,11 +29,13 @@
     onHistoryCommit
   }: Props = $props();
 
-  // Cache palette names to avoid repeated calculations during render
+  const generatedPaletteNames = $derived(
+    palettesHex.length === 0 ? [] : resolveGeneratedPaletteNames(palettesHex, $contrastColors.low)
+  );
   const paletteNames = $derived(
     palettesHex.length === 0
       ? []
-      : palettesHex.map((palette) => getPaletteName(palette, $contrastColors.low))
+      : resolveGeneratedPaletteNames(palettesHex, $contrastColors.low, $customPaletteNames)
   );
 
   let inputEls: HTMLInputElement[] = $state([]);
@@ -94,6 +103,31 @@
     }
     onHistoryCommit?.('Palette hue adjusted');
   }
+
+  function handlePaletteNameCommit(paletteIndex: number, nextValue: string | undefined): void {
+    const currentNames = $customPaletteNames ? [...$customPaletteNames] : [];
+    const currentValue = currentNames[paletteIndex];
+
+    if (nextValue === currentValue || (!nextValue && !currentValue)) {
+      return;
+    }
+
+    if (nextValue) {
+      currentNames[paletteIndex] = nextValue;
+      updateColorState({ customPaletteNames: currentNames });
+      announce(`Palette ${paletteIndex + 1} renamed to ${nextValue}`);
+      onHistoryCommit?.('Palette name changed');
+      return;
+    }
+
+    if (paletteIndex < currentNames.length) {
+      currentNames[paletteIndex] = '';
+    }
+
+    updateColorState({ customPaletteNames: currentNames });
+    announce(`Palette ${paletteIndex + 1} name reset to ${generatedPaletteNames[paletteIndex]}`);
+    onHistoryCommit?.('Palette name reset');
+  }
 </script>
 
 <Card title="Generated Palettes" subtitle="Adjust hue per palette" data-testid="generated-palettes">
@@ -102,7 +136,16 @@
       {#each palettesHex as palette, paletteIndex (paletteIndex)}
         <div class="palette-block">
           <div class="palette-header">
-            <h3 class="palette-title">{paletteNames[paletteIndex]}</h3>
+            <h3 class="palette-title">
+              <PaletteNameEditor
+                value={$customPaletteNames?.[paletteIndex]}
+                fallbackValue={generatedPaletteNames[paletteIndex]}
+                editButtonAriaLabel={`Edit name for palette ${paletteIndex + 1}`}
+                inputAriaLabel={`Palette ${paletteIndex + 1} name`}
+                data-testid={`generated-palette-name-${paletteIndex}`}
+                onCommit={(value) => handlePaletteNameCommit(paletteIndex, value)}
+              />
+            </h3>
             <div class="hue-nudger">
               <label class="hue-nudger-label" for="hue-nudger-{paletteIndex}">Hue</label>
               <div class="nudger-container">
@@ -118,7 +161,7 @@
                   oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
                   onblur={(e) => handleHueNudgerBlur(paletteIndex, e)}
                   onkeydown={(e) => handleKeyDown(paletteIndex, e)}
-                  class="nudger-input"
+                  class="nudger-input input mono hue-input"
                   aria-label="Hue adjustment for {paletteNames[
                     paletteIndex
                   ]} palette, -180 to 180 degrees"
@@ -151,6 +194,34 @@
     width: 96px;
   }
 
+  .hue-nudger .nudger-container {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .hue-input {
+    background: var(--bg-primary);
+    border: var(--border-width-thin) solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    min-height: var(--touch-target-comfortable);
+    padding: var(--space-sm) var(--space-md);
+    text-align: center;
+  }
+
+  .hue-input:focus-visible {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  .hue-input[data-nonzero] {
+    border-color: color-mix(in oklab, var(--border) 45%, var(--accent));
+    color: var(--text-primary);
+    font-weight: var(--font-weight-normal);
+  }
+
   @media (max-width: 768px) {
     .nudger-input {
       width: 110px;
@@ -175,9 +246,10 @@
 
   .palette-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--space-md);
+    flex-wrap: wrap;
   }
 
   .palette-title {
@@ -185,7 +257,8 @@
     color: var(--text-primary);
     font-size: var(--font-size-md);
     font-weight: var(--font-weight-bold);
-    text-transform: capitalize;
+    flex: 1 1 16rem;
+    min-width: 0;
   }
 
   .hue-nudger {
