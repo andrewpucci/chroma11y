@@ -384,6 +384,16 @@ Run E2E tests only:
 npm run test:e2e
 ```
 
+This is the recommended E2E path for validation because it runs the Dockerized test environment used for CI-parity checks.
+
+Run Playwright directly for faster local debugging:
+
+```bash
+npm run test:e2e:local
+```
+
+Use this when iterating on a single spec, debugging selectors, or working in Playwright UI mode. Prefer `npm run test:e2e` before opening or updating a PR.
+
 Run E2E tests in UI mode:
 
 ```bash
