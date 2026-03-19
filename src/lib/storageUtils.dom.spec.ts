@@ -37,7 +37,9 @@ describe('storageUtils', () => {
       apcaBody: true
     },
     contrastAlgorithm: 'WCAG',
-    oklchDisplaySignificantDigits: 4
+    oklchDisplaySignificantDigits: 4,
+    customNeutralName: 'Canvas',
+    customPaletteNames: ['Ocean', '', 'Bloom']
   };
 
   beforeEach(() => {
@@ -320,7 +322,7 @@ describe('storageUtils', () => {
     });
 
     it('preserves valid display settings', () => {
-      expect.assertions(9);
+      expect.assertions(11);
 
       localStorage.setItem('chroma11y-state', JSON.stringify(mockState));
 
@@ -335,6 +337,26 @@ describe('storageUtils', () => {
       expect(result?.swatchContrastIndicators).toEqual(mockState.swatchContrastIndicators);
       expect(result?.contrastAlgorithm).toBe('WCAG');
       expect(result?.oklchDisplaySignificantDigits).toBe(4);
+      expect(result?.customNeutralName).toBe('Canvas');
+      expect(result?.customPaletteNames).toEqual(['Ocean', '', 'Bloom']);
+    });
+
+    it('normalizes invalid custom palette names', () => {
+      expect.assertions(2);
+
+      localStorage.setItem(
+        'chroma11y-state',
+        JSON.stringify({
+          ...mockState,
+          customNeutralName: '   ',
+          customPaletteNames: ['Ocean', 42, ' ', 'Bloom']
+        })
+      );
+
+      const result = loadStateFromStorage();
+
+      expect(result?.customNeutralName).toBeUndefined();
+      expect(result?.customPaletteNames).toEqual(['Ocean', '', '', 'Bloom']);
     });
   });
 

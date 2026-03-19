@@ -1,10 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import Color from 'colorjs.io';
 
 import NeutralPalette from '$lib/components/NeutralPalette.svelte';
-import { lightnessNudgers, resetColorState } from '$lib/stores';
+import { customNeutralName, lightnessNudgers, resetColorState } from '$lib/stores';
 
 describe('NeutralPalette', () => {
   beforeEach(() => {
@@ -136,5 +137,26 @@ describe('NeutralPalette', () => {
       name: /(view color details|copy to clipboard)/i
     });
     expect(swatches).toHaveLength(2);
+  });
+
+  it('supports renaming the neutral palette inline', async () => {
+    const user = userEvent.setup();
+    const neutralsHex = ['#ffffff', '#000000'];
+
+    render(NeutralPalette, {
+      props: {
+        neutralsHex,
+        neutralsDisplay: neutralsHex,
+        lightnessNudgerValues: [0, 0]
+      }
+    });
+
+    await user.click(screen.getByRole('button', { name: /edit name for neutral palette/i }));
+    const input = screen.getByRole('textbox', { name: /neutral palette name/i });
+    await user.clear(input);
+    await user.type(input, 'Canvas{Enter}');
+
+    expect(get(customNeutralName)).toBe('Canvas');
+    expect(screen.getByText('Canvas')).toBeInTheDocument();
   });
 });

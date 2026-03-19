@@ -1,10 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import Color from 'colorjs.io';
 
 import PaletteGrid from '$lib/components/PaletteGrid.svelte';
-import { hueNudgers, resetColorState } from '$lib/stores';
+import { customPaletteNames, hueNudgers, resetColorState } from '$lib/stores';
 
 describe('PaletteGrid', () => {
   beforeEach(() => {
@@ -148,5 +149,20 @@ describe('PaletteGrid', () => {
 
     const headings = screen.getAllByRole('heading', { level: 3 });
     expect(headings).toHaveLength(1);
+  });
+
+  it('supports renaming generated palettes inline', async () => {
+    const user = userEvent.setup();
+    const palettesHex = [['#e6f0ff', '#0066ff']];
+
+    render(PaletteGrid, { props: { palettesHex, hueNudgerValues: [0] } });
+
+    await user.click(screen.getByRole('button', { name: /edit name for palette 1/i }));
+    const input = screen.getByRole('textbox', { name: /palette 1 name/i });
+    await user.clear(input);
+    await user.type(input, 'Ocean{Enter}');
+
+    expect(get(customPaletteNames)).toEqual(['Ocean']);
+    expect(screen.getByText('Ocean')).toBeInTheDocument();
   });
 });

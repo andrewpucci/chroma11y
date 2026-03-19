@@ -6,6 +6,29 @@
 import { test, expect } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
 
+async function renameNeutralPalette(
+  page: import('@playwright/test').Page,
+  name: string
+): Promise<void> {
+  await page.getByRole('button', { name: 'Edit name for neutral palette' }).click();
+  const input = page.getByRole('textbox', { name: 'Neutral palette name' });
+  await input.fill(name);
+  await input.press('Enter');
+}
+
+async function renameGeneratedPalette(
+  page: import('@playwright/test').Page,
+  index: number,
+  name: string
+): Promise<void> {
+  await page
+    .getByRole('button', { name: `Edit name for palette ${index + 1}`, exact: true })
+    .click();
+  const input = page.getByRole('textbox', { name: `Palette ${index + 1} name`, exact: true });
+  await input.fill(name);
+  await input.press('Enter');
+}
+
 test.describe('Local Storage Persistence', () => {
   test.beforeEach(async ({ page }) => {
     // Clear localStorage before each test
@@ -111,6 +134,43 @@ test.describe('Local Storage Persistence', () => {
     await waitForAppReady(page);
 
     await expect(page.locator('#show-swatch-gamut-warnings')).not.toBeChecked();
+  });
+
+  test('remembers custom neutral and generated palette names across sessions', async ({ page }) => {
+    await renameNeutralPalette(page, 'Canvas');
+    await renameGeneratedPalette(page, 0, 'Ocean');
+
+    await page.waitForFunction(
+      () => {
+        const raw = localStorage.getItem('chroma11y-state');
+        if (!raw) return false;
+
+        try {
+          const parsed = JSON.parse(raw) as {
+            customNeutralName?: string;
+            customPaletteNames?: string[];
+          };
+          return (
+            parsed.customNeutralName === 'Canvas' &&
+            Array.isArray(parsed.customPaletteNames) &&
+            parsed.customPaletteNames[0] === 'Ocean'
+          );
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 5000 }
+    );
+
+    await page.goto('/');
+    await waitForAppReady(page);
+
+    await expect(page.getByRole('button', { name: 'Edit name for neutral palette' })).toContainText(
+      'Canvas'
+    );
+    await expect(
+      page.getByRole('button', { name: 'Edit name for palette 1', exact: true })
+    ).toContainText('Ocean');
   });
 });
 
