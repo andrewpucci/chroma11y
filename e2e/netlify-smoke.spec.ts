@@ -1,5 +1,5 @@
 /**
- * Netlify smoke tests run against deploy previews only.
+ * Netlify smoke tests run against deploy previews in CI and the local preview build in development.
  * These checks intentionally avoid visual snapshot assertions.
  */
 
