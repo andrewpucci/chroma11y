@@ -1,10 +1,7 @@
 [build]
-  # Keep Netlify focused on producing preview deploys efficiently.
-  # PR validation already runs in GitHub Actions:
-  # - unit-tests.yml
-  # - e2e.yml
-  # - netlify-smoke.yml
-  command = "npm run build"
+  # Run the current unit suite before building deploy previews.
+  # Browser-based E2E and smoke coverage still run in GitHub Actions.
+  command = "npm run test:unit -- --run && npm run build"
   publish = "build"
   node_version = "24"
 
