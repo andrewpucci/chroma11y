@@ -40,6 +40,17 @@ describe('urlUtils', () => {
       expect(encoded).toContain('t=dark');
     });
 
+    it('encodes custom neutral and palette names', () => {
+      const state: UrlColorState = {
+        customNeutralName: 'Canvas',
+        customPaletteNames: ['Ocean Blue', '', 'Sun:Glow, Accent']
+      };
+      const encoded = encodeStateToUrl(state);
+
+      expect(encoded).toContain('nn=Canvas');
+      expect(encoded).toContain('pn=0%3AT2NlYW4gQmx1ZQ%2C2%3AU3VuOkdsb3csIEFjY2VudA');
+    });
+
     it('does not encode auto theme preference (default)', () => {
       const state: UrlColorState = { themePreference: 'auto' };
       const encoded = encodeStateToUrl(state);
@@ -143,6 +154,21 @@ describe('urlUtils', () => {
       const params = new URLSearchParams('t=dark');
       const state = decodeStateFromUrl(params);
       expect(state.themePreference).toBe('dark');
+    });
+
+    it('decodes custom neutral and palette names', () => {
+      const params = new URLSearchParams('nn=Canvas&pn=0:T2NlYW4gQmx1ZQ,2:U3VuOkdsb3csIEFjY2VudA');
+      const state = decodeStateFromUrl(params);
+
+      expect(state.customNeutralName).toBe('Canvas');
+      expect(state.customPaletteNames).toEqual(['Ocean Blue', '', 'Sun:Glow, Accent']);
+    });
+
+    it('ignores malformed custom palette name entries', () => {
+      const params = new URLSearchParams('pn=wat:bad,2:%E0%A4%A');
+      const state = decodeStateFromUrl(params);
+
+      expect(state.customPaletteNames).toBeUndefined();
     });
 
     it('decodes lightness nudgers from index:value format', () => {

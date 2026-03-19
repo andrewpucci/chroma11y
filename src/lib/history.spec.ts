@@ -39,6 +39,8 @@ function createSnapshot(overrides: Partial<HistorySnapshot> = {}): HistorySnapsh
     },
     contrastAlgorithm: 'WCAG',
     oklchDisplaySignificantDigits: 4,
+    customNeutralName: undefined,
+    customPaletteNames: undefined,
     ...overrides
   };
 }
@@ -149,5 +151,23 @@ describe('history', () => {
     const jumpToFinal = manager.go(3);
     expect(jumpToFinal?.snapshot).toEqual(themeAndAlgorithm);
     expect(jumpToFinal?.entry.label).toBe('Theme preference changed');
+  });
+
+  it('preserves custom palette names through history navigation', () => {
+    expect.assertions(4);
+
+    const initial = createSnapshot();
+    const renamed = createSnapshot({
+      customNeutralName: 'Canvas',
+      customPaletteNames: ['Ocean', '', 'Bloom']
+    });
+
+    const manager = createHistoryManager(initial);
+    manager.commit(renamed, 'Palette name changed');
+
+    expect(manager.getCurrentSnapshot()).toEqual(renamed);
+    expect(manager.undo()?.snapshot).toEqual(initial);
+    expect(manager.redo()?.snapshot).toEqual(renamed);
+    expect(manager.getCurrentSnapshot().customPaletteNames).toEqual(['Ocean', '', 'Bloom']);
   });
 });

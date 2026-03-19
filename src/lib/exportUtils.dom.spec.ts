@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { downloadFile, downloadDesignTokens, downloadCSS, downloadSCSS } from './exportUtils';
 
 describe('exportUtils DOM', () => {
+  const defaultOptions = { lowContrastColor: '#ffffff' };
   let createElementSpy: ReturnType<typeof vi.spyOn>;
   let appendChildSpy: ReturnType<typeof vi.spyOn>;
   let removeChildSpy: ReturnType<typeof vi.spyOn>;
@@ -119,7 +120,7 @@ describe('exportUtils DOM', () => {
       const neutrals = ['#ffffff', '#000000'];
       const palettes = [['#ff0000', '#00ff00']];
 
-      downloadDesignTokens(neutrals, palettes);
+      downloadDesignTokens(neutrals, palettes, defaultOptions);
 
       expect(mockLink.download).toBe('color-tokens.json');
       const blobArg = createObjectURLSpy.mock.calls[0][0] as Blob;
@@ -134,7 +135,7 @@ describe('exportUtils DOM', () => {
       const neutrals = ['#ffffff', '#000000'];
       const palettes = [['#ff0000', '#00ff00']];
 
-      downloadCSS(neutrals, palettes);
+      downloadCSS(neutrals, palettes, defaultOptions);
 
       expect(mockLink.download).toBe('colors.css');
       const blobArg = createObjectURLSpy.mock.calls[0][0] as Blob;
@@ -148,7 +149,7 @@ describe('exportUtils DOM', () => {
       const palettes: string[][] = [];
       const displayNeutrals = ['oklch(100% 0 0)'];
 
-      downloadCSS(neutrals, palettes, displayNeutrals);
+      downloadCSS(neutrals, palettes, defaultOptions, displayNeutrals);
 
       expect(mockLink.click).toHaveBeenCalledTimes(1);
     });
@@ -161,7 +162,7 @@ describe('exportUtils DOM', () => {
       const neutrals = ['#ffffff', '#000000'];
       const palettes = [['#ff0000', '#00ff00']];
 
-      downloadSCSS(neutrals, palettes);
+      downloadSCSS(neutrals, palettes, defaultOptions);
 
       expect(mockLink.download).toBe('colors.scss');
       const blobArg = createObjectURLSpy.mock.calls[0][0] as Blob;
@@ -176,7 +177,7 @@ describe('exportUtils DOM', () => {
       const displayNeutrals = ['oklch(100% 0 0)'];
       const displayPalettes: string[][] = [];
 
-      downloadSCSS(neutrals, palettes, displayNeutrals, displayPalettes);
+      downloadSCSS(neutrals, palettes, defaultOptions, displayNeutrals, displayPalettes);
 
       expect(mockLink.click).toHaveBeenCalledTimes(1);
     });

@@ -29,6 +29,21 @@ async function downloadFileContent(
   };
 }
 
+async function renameNeutralPalette(page: Page, name: string): Promise<void> {
+  await page.getByRole('button', { name: 'Edit name for neutral palette' }).click();
+  const input = page.getByRole('textbox', { name: 'Neutral palette name' });
+  await input.fill(name);
+  await input.press('Enter');
+}
+
+async function renameGeneratedPalette(page: Page, index: number, name: string): Promise<void> {
+  await page
+    .getByRole('button', { name: `Edit name for palette ${index + 1}`, exact: true })
+    .click();
+  const input = page.getByRole('textbox', { name: `Palette ${index + 1} name`, exact: true });
+  await input.fill(name);
+  await input.press('Enter');
+}
 test.describe('Export Format Validation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -47,12 +62,18 @@ test.describe('Export Format Validation', () => {
       Record<string, { $value: { hex: string } }>
     >;
 
+    const [neutralKey] = Object.keys(parsed);
+    const exportedNeutralPalette = parsed[neutralKey] as Record<
+      string,
+      { $value: { hex: string } }
+    >;
+
     expect(filename).toBe('color-tokens.json');
-    expect(Object.keys(parsed.gray)).toHaveLength(displayedNeutrals.length);
+    expect(Object.keys(exportedNeutralPalette)).toHaveLength(displayedNeutrals.length);
 
     const exportedNeutrals = displayedNeutrals.map((_, index) => {
       const step = String(index * 10);
-      return parsed.gray[step].$value.hex.toLowerCase();
+      return exportedNeutralPalette[step].$value.hex.toLowerCase();
     });
 
     expect(exportedNeutrals).toEqual(displayedNeutrals);
@@ -103,15 +124,48 @@ test.describe('Export Format Validation', () => {
 
     expect(filename).toBe('colors.css');
     expect(content).toContain(':root {');
-    expect(content).toContain(`--color-gray-10: ${swatchValue};`);
+    expect(content).toContain(`${swatchValue};`);
+    expect(content).toMatch(/--color-[a-z0-9-]+-10:\s*oklch\(/i);
   });
 
   test('SCSS export downloads variable declarations', async ({ page }) => {
     const { filename, content } = await downloadFileContent(page, 'Export SCSS variables');
 
     expect(filename).toBe('colors.scss');
-    expect(content).toContain('$color-gray-0:');
+    expect(content).toMatch(/\$color-[a-z0-9-]+-0:/i);
     expect(content).toMatch(/\$color-[a-z0-9-]+-\d+:\s*#[0-9a-f]{6}/i);
     expect(content).not.toContain(':root');
+  });
+
+  test('custom neutral and palette names round-trip through URL and exports', async ({ page }) => {
+    await renameNeutralPalette(page, 'Canvas');
+    await renameGeneratedPalette(page, 0, 'Ocean');
+
+    await page.waitForFunction(
+      () => {
+        const params = new URL(window.location.href).searchParams;
+        return params.get('nn') === 'Canvas' && params.has('pn');
+      },
+      { timeout: 5000 }
+    );
+
+    const shareUrl = page.url();
+    await page.goto(shareUrl);
+    await waitForAppReady(page);
+    await waitForColorGeneration(page);
+
+    const jsonExport = JSON.parse(
+      (await downloadFileContent(page, 'Export JSON design tokens')).content
+    ) as Record<string, unknown>;
+    expect(jsonExport.canvas).toBeTruthy();
+    expect(jsonExport.ocean).toBeTruthy();
+
+    const cssExport = (await downloadFileContent(page, 'Export CSS custom properties')).content;
+    expect(cssExport).toContain('--color-canvas-0:');
+    expect(cssExport).toContain('--color-ocean-0:');
+
+    const scssExport = (await downloadFileContent(page, 'Export SCSS variables')).content;
+    expect(scssExport).toContain('$color-canvas-0:');
+    expect(scssExport).toContain('$color-ocean-0:');
   });
 });

@@ -10,10 +10,11 @@ describe('exportUtils', () => {
     ['#e6f0ff', '#b3d1ff', '#80b3ff', '#4d94ff', '#1a75ff', '#0066ff'],
     ['#ffe6f0', '#ffb3d1', '#ff80b3', '#ff4d94', '#ff1a75', '#ff0066']
   ];
+  const defaultOptions = { lowContrastColor: '#ffffff' };
 
   describe('exportAsDesignTokens', () => {
     it('exports neutral colors to gray palette', () => {
-      const tokens = exportAsDesignTokens(sampleNeutrals, []);
+      const tokens = exportAsDesignTokens(sampleNeutrals, [], defaultOptions);
 
       const gray = tokens.gray as DesignTokens;
       expect(gray['0']).toEqual({
@@ -23,7 +24,7 @@ describe('exportUtils', () => {
           components: [1, 1, 1],
           hex: '#ffffff'
         },
-        $description: 'Neutral color step 0'
+        $description: 'Gray color step 0'
       });
       expect(gray['50']).toEqual({
         $type: 'color',
@@ -32,23 +33,23 @@ describe('exportUtils', () => {
           components: [0, 0, 0],
           hex: '#000000'
         },
-        $description: 'Neutral color step 50'
+        $description: 'Gray color step 50'
       });
     });
 
     it('exports color palettes with correct names', () => {
-      const tokens = exportAsDesignTokens([], samplePalettes);
+      const tokens = exportAsDesignTokens([], samplePalettes, defaultOptions);
 
-      // First palette should be 'blue-ribbon' (detected from color)
-      const blueRibbon = tokens['blue-ribbon'] as DesignTokens;
-      expect(blueRibbon['0']).toEqual({
+      // First palette should be 'azure' (detected from color)
+      const azure = tokens.azure as DesignTokens;
+      expect(azure['0']).toEqual({
         $type: 'color',
         $value: {
           colorSpace: 'srgb',
           components: [0.9019607843137255, 0.9411764705882353, 1],
           hex: '#e6f0ff'
         },
-        $description: 'Blue Ribbon color step 0'
+        $description: 'Azure color step 0'
       });
 
       // Second palette should be 'mellow-melon' (detected from color)
@@ -65,7 +66,7 @@ describe('exportUtils', () => {
     });
 
     it('uses step increments of 10', () => {
-      const tokens = exportAsDesignTokens(sampleNeutrals, []);
+      const tokens = exportAsDesignTokens(sampleNeutrals, [], defaultOptions);
 
       const gray = tokens.gray as DesignTokens;
       expect(gray['0']).toBeDefined();
@@ -76,51 +77,51 @@ describe('exportUtils', () => {
 
   describe('exportAsCSS', () => {
     it('wraps variables in :root selector', () => {
-      const css = exportAsCSS(sampleNeutrals, []);
+      const css = exportAsCSS(sampleNeutrals, [], defaultOptions);
       expect(css).toMatch(/^:root \{/);
       expect(css).toContain('}');
     });
 
     it('exports neutral colors as --color-gray-* variables', () => {
-      const css = exportAsCSS(sampleNeutrals, []);
+      const css = exportAsCSS(sampleNeutrals, [], defaultOptions);
       expect(css).toContain('--color-gray-0: #ffffff;');
       expect(css).toContain('--color-gray-50: #000000;');
     });
 
     it('exports palettes with correct naming', () => {
-      const css = exportAsCSS([], samplePalettes);
-      expect(css).toContain('--color-blue-ribbon-0: #e6f0ff;');
+      const css = exportAsCSS([], samplePalettes, defaultOptions);
+      expect(css).toContain('--color-azure-0: #e6f0ff;');
       expect(css).toContain('--color-mellow-melon-0: #ffe6f0;');
     });
 
     it('includes section comments', () => {
-      const css = exportAsCSS(sampleNeutrals, samplePalettes);
-      expect(css).toContain('/* Neutral Colors */');
-      expect(css).toContain('/* Blue Ribbon Palette */');
+      const css = exportAsCSS(sampleNeutrals, samplePalettes, defaultOptions);
+      expect(css).toContain('/* Gray Palette */');
+      expect(css).toContain('/* Azure Palette */');
     });
   });
 
   describe('exportAsSCSS', () => {
     it('exports neutral colors as $color-gray-* variables', () => {
-      const scss = exportAsSCSS(sampleNeutrals, []);
+      const scss = exportAsSCSS(sampleNeutrals, [], defaultOptions);
       expect(scss).toContain('$color-gray-0: #ffffff;');
       expect(scss).toContain('$color-gray-50: #000000;');
     });
 
     it('exports palettes with correct naming', () => {
-      const scss = exportAsSCSS([], samplePalettes);
-      expect(scss).toContain('$color-blue-ribbon-0: #e6f0ff;');
+      const scss = exportAsSCSS([], samplePalettes, defaultOptions);
+      expect(scss).toContain('$color-azure-0: #e6f0ff;');
       expect(scss).toContain('$color-mellow-melon-0: #ffe6f0;');
     });
 
     it('includes section comments', () => {
-      const scss = exportAsSCSS(sampleNeutrals, samplePalettes);
-      expect(scss).toContain('// Neutral Colors');
-      expect(scss).toContain('// Blue Ribbon Palette');
+      const scss = exportAsSCSS(sampleNeutrals, samplePalettes, defaultOptions);
+      expect(scss).toContain('// Gray Palette');
+      expect(scss).toContain('// Azure Palette');
     });
 
     it('does not use :root selector', () => {
-      const scss = exportAsSCSS(sampleNeutrals, samplePalettes);
+      const scss = exportAsSCSS(sampleNeutrals, samplePalettes, defaultOptions);
       expect(scss).not.toContain(':root');
     });
   });
@@ -129,7 +130,7 @@ describe('exportUtils', () => {
     it('handles grayscale palette gracefully', () => {
       const palettes = [['#808080', '#404040']];
 
-      const css = exportAsCSS([], palettes);
+      const css = exportAsCSS([], palettes, defaultOptions);
 
       // Should still produce valid output with some name
       expect(css).toContain('--color-');
@@ -140,7 +141,7 @@ describe('exportUtils', () => {
       const palettes: string[][] = [];
       const displayNeutrals = ['oklch(100% 0 0)'];
 
-      const css = exportAsCSS(neutrals, palettes, displayNeutrals);
+      const css = exportAsCSS(neutrals, palettes, defaultOptions, displayNeutrals);
 
       expect(css).toContain('oklch(100% 0 0)');
     });
@@ -150,9 +151,56 @@ describe('exportUtils', () => {
       const palettes: string[][] = [];
       const displayNeutrals = ['oklch(100% 0 0)'];
 
-      const scss = exportAsSCSS(neutrals, palettes, displayNeutrals);
+      const scss = exportAsSCSS(neutrals, palettes, defaultOptions, displayNeutrals);
 
       expect(scss).toContain('oklch(100% 0 0)');
+    });
+
+    it('uses custom neutral and palette names in exported identifiers', () => {
+      const css = exportAsCSS(sampleNeutrals, samplePalettes, {
+        lowContrastColor: '#ffffff',
+        customNeutralName: 'Canvas',
+        customPaletteNames: ['Ocean', 'Bloom']
+      });
+
+      expect(css).toContain('--color-canvas-0: #ffffff;');
+      expect(css).toContain('--color-ocean-0: #e6f0ff;');
+      expect(css).toContain('--color-bloom-0: #ffe6f0;');
+    });
+
+    it('deduplicates export slugs across neutral and generated palettes', () => {
+      const css = exportAsCSS(sampleNeutrals, samplePalettes, {
+        lowContrastColor: '#ffffff',
+        customNeutralName: 'Blue',
+        customPaletteNames: ['Blue', 'Blue']
+      });
+
+      expect(css).toContain('--color-blue-0: #ffffff;');
+      expect(css).toContain('--color-blue-2-0: #e6f0ff;');
+      expect(css).toContain('--color-blue-3-0: #ffe6f0;');
+    });
+
+    it('escapes custom names before inserting them into CSS comments', () => {
+      const css = exportAsCSS(sampleNeutrals, samplePalettes, {
+        lowContrastColor: '#ffffff',
+        customNeutralName: 'Canvas */ :root { color: red; }',
+        customPaletteNames: ['Ocean */ body { display:none; }']
+      });
+
+      expect(css).toContain('/* Canvas * / :root { color: red; } Palette */');
+      expect(css).toContain('/* Ocean * / body { display:none; } Palette */');
+      expect(css).not.toContain('/* Canvas */ :root');
+    });
+
+    it('escapes custom names before inserting them into SCSS comments', () => {
+      const scss = exportAsSCSS(sampleNeutrals, samplePalettes, {
+        lowContrastColor: '#ffffff',
+        customNeutralName: 'Canvas */ $danger: red;',
+        customPaletteNames: ['Ocean */ $warning: orange;']
+      });
+
+      expect(scss).toContain('// Canvas * / $danger: red; Palette');
+      expect(scss).toContain('// Ocean * / $warning: orange; Palette');
     });
   });
 });

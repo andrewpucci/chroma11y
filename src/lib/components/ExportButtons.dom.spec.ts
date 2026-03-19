@@ -36,22 +36,57 @@ describe('ExportButtons', () => {
 
     const neutrals = ['#ffffff'];
     const palettes = [['#e6f0ff']];
+    const lowContrastColor = '#ffffff';
     const displayNeutrals = ['oklch(94.772434% 0.048057 208.654439)'];
     const displayPalettes = [['oklch(72.618719% 0.112904 251.168672)']];
+    const customNeutralName = 'Canvas';
+    const customPaletteNames = ['Ocean'];
 
     render(ExportButtons, {
-      props: { neutrals, palettes, displayNeutrals, displayPalettes }
+      props: {
+        neutrals,
+        palettes,
+        lowContrastColor,
+        displayNeutrals,
+        displayPalettes,
+        customNeutralName,
+        customPaletteNames
+      }
     });
 
     await user.click(screen.getByRole('button', { name: /export json design tokens/i }));
-    expect(downloadDesignTokens).toHaveBeenCalledWith(neutrals, palettes);
+    expect(downloadDesignTokens).toHaveBeenCalledWith(neutrals, palettes, {
+      lowContrastColor,
+      customNeutralName,
+      customPaletteNames
+    });
     expect(announce).toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: /export css custom properties/i }));
-    expect(downloadCSS).toHaveBeenCalledWith(neutrals, palettes, displayNeutrals, displayPalettes);
+    expect(downloadCSS).toHaveBeenCalledWith(
+      neutrals,
+      palettes,
+      {
+        lowContrastColor,
+        customNeutralName,
+        customPaletteNames
+      },
+      displayNeutrals,
+      displayPalettes
+    );
 
     await user.click(screen.getByRole('button', { name: /export scss variables/i }));
-    expect(downloadSCSS).toHaveBeenCalledWith(neutrals, palettes, displayNeutrals, displayPalettes);
+    expect(downloadSCSS).toHaveBeenCalledWith(
+      neutrals,
+      palettes,
+      {
+        lowContrastColor,
+        customNeutralName,
+        customPaletteNames
+      },
+      displayNeutrals,
+      displayPalettes
+    );
   });
 
   it('shows share button, copies current URL, and provides copy feedback', async () => {
