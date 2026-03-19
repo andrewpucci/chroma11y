@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import Page from './+page.svelte';
+import type { PageScheduler } from '$lib/pageScheduler';
+import PageContent from './PageContent.svelte';
 
 interface HistoryUiState {
   numColors: string;
@@ -15,6 +16,10 @@ interface HistoryUiState {
   themePreference: string;
   contrastAlgorithm: string;
   oklchDigits: string | null;
+}
+
+interface ControllablePageScheduler extends PageScheduler {
+  flushHistoryResync(): void;
 }
 
 type HistoryAction =
@@ -107,8 +112,55 @@ function readUiState(): HistoryUiState {
   };
 }
 
-async function renderPage(): Promise<void> {
-  render(Page);
+function createImmediatePageScheduler(): PageScheduler {
+  return {
+    scheduleColorGeneration(task: () => void): void {
+      task();
+    },
+    schedulePersistence(task: () => void): void {
+      task();
+    },
+    scheduleEditableHistorySuppressionReset(task: () => void): void {
+      task();
+    },
+    schedulePendingNativeHistoryReset(task: () => void): void {
+      task();
+    },
+    scheduleHistoryShortcut(task: () => void): void {
+      task();
+    },
+    scheduleHistoryResync(task: () => void): void {
+      task();
+    },
+    cancelHistoryResync(): void {},
+    destroy(): void {}
+  };
+}
+
+function createControllablePageScheduler(): ControllablePageScheduler {
+  let historyResyncTask: (() => void) | null = null;
+
+  return {
+    ...createImmediatePageScheduler(),
+    scheduleHistoryResync(task: () => void): void {
+      historyResyncTask = task;
+    },
+    cancelHistoryResync(): void {
+      historyResyncTask = null;
+    },
+    flushHistoryResync(): void {
+      historyResyncTask?.();
+    },
+    destroy(): void {
+      historyResyncTask = null;
+    }
+  };
+}
+
+async function renderPage(
+  scheduler: PageScheduler = createImmediatePageScheduler()
+): Promise<void> {
+  render(PageContent, { props: { scheduler } });
   await flushAppState();
   expect(getUndoButton()).toBeDisabled();
   expect(getRedoButton()).toBeDisabled();
@@ -118,9 +170,9 @@ async function flushHistoryCommit(): Promise<void> {
   await flushAppState();
 }
 
-async function flushAppState(time: number = 600): Promise<void> {
+async function flushAppState(): Promise<void> {
   await tick();
-  await vi.advanceTimersByTimeAsync(time);
+  await Promise.resolve();
   await tick();
   await tick();
 }
@@ -213,7 +265,6 @@ async function performAction(action: HistoryAction, user: ReturnType<typeof user
 
 describe('page history integration', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: vi.fn().mockImplementation(() => ({
@@ -238,12 +289,8 @@ describe('page history integration', () => {
     window.history.replaceState({}, '', '/');
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it('supports button undo/redo and multi-step menu jumps', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
+    const user = userEvent.setup();
 
     await renderPage();
 
@@ -289,7 +336,7 @@ describe('page history integration', () => {
   }, 10000);
 
   it('keeps mixed generator and contrast history steps aligned across redo', async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
+    const user = userEvent.setup();
 
     await renderPage();
     await performAction({ type: 'setNumColors', value: 12 }, user);
@@ -332,7 +379,9 @@ describe('page history integration', () => {
   }, 10000);
 
   it('cancels history-input resync once a replacement edit starts', async () => {
-    await renderPage();
+    const scheduler = createControllablePageScheduler();
+
+    await renderPage(scheduler);
     const initialBaseColor = getBaseColorHexInput().value;
     const baseColorInput = getBaseColorHexInput();
     baseColorInput.value = '#00ff00';
@@ -355,24 +404,25 @@ describe('page history integration', () => {
       inputType: 'historyUndo'
     });
     await fireEvent(currentBaseColorInput, historyUndoInputEvent);
-    await flushAppState(20);
+    await flushAppState();
 
     const replacementInput = getBaseColorHexInput();
     replacementInput.focus();
     replacementInput.value = '#ff0000';
     await fireEvent.input(replacementInput);
     await fireEvent.change(replacementInput);
-    await flushAppState(20);
+    await flushAppState();
 
     expect(getBaseColorHexInput()).toHaveValue('#ff0000');
 
-    await flushAppState(1000);
+    scheduler.flushHistoryResync();
+    await flushAppState();
 
     expect(getBaseColorHexInput()).toHaveValue('#ff0000');
   }, 10000);
 
   async function expectScenarioRoundTrip(actions: HistoryAction[]): Promise<void> {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTimeAsync });
+    const user = userEvent.setup();
 
     await renderPage();
 
@@ -388,10 +438,10 @@ describe('page history integration', () => {
 
     expect(getUndoButton()).toBeEnabled();
     await user.click(getUndoHistoryButton());
-    await flushAppState(20);
+    await flushAppState();
     expect(screen.getAllByRole('menuitem')).toHaveLength(snapshots.length - 1);
     await user.click(getUndoHistoryButton());
-    await flushAppState(20);
+    await flushAppState();
 
     for (let index = snapshots.length - 2; index >= 0; index -= 1) {
       await user.click(getUndoButton());
