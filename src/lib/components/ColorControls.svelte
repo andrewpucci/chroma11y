@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import BezierEditor from './BezierEditor.svelte';
+  import Icon from './Icon.svelte';
   import SliderNumberField from './SliderNumberField.svelte';
   import { getChromaMultiplierBounds } from '$lib/chromaMultiplier';
   import type { GamutSpace } from '$lib/types';
@@ -25,6 +26,8 @@
     onNumPalettesCommit?: () => void;
     onBezierInteractionStart?: () => void;
     onBezierCommit?: () => void;
+    advancedOpen?: boolean;
+    onAdvancedToggle?: (open: boolean) => void;
   }
 
   let {
@@ -46,8 +49,11 @@
     onNumColorsCommit,
     onNumPalettesCommit,
     onBezierInteractionStart,
-    onBezierCommit
+    onBezierCommit,
+    advancedOpen = false,
+    onAdvancedToggle
   }: Props = $props();
+  let currentAdvancedOpen = $derived(advancedOpen);
 
   interface RangeConfig {
     min: number;
@@ -131,9 +137,6 @@
   function finalizeDrag() {
     cleanupWindowListeners();
     isDraggingCounts = false;
-    // Defer layout unfreeze to the next frame so the browser's native
-    // range-input handling finishes with the frozen layout geometry first.
-    // This prevents the pointer position from being remapped to a shifted slider.
     requestAnimationFrame(() => {
       onRangeDragEnd?.();
     });
@@ -155,122 +158,178 @@
     }
   }
 
+  function handleAdvancedToggle(event: Event): void {
+    const nextOpen = (event.currentTarget as HTMLDetailsElement).open;
+    currentAdvancedOpen = nextOpen;
+    onAdvancedToggle?.(nextOpen);
+  }
+
   onDestroy(() => {
     cleanupWindowListeners();
   });
 </script>
 
 <section class="generator-controls">
-  <div class="control-grid">
-    <div class="field base-color">
-      <label class="label" for="baseColor">Base Color</label>
-      <div class="base-color-row">
-        <input
-          id="baseColor"
-          type="color"
-          bind:value={baseColor}
-          aria-describedby="baseColorHex"
-          tabindex="0"
-          onchange={onBaseColorCommit}
-        />
-        <input
-          id="baseColorHex"
-          class="input"
-          type="text"
-          bind:value={baseColor}
-          placeholder="#1862E6"
-          aria-label="Base color hex value"
-          onchange={onBaseColorCommit}
-          onblur={onBaseColorCommit}
-        />
+  <section class="control-subsection">
+    <div class="control-grid">
+      <div class="field base-color">
+        <label class="label" for="baseColor">Base Color</label>
+        <div class="base-color-row">
+          <input
+            id="baseColor"
+            type="color"
+            bind:value={baseColor}
+            aria-describedby="baseColorHex"
+            tabindex="0"
+            onchange={onBaseColorCommit}
+          />
+          <input
+            id="baseColorHex"
+            class="input"
+            type="text"
+            bind:value={baseColor}
+            placeholder="#1862E6"
+            aria-label="Base color hex value"
+            onchange={onBaseColorCommit}
+            onblur={onBaseColorCommit}
+          />
+        </div>
+      </div>
+
+      <SliderNumberField
+        id="warmth"
+        label="Warmth"
+        valueInputLabel="Warmth value input"
+        min={WARMTH_RANGE.min}
+        max={WARMTH_RANGE.max}
+        step={WARMTH_RANGE.step}
+        bind:value={warmth}
+        groupHelpText={`Range ${WARMTH_RANGE.min} to ${WARMTH_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+        onRangeChange={onWarmthCommit}
+        onNumberInput={clampWarmthFromInput}
+        onNumberChange={onWarmthCommit}
+        onNumberBlur={clampWarmthFromInput}
+      />
+
+      <SliderNumberField
+        id="saturation"
+        label="Saturation"
+        valueInputLabel="Saturation value input"
+        min={SATURATION_RANGE.min}
+        max={SATURATION_RANGE.max}
+        step={SATURATION_RANGE.step}
+        bind:value={chromaMultiplier}
+        groupHelpText="Normalized range 0 to 1. Use slider for coarse adjustment and number input for precise adjustment."
+        onRangeChange={onSaturationCommit}
+        onNumberInput={clampSaturationFromInput}
+        onNumberChange={onSaturationCommit}
+        onNumberBlur={clampSaturationFromInput}
+      />
+
+      <SliderNumberField
+        id="numColors"
+        label="Number of Colors"
+        valueInputLabel="Number of colors value input"
+        min={NUM_COLORS_RANGE.min}
+        max={NUM_COLORS_RANGE.max}
+        step={NUM_COLORS_RANGE.step}
+        bind:value={numColors}
+        groupHelpText={`Range ${NUM_COLORS_RANGE.min} to ${NUM_COLORS_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+        onRangePointerDown={handlePointerDown}
+        onRangeInput={handleKeyboardInput}
+        onRangeChange={onNumColorsCommit}
+        onNumberInput={clampNumColorsFromInput}
+        onNumberChange={onNumColorsCommit}
+        onNumberBlur={clampNumColorsFromInput}
+      />
+
+      <SliderNumberField
+        id="numPalettes"
+        label="Number of Palettes"
+        valueInputLabel="Number of palettes value input"
+        min={NUM_PALETTES_RANGE.min}
+        max={NUM_PALETTES_RANGE.max}
+        step={NUM_PALETTES_RANGE.step}
+        bind:value={numPalettes}
+        groupHelpText={`Range ${NUM_PALETTES_RANGE.min} to ${NUM_PALETTES_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+        onRangePointerDown={handlePointerDown}
+        onRangeInput={handleKeyboardInput}
+        onRangeChange={onNumPalettesCommit}
+        onNumberInput={clampNumPalettesFromInput}
+        onNumberChange={onNumPalettesCommit}
+        onNumberBlur={clampNumPalettesFromInput}
+      />
+    </div>
+  </section>
+
+  <details
+    class="advanced-group"
+    open={currentAdvancedOpen}
+    data-testid="generation-advanced-group"
+    ontoggle={handleAdvancedToggle}
+  >
+    <summary class="advanced-summary">
+      <span class="advanced-heading">
+        <h3 class="subsection-title">Advanced</h3>
+        <span class="advanced-copy">Bezier curve shaping</span>
+      </span>
+      <span class="advanced-chevron" aria-hidden="true">
+        <span class="advanced-chevron-inner">
+          <Icon
+            name="chevron-down"
+            size="var(--advanced-disclosure-icon-size)"
+            stroke="var(--advanced-disclosure-icon-stroke)"
+          />
+        </span>
+      </span>
+    </summary>
+    <div class="advanced-panel">
+      <div class="advanced-body">
+        <div class="bezier-section">
+          <div class="bezier-title">Bezier Curve</div>
+          <BezierEditor
+            bind:x1
+            bind:y1
+            bind:x2
+            bind:y2
+            onInteractionStart={onBezierInteractionStart}
+            onCommit={onBezierCommit}
+          />
+        </div>
       </div>
     </div>
-
-    <SliderNumberField
-      id="warmth"
-      label="Warmth"
-      valueInputLabel="Warmth value input"
-      min={WARMTH_RANGE.min}
-      max={WARMTH_RANGE.max}
-      step={WARMTH_RANGE.step}
-      bind:value={warmth}
-      groupHelpText={`Range ${WARMTH_RANGE.min} to ${WARMTH_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
-      onRangeChange={onWarmthCommit}
-      onNumberInput={clampWarmthFromInput}
-      onNumberChange={onWarmthCommit}
-      onNumberBlur={clampWarmthFromInput}
-    />
-
-    <SliderNumberField
-      id="saturation"
-      label="Saturation"
-      valueInputLabel="Saturation value input"
-      min={SATURATION_RANGE.min}
-      max={SATURATION_RANGE.max}
-      step={SATURATION_RANGE.step}
-      bind:value={chromaMultiplier}
-      groupHelpText="Normalized range 0 to 1. Use slider for coarse adjustment and number input for precise adjustment."
-      onRangeChange={onSaturationCommit}
-      onNumberInput={clampSaturationFromInput}
-      onNumberChange={onSaturationCommit}
-      onNumberBlur={clampSaturationFromInput}
-    />
-
-    <SliderNumberField
-      id="numColors"
-      label="Number of Colors"
-      valueInputLabel="Number of colors value input"
-      min={NUM_COLORS_RANGE.min}
-      max={NUM_COLORS_RANGE.max}
-      step={NUM_COLORS_RANGE.step}
-      bind:value={numColors}
-      groupHelpText={`Range ${NUM_COLORS_RANGE.min} to ${NUM_COLORS_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
-      onRangePointerDown={handlePointerDown}
-      onRangeInput={handleKeyboardInput}
-      onRangeChange={onNumColorsCommit}
-      onNumberInput={clampNumColorsFromInput}
-      onNumberChange={onNumColorsCommit}
-      onNumberBlur={clampNumColorsFromInput}
-    />
-
-    <SliderNumberField
-      id="numPalettes"
-      label="Number of Palettes"
-      valueInputLabel="Number of palettes value input"
-      min={NUM_PALETTES_RANGE.min}
-      max={NUM_PALETTES_RANGE.max}
-      step={NUM_PALETTES_RANGE.step}
-      bind:value={numPalettes}
-      groupHelpText={`Range ${NUM_PALETTES_RANGE.min} to ${NUM_PALETTES_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
-      onRangePointerDown={handlePointerDown}
-      onRangeInput={handleKeyboardInput}
-      onRangeChange={onNumPalettesCommit}
-      onNumberInput={clampNumPalettesFromInput}
-      onNumberChange={onNumPalettesCommit}
-      onNumberBlur={clampNumPalettesFromInput}
-    />
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="bezier-section">
-    <div class="bezier-title">Bezier Curve</div>
-    <BezierEditor
-      bind:x1
-      bind:y1
-      bind:x2
-      bind:y2
-      onInteractionStart={onBezierInteractionStart}
-      onCommit={onBezierCommit}
-    />
-  </div>
+  </details>
 </section>
 
 <style>
   .generator-controls {
+    --advanced-disclosure-icon-size: var(--icon-size-disclosure);
+    --advanced-disclosure-icon-stroke: var(--icon-stroke-disclosure);
+    --advanced-expand-duration: var(--duration-normal);
+    --advanced-collapse-duration: var(--duration-fast);
+    --advanced-expand-ease: var(--ease-emphasized);
+    --advanced-collapse-ease: var(--ease-out);
     display: grid;
     gap: var(--space-md);
     container-type: inline-size;
+  }
+
+  .control-subsection {
+    display: grid;
+    gap: var(--space-md);
+  }
+
+  .subsection-title {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--letter-spacing-normal);
+    color: var(--text-primary);
+  }
+
+  .advanced-copy {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .control-grid {
@@ -281,20 +340,19 @@
 
   .base-color-row {
     display: grid;
-    grid-template-columns: 56px 1fr;
+    grid-template-columns: var(--control-size-color-input) 1fr;
     gap: var(--space-sm);
     align-items: center;
   }
 
   .base-color-row input[type='color'] {
-    width: 56px;
+    width: var(--control-size-color-input);
     height: var(--touch-target-comfortable);
     padding: 0;
-    border: 1px solid var(--border);
+    border: var(--border-width-thin) solid var(--border);
     border-radius: var(--radius-md);
     background: transparent;
     cursor: pointer;
-    /* Don't use appearance: none to maintain keyboard focusability in WebKit */
   }
 
   .base-color-row input[type='color']::-webkit-color-swatch-wrapper {
@@ -304,19 +362,88 @@
   }
 
   .base-color-row input[type='color']::-webkit-color-swatch {
-    border: 1px solid var(--border);
+    border: var(--border-width-thin) solid var(--border);
     border-radius: var(--radius-md);
   }
 
   .base-color-row input[type='color']::-moz-color-swatch {
-    border: 1px solid var(--border);
+    border: var(--border-width-thin) solid var(--border);
     border-radius: var(--radius-md);
   }
 
-  .divider {
-    height: 1px;
-    background: color-mix(in oklab, var(--border) 60%, transparent);
-    margin: var(--space-xs) 0;
+  .advanced-group {
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 55%, transparent);
+    border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--bg-primary) 92%, transparent);
+    overflow: hidden;
+    transition:
+      border-color var(--transition-fast),
+      background-color var(--transition-normal);
+  }
+
+  .advanced-summary {
+    list-style: none;
+    cursor: pointer;
+    min-height: var(--touch-target-comfortable);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    text-align: left;
+    width: 100%;
+  }
+
+  .advanced-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .advanced-summary::marker {
+    content: '';
+  }
+
+  .advanced-summary:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  .advanced-group:has(> .advanced-summary:focus-visible) {
+    outline: var(--focus-outline-width) solid var(--focus-outline-inside);
+    box-shadow: 0 0 0 var(--focus-outline-offset) var(--focus-outline-outside);
+  }
+
+  .advanced-chevron {
+    inline-size: calc(var(--space-md) + var(--space-2xs));
+    block-size: calc(var(--space-md) + var(--space-2xs));
+    flex: 0 0 calc(var(--space-md) + var(--space-2xs));
+    margin-inline-start: auto;
+    margin-block-start: var(--space-2xs);
+    color: var(--text-primary);
+    opacity: 0.92;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .advanced-chevron-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+      transform var(--duration-normal) var(--ease-emphasized),
+      opacity var(--transition-fast);
+    transform-origin: center;
+  }
+
+  .advanced-group[open] .advanced-chevron-inner {
+    transform: rotate(180deg);
+  }
+
+  .advanced-body {
+    display: grid;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-top: var(--border-width-thin) solid color-mix(in oklab, var(--border) 42%, transparent);
   }
 
   .bezier-title {
@@ -325,28 +452,68 @@
     color: var(--text-primary);
   }
 
+  .bezier-section {
+    display: grid;
+    gap: var(--space-sm);
+  }
+
   @container (max-width: 980px) and (min-width: 770px) {
     .generator-controls {
       grid-template-columns: 1fr 1fr;
       align-items: start;
     }
 
-    .control-grid {
+    .control-subsection {
       grid-column: 1;
     }
 
-    .bezier-section {
+    .advanced-group {
       grid-column: 2;
-      align-content: start;
-    }
-
-    .divider {
-      display: none;
+      align-self: start;
     }
   }
 
-  .bezier-section {
-    display: grid;
-    gap: var(--space-sm);
+  @media (max-width: 980px) {
+    .generator-controls {
+      --advanced-disclosure-icon-size: var(--icon-size-disclosure-compact);
+      --advanced-disclosure-icon-stroke: var(--icon-stroke-disclosure-compact);
+    }
+  }
+
+  @supports selector(::details-content) {
+    @supports (interpolate-size: allow-keywords) {
+      .advanced-group {
+        interpolate-size: allow-keywords;
+      }
+
+      .advanced-group::details-content {
+        block-size: 0;
+        opacity: 0;
+        overflow: clip;
+        transition:
+          block-size var(--advanced-collapse-duration) var(--advanced-collapse-ease),
+          opacity var(--advanced-collapse-duration) var(--advanced-collapse-ease),
+          content-visibility var(--advanced-collapse-duration) allow-discrete;
+      }
+
+      .advanced-group[open]::details-content {
+        block-size: auto;
+        opacity: 1;
+        transition:
+          block-size var(--advanced-expand-duration) var(--advanced-expand-ease),
+          opacity var(--duration-fast) var(--ease-out),
+          content-visibility var(--advanced-expand-duration) allow-discrete;
+      }
+
+      .advanced-body {
+        transform: translateY(calc(var(--space-xs) * -1));
+        transition: transform var(--advanced-collapse-duration) var(--advanced-collapse-ease);
+      }
+
+      .advanced-group[open] .advanced-body {
+        transform: translateY(0);
+        transition: transform var(--advanced-expand-duration) var(--advanced-expand-ease);
+      }
+    }
   }
 </style>

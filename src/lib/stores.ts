@@ -453,7 +453,7 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
       ...currentState,
       ...themePreset,
       currentTheme: targetTheme,
-      themePreference: 'auto' as ThemePreference,
+      themePreference: currentState.themePreference,
       customNeutralName: undefined,
       customPaletteNames: undefined,
       _lastUpdated: Date.now()

@@ -32,8 +32,10 @@
 
   interface Props {
     name: IconName;
-    size?: number;
-    stroke?: number;
+    size?: number | string;
+    stroke?: number | string;
+    class?: string;
+    style?: string;
   }
 
   const ICONS = {
@@ -52,8 +54,19 @@
     'status-fail': IconX
   } as const satisfies Record<IconName, typeof IconCopy>;
 
-  let { name, size = 16, stroke = 1.75 }: Props = $props();
+  let {
+    name,
+    size = 16,
+    stroke = 1.75,
+    class: className = '',
+    style: styleText = ''
+  }: Props = $props();
   const IconComponent = $derived(ICONS[name] ?? IconAlertCircle);
+  const resolvedSize = $derived(typeof size === 'number' ? `${size}px` : size);
+  const resolvedStroke = $derived(typeof stroke === 'number' ? `${stroke}` : stroke);
+  const iconStyle = $derived(
+    `inline-size: ${resolvedSize}; block-size: ${resolvedSize}; stroke-width: ${resolvedStroke};${styleText ? ` ${styleText}` : ''}`
+  );
 </script>
 
-<IconComponent {size} {stroke} aria-hidden="true" />
+<IconComponent class={className} style={iconStyle} aria-hidden="true" />

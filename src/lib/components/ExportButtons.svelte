@@ -2,7 +2,6 @@
   import { onDestroy } from 'svelte';
   import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/exportUtils';
   import { copyToClipboard } from '$lib/colorUtils';
-  import { resetColorState, currentTheme } from '$lib/stores';
   import { announce } from '$lib/announce';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
@@ -15,7 +14,6 @@
     displayPalettes?: string[][];
     customNeutralName?: string;
     customPaletteNames?: string[];
-    onResetCommit?: () => void;
   }
 
   let {
@@ -25,11 +23,8 @@
     displayNeutrals = [],
     displayPalettes = [],
     customNeutralName,
-    customPaletteNames,
-    onResetCommit
+    customPaletteNames
   }: Props = $props();
-
-  const theme = $derived($currentTheme);
 
   const exportNameOptions = $derived({
     lowContrastColor,
@@ -80,21 +75,6 @@
       copyFeedbackTimeout = null;
     }, 2000);
   }
-
-  /**
-   * Resets all color settings to default values for the current theme.
-   * Preserves the current theme preference.
-   */
-  function handleReset() {
-    const confirmed = window.confirm(
-      'Reset all settings to defaults? This will clear your current palette configuration.'
-    );
-    if (confirmed) {
-      resetColorState(theme as 'light' | 'dark');
-      announce('Settings reset to defaults');
-      onResetCommit?.();
-    }
-  }
 </script>
 
 <div class="export-buttons">
@@ -129,10 +109,6 @@
   >
     <Icon name="scss" />
     Export SCSS
-  </Button>
-  <Button onclick={handleReset} variant="ghost" ariaLabel="Reset all settings to defaults">
-    <Icon name="reset" />
-    Reset
   </Button>
 </div>
 
