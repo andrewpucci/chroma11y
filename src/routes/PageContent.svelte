@@ -38,11 +38,18 @@
     customPaletteNames,
     updateColorState,
     updateContrastFromNeutrals,
+    resetColorState,
     setTheme,
     setThemePreference
   } from '$lib/stores';
   import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
-  import { loadStateFromStorage, saveStateToStorage } from '$lib/storageUtils';
+  import {
+    loadStateFromStorage,
+    saveStateToStorage,
+    loadUiPreferencesFromStorage,
+    saveUiPreferencesToStorage,
+    type StoredUiPreferences
+  } from '$lib/storageUtils';
   import { announce } from '$lib/announce';
   import { generatePalettes } from '$lib/colorUtils';
   import type { ColorGenParams } from '$lib/colorUtils';
@@ -64,7 +71,22 @@
     scheduler?: PageScheduler;
   }
 
+  interface CompactSectionState {
+    generation: boolean;
+    contrast: boolean;
+    output: boolean;
+    export: boolean;
+  }
+
   let { scheduler = createPageScheduler() }: Props = $props();
+
+  const COMPACT_LAYOUT_MEDIA_QUERY = '(max-width: 980px)';
+  const DEFAULT_COMPACT_SECTIONS: CompactSectionState = {
+    generation: false,
+    contrast: false,
+    output: false,
+    export: false
+  };
 
   // Derived values from stores (auto-subscribed)
   let neutralsLocal = $derived($neutrals);
@@ -102,6 +124,15 @@
   let y1Local = $state(0.0);
   let x2Local = $state(0.28);
   let y2Local = $state(0.38);
+  let isCompactLayout = $state(
+    typeof window === 'undefined' || !('matchMedia' in window)
+      ? false
+      : window.matchMedia(COMPACT_LAYOUT_MEDIA_QUERY).matches
+  );
+  let compactSections = $state<CompactSectionState>({ ...DEFAULT_COMPACT_SECTIONS });
+  let generationAdvancedOpen = $state(false);
+  let outputAdvancedOpen = $state(false);
+  let uiPreferencesLoaded = $state(false);
 
   let urlStateLoaded = $state(false);
   let appShellEl: HTMLDivElement | undefined = $state();
@@ -148,6 +179,71 @@
           redoEntries: []
         };
   }
+
+  function applyStoredUiPreferences(preferences: StoredUiPreferences): void {
+    compactSections = { ...preferences.compactSections };
+    generationAdvancedOpen = preferences.generationAdvancedOpen;
+    outputAdvancedOpen = preferences.outputAdvancedOpen;
+  }
+
+  function getUiPreferencesSnapshot(): StoredUiPreferences {
+    return {
+      compactSections: { ...compactSections },
+      generationAdvancedOpen,
+      outputAdvancedOpen
+    };
+  }
+
+  function updateCompactSection(section: keyof CompactSectionState, open: boolean): void {
+    compactSections = {
+      ...compactSections,
+      [section]: open
+    };
+  }
+
+  function formatDisplayColorSpace(value: string): string {
+    if (value === 'oklch') return 'OKLCH';
+    if (value === 'rgb') return 'RGB';
+    if (value === 'hsl') return 'HSL';
+    return 'Hex';
+  }
+
+  function formatThemePreference(value: string): string {
+    if (value === 'auto') return 'Auto';
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  function formatSwatchLabels(value: string): string {
+    if (value === 'both') return 'Step + Value';
+    if (value === 'step') return 'Step';
+    if (value === 'value') return 'Value';
+    return 'Hidden';
+  }
+
+  function formatContrastAlgorithm(value: string): string {
+    return value === 'WCAG' ? 'WCAG 2.2' : 'APCA';
+  }
+
+  function formatContrastStepLabel(value: number): string {
+    return `${value * 10}`;
+  }
+
+  const generationCardSummary = $derived(
+    `${baseColorLocal.toUpperCase()}, ${numColorsLocal} colors, ${numPalettesLocal} palettes`
+  );
+  const contrastCardSummary = $derived(
+    contrastModeLocal === 'manual'
+      ? `${formatContrastAlgorithm(contrastAlgorithmLocal)}, Manual, ${contrastColorsLocal.low} / ${contrastColorsLocal.high}`
+      : `${formatContrastAlgorithm(contrastAlgorithmLocal)}, Auto, ${formatContrastStepLabel(
+          lowStepLocal
+        )} / ${formatContrastStepLabel(highStepLocal)}`
+  );
+  const outputCardSummary = $derived(
+    `${formatDisplayColorSpace(displayColorSpaceLocal)}, ${formatThemePreference(
+      themePreferenceLocal
+    )}, ${formatSwatchLabels(swatchLabelsLocal)}`
+  );
+  const exportCardSummary = 'Share URL, JSON, CSS, SCSS';
 
   function captureHistorySnapshot(preferStoreState: boolean = false): HistorySnapshot {
     if (preferStoreState) {
@@ -317,6 +413,19 @@
         refreshHistoryView();
       }
     });
+  }
+
+  function handleResetToDefaults(): void {
+    const confirmed = window.confirm(
+      'Reset all settings to defaults? This will clear your current palette configuration.'
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    resetColorState(currentThemeLocal);
+    announce('Settings reset to defaults');
+    scheduleHistoryCommit('Reset to defaults');
   }
 
   function announceHistoryAction(prefix: 'Undid' | 'Redid', label: string, steps: number): void {
@@ -632,6 +741,18 @@
 
   // Load initial state from URL or localStorage
   onMount(() => {
+    const controlsLayoutMql = window.matchMedia(COMPACT_LAYOUT_MEDIA_QUERY);
+    const syncCompactLayout = (e: MediaQueryList | MediaQueryListEvent): void => {
+      isCompactLayout = e.matches;
+    };
+    syncCompactLayout(controlsLayoutMql);
+
+    const storedUiPreferences = loadUiPreferencesFromStorage();
+    if (storedUiPreferences) {
+      applyStoredUiPreferences(storedUiPreferences);
+    }
+    uiPreferencesLoaded = true;
+
     const urlState = getUrlState();
     const storedState = loadStateFromStorage();
 
@@ -661,6 +782,7 @@
       handleMediaChange(mql);
     }
     mql.addEventListener('change', handleMediaChange);
+    controlsLayoutMql.addEventListener('change', syncCompactLayout);
     document.addEventListener('input', handleDocumentInput, true);
     document.addEventListener('beforeinput', handleHistoryBeforeInput, true);
     document.addEventListener('change', handleDocumentChange, true);
@@ -674,6 +796,7 @@
     return () => {
       scheduler.destroy();
       mql.removeEventListener('change', handleMediaChange);
+      controlsLayoutMql.removeEventListener('change', syncCompactLayout);
       document.removeEventListener('input', handleDocumentInput, true);
       document.removeEventListener('beforeinput', handleHistoryBeforeInput, true);
       document.removeEventListener('change', handleDocumentChange, true);
@@ -873,6 +996,14 @@
     });
   });
 
+  $effect(() => {
+    if (!uiPreferencesLoaded) {
+      return;
+    }
+
+    saveUiPreferencesToStorage(getUiPreferencesSnapshot());
+  });
+
   function applyUrlState(urlState: UrlColorState) {
     const stateUpdate: Record<string, unknown> = {};
 
@@ -992,6 +1123,7 @@
     redoEntries={historyView.redoEntries}
     onUndo={handleUndo}
     onRedo={handleRedo}
+    onReset={handleResetToDefaults}
     onUndoJump={handleHistoryJump}
     onRedoJump={handleHistoryJump}
   />
@@ -999,56 +1131,159 @@
   <div class="layout-container">
     <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
       <Sidebar>
-        <Card title="Generation" subtitle="Core palette controls">
-          {#key `generation-${historyRestoreRevision}`}
-            <ColorControls
-              bind:baseColor={baseColorLocal}
-              bind:warmth={warmthLocal}
-              bind:chromaMultiplier={chromaMultiplierLocal}
-              gamutSpace={gamutSpaceLocal}
-              bind:numColors={numColorsLocal}
-              bind:numPalettes={numPalettesLocal}
-              bind:x1={x1Local}
-              bind:y1={y1Local}
-              bind:x2={x2Local}
-              bind:y2={y2Local}
-              onRangeDragStart={freezeLayout}
-              onRangeDragEnd={unfreezeLayout}
-              onBaseColorCommit={() => scheduleHistoryCommit('Base color changed')}
-              onWarmthCommit={() => scheduleHistoryCommit('Warmth changed')}
-              onSaturationCommit={() => scheduleHistoryCommit('Saturation changed')}
-              onNumColorsCommit={() => scheduleHistoryCommit('Number of colors changed')}
-              onNumPalettesCommit={() => scheduleHistoryCommit('Number of palettes changed')}
-              onBezierInteractionStart={beginBezierInteraction}
-              onBezierCommit={handleBezierCommit}
+        {#if isCompactLayout}
+          <Card
+            title="Generation"
+            subtitle="Core palette controls"
+            summary={generationCardSummary}
+            collapsible
+            open={compactSections.generation}
+            onToggle={(open) => updateCompactSection('generation', open)}
+            data-testid="generation-controls-card"
+          >
+            {#key `generation-${historyRestoreRevision}`}
+              <ColorControls
+                bind:baseColor={baseColorLocal}
+                bind:warmth={warmthLocal}
+                bind:chromaMultiplier={chromaMultiplierLocal}
+                gamutSpace={gamutSpaceLocal}
+                bind:numColors={numColorsLocal}
+                bind:numPalettes={numPalettesLocal}
+                bind:x1={x1Local}
+                bind:y1={y1Local}
+                bind:x2={x2Local}
+                bind:y2={y2Local}
+                advancedOpen={generationAdvancedOpen}
+                onAdvancedToggle={(open) => (generationAdvancedOpen = open)}
+                onRangeDragStart={freezeLayout}
+                onRangeDragEnd={unfreezeLayout}
+                onBaseColorCommit={() => scheduleHistoryCommit('Base color changed')}
+                onWarmthCommit={() => scheduleHistoryCommit('Warmth changed')}
+                onSaturationCommit={() => scheduleHistoryCommit('Saturation changed')}
+                onNumColorsCommit={() => scheduleHistoryCommit('Number of colors changed')}
+                onNumPalettesCommit={() => scheduleHistoryCommit('Number of palettes changed')}
+                onBezierInteractionStart={beginBezierInteraction}
+                onBezierCommit={handleBezierCommit}
+              />
+            {/key}
+          </Card>
+
+          <Card
+            title="Contrast"
+            subtitle="Contrast and indicators"
+            summary={contrastCardSummary}
+            collapsible
+            open={compactSections.contrast}
+            onToggle={(open) => updateCompactSection('contrast', open)}
+            data-testid="contrast-controls-card"
+          >
+            {#key `contrast-${historyRestoreRevision}`}
+              <ContrastControls onHistoryCommit={scheduleHistoryCommit} />
+            {/key}
+          </Card>
+
+          <Card
+            title="Output"
+            subtitle="Formats and labels"
+            summary={outputCardSummary}
+            collapsible
+            open={compactSections.output}
+            onToggle={(open) => updateCompactSection('output', open)}
+            data-testid="output-controls-card"
+          >
+            {#key `output-${historyRestoreRevision}`}
+              <DisplaySettings
+                advancedOpen={outputAdvancedOpen}
+                onAdvancedToggle={(open) => (outputAdvancedOpen = open)}
+                onHistoryCommit={scheduleHistoryCommit}
+              />
+            {/key}
+          </Card>
+
+          <Card
+            title="Export"
+            subtitle="Share or export"
+            summary={exportCardSummary}
+            collapsible
+            open={compactSections.export}
+            onToggle={(open) => updateCompactSection('export', open)}
+            data-testid="export-controls-card"
+          >
+            <ExportButtons
+              neutrals={neutralsHexLocal}
+              palettes={palettesHexLocal}
+              lowContrastColor={contrastColorsLocal.low}
+              displayNeutrals={neutralsSwatchDisplayLocal}
+              displayPalettes={palettesSwatchDisplayLocal}
+              customNeutralName={customNeutralNameLocal}
+              customPaletteNames={customPaletteNamesLocal}
             />
-          {/key}
-        </Card>
+          </Card>
+        {:else}
+          <Card
+            title="Generation"
+            subtitle="Core palette controls"
+            data-testid="generation-controls-card"
+          >
+            {#key `generation-${historyRestoreRevision}`}
+              <ColorControls
+                bind:baseColor={baseColorLocal}
+                bind:warmth={warmthLocal}
+                bind:chromaMultiplier={chromaMultiplierLocal}
+                gamutSpace={gamutSpaceLocal}
+                bind:numColors={numColorsLocal}
+                bind:numPalettes={numPalettesLocal}
+                bind:x1={x1Local}
+                bind:y1={y1Local}
+                bind:x2={x2Local}
+                bind:y2={y2Local}
+                advancedOpen={generationAdvancedOpen}
+                onAdvancedToggle={(open) => (generationAdvancedOpen = open)}
+                onRangeDragStart={freezeLayout}
+                onRangeDragEnd={unfreezeLayout}
+                onBaseColorCommit={() => scheduleHistoryCommit('Base color changed')}
+                onWarmthCommit={() => scheduleHistoryCommit('Warmth changed')}
+                onSaturationCommit={() => scheduleHistoryCommit('Saturation changed')}
+                onNumColorsCommit={() => scheduleHistoryCommit('Number of colors changed')}
+                onNumPalettesCommit={() => scheduleHistoryCommit('Number of palettes changed')}
+                onBezierInteractionStart={beginBezierInteraction}
+                onBezierCommit={handleBezierCommit}
+              />
+            {/key}
+          </Card>
 
-        <Card title="Contrast" subtitle="Contrast and indicators">
-          {#key `contrast-${historyRestoreRevision}`}
-            <ContrastControls onHistoryCommit={scheduleHistoryCommit} />
-          {/key}
-        </Card>
+          <Card
+            title="Contrast"
+            subtitle="Contrast and indicators"
+            data-testid="contrast-controls-card"
+          >
+            {#key `contrast-${historyRestoreRevision}`}
+              <ContrastControls onHistoryCommit={scheduleHistoryCommit} />
+            {/key}
+          </Card>
 
-        <Card title="Settings" subtitle="Display and labels">
-          {#key `settings-${historyRestoreRevision}`}
-            <DisplaySettings onHistoryCommit={scheduleHistoryCommit} />
-          {/key}
-        </Card>
+          <Card title="Output" subtitle="Formats and labels" data-testid="output-controls-card">
+            {#key `output-${historyRestoreRevision}`}
+              <DisplaySettings
+                advancedOpen={outputAdvancedOpen}
+                onAdvancedToggle={(open) => (outputAdvancedOpen = open)}
+                onHistoryCommit={scheduleHistoryCommit}
+              />
+            {/key}
+          </Card>
 
-        <Card title="Export" subtitle="Share or export">
-          <ExportButtons
-            neutrals={neutralsHexLocal}
-            palettes={palettesHexLocal}
-            lowContrastColor={contrastColorsLocal.low}
-            displayNeutrals={neutralsSwatchDisplayLocal}
-            displayPalettes={palettesSwatchDisplayLocal}
-            customNeutralName={customNeutralNameLocal}
-            customPaletteNames={customPaletteNamesLocal}
-            onResetCommit={() => scheduleHistoryCommit('Settings reset')}
-          />
-        </Card>
+          <Card title="Export" subtitle="Share or export" data-testid="export-controls-card">
+            <ExportButtons
+              neutrals={neutralsHexLocal}
+              palettes={palettesHexLocal}
+              lowContrastColor={contrastColorsLocal.low}
+              displayNeutrals={neutralsSwatchDisplayLocal}
+              displayPalettes={palettesSwatchDisplayLocal}
+              customNeutralName={customNeutralNameLocal}
+              customPaletteNames={customPaletteNamesLocal}
+            />
+          </Card>
+        {/if}
       </Sidebar>
 
       <main

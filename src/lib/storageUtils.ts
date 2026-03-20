@@ -16,8 +16,19 @@ import type {
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
 
 export type StoredColorState = SerializableColorState;
+export interface StoredUiPreferences {
+  compactSections: {
+    generation: boolean;
+    contrast: boolean;
+    output: boolean;
+    export: boolean;
+  };
+  generationAdvancedOpen: boolean;
+  outputAdvancedOpen: boolean;
+}
 
 const STORAGE_KEY = 'chroma11y-state';
+const UI_PREFERENCES_STORAGE_KEY = 'chroma11y-ui-preferences';
 
 const VALID_DISPLAY_SPACES: DisplayColorSpace[] = ['hex', 'rgb', 'oklch', 'hsl'];
 const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
@@ -198,5 +209,50 @@ export function clearStoredState(): void {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.warn('Failed to clear localStorage:', error);
+  }
+}
+
+function isValidStoredUiPreferences(value: unknown): value is StoredUiPreferences {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const candidate = value as Record<string, unknown>;
+  const compactSections = candidate.compactSections;
+
+  if (typeof compactSections !== 'object' || compactSections === null) return false;
+
+  const sectionState = compactSections as Record<string, unknown>;
+
+  return (
+    typeof sectionState.generation === 'boolean' &&
+    typeof sectionState.contrast === 'boolean' &&
+    typeof sectionState.output === 'boolean' &&
+    typeof sectionState.export === 'boolean' &&
+    typeof candidate.generationAdvancedOpen === 'boolean' &&
+    typeof candidate.outputAdvancedOpen === 'boolean'
+  );
+}
+
+export function saveUiPreferencesToStorage(preferences: StoredUiPreferences): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem(UI_PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+  } catch (error) {
+    console.warn('Failed to save UI preferences to localStorage:', error);
+  }
+}
+
+export function loadUiPreferencesFromStorage(): StoredUiPreferences | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const stored = localStorage.getItem(UI_PREFERENCES_STORAGE_KEY);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored) as unknown;
+    return isValidStoredUiPreferences(parsed) ? parsed : null;
+  } catch (error) {
+    console.warn('Failed to load UI preferences from localStorage:', error);
+    return null;
   }
 }

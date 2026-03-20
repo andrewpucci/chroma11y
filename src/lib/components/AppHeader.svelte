@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { HistoryMenuEntry } from '$lib/history';
   import Brand from './Brand.svelte';
+  import Button from './Button.svelte';
+  import Icon from './Icon.svelte';
   import HistoryActionGroup from './HistoryActionGroup.svelte';
 
   interface Props {
@@ -11,6 +13,7 @@
     redoEntries?: HistoryMenuEntry[];
     onUndo?: () => void;
     onRedo?: () => void;
+    onReset?: () => void;
     onUndoJump?: (position: number) => void;
     onRedoJump?: (position: number) => void;
   }
@@ -23,6 +26,7 @@
     redoEntries = [],
     onUndo = () => {},
     onRedo = () => {},
+    onReset = () => {},
     onUndoJump = () => {},
     onRedoJump = () => {}
   }: Props = $props();
@@ -32,6 +36,10 @@
   <div class="topbar-inner" bind:this={bindInner}>
     <Brand />
     <div class="history-controls" aria-label="History controls">
+      <Button onclick={onReset} variant="ghost" ariaLabel="Reset all settings to defaults">
+        <Icon name="reset" />
+        <span>Reset</span>
+      </Button>
       <HistoryActionGroup
         action="undo"
         disabled={!canUndo}
