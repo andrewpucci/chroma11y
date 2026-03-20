@@ -25,7 +25,7 @@ Svelte 5 components with co-located DOM tests. All components use scoped `<style
 - **`PaletteGrid.svelte`** — color palette grid with hue nudgers
 - **`ColorSwatch.svelte`** — individual color swatch (click-to-copy, drawer trigger)
 - **`ColorInfoDrawer.svelte`** — slide-out panel showing color details (hex, rgb, oklch, hsl, contrast, name)
-- **`DisplaySettings.svelte`** — settings card with color space, gamut, theme, swatch labels, and contrast algorithm options
+- **`DisplaySettings.svelte`** — output controls for color space, theme, swatch labels, gamut mapping, and OKLCH precision
 - **`SliderNumberField.svelte`** — reusable grouped range + number input control with shared accessibility semantics
 - **`DynamicSvg.svelte`** — dynamic SVG rendering with DOMPurify sanitization
 - **`AppHeader.svelte`** / **`Sidebar.svelte`** / **`Card.svelte`** / **`Brand.svelte`** — layout components

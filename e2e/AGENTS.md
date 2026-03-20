@@ -83,8 +83,8 @@ Current visual checkpoint coverage:
 - Bezier editor default + moved control point state
 - Focus indicator states (light, dark)
 - Mobile full-page states (light, dark)
-- Sidebar controls panel
-- Display settings tooltip open (OKLCH)
+- Sidebar controls panel (desktop expanded, compact default state)
+- Output settings tooltip open (OKLCH)
 - Contrast custom mode
 - Contrast algorithm APCA state
 - Drawer open state
