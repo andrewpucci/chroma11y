@@ -21,6 +21,15 @@ import {
 import { announce } from '$lib/announce';
 
 describe('DisplaySettings', () => {
+  function getAdvancedSummary(): HTMLElement {
+    const summary = document.querySelector('[data-testid="output-advanced-group"] summary');
+    if (!(summary instanceof HTMLElement)) {
+      throw new Error('Expected output advanced summary to exist');
+    }
+
+    return summary;
+  }
+
   beforeEach(() => {
     updateColorState({
       displayColorSpace: 'hex',
@@ -33,23 +42,28 @@ describe('DisplaySettings', () => {
     vi.mocked(announce).mockClear();
   });
 
-  it('renders base settings without OKLCH significant digits slider by default', () => {
+  it('renders basic settings and keeps advanced output controls collapsed by default', () => {
     render(DisplaySettings);
+    const advancedGroup = screen.getByTestId('output-advanced-group') as HTMLDetailsElement;
+    const advancedSummary = getAdvancedSummary();
 
     expect(screen.getByLabelText('Display color space format')).toBeInTheDocument();
-    expect(screen.getByLabelText('Gamut mapping target')).toBeInTheDocument();
     expect(screen.getByLabelText('Theme preference')).toBeInTheDocument();
     expect(screen.getByLabelText('Show step labels on swatches')).toBeInTheDocument();
     expect(screen.getByLabelText('Show value labels on swatches')).toBeInTheDocument();
-    expect(screen.getByLabelText('Show gamut warnings on mapped swatches')).toBeInTheDocument();
+    expect(advancedGroup.open).toBe(false);
+    expect(advancedSummary).toBeInTheDocument();
     expect(screen.queryByLabelText('OKLCH display significant digits')).not.toBeInTheDocument();
   });
 
-  it('shows OKLCH significant digits slider and number input only when OKLCH color space is selected', async () => {
+  it('shows advanced controls and OKLCH significant digits only after expanding advanced output', async () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
     expect(screen.queryByLabelText('OKLCH display significant digits')).not.toBeInTheDocument();
+
+    await user.click(getAdvancedSummary());
+    expect(screen.getByLabelText('Gamut mapping target')).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
 
@@ -65,20 +79,13 @@ describe('DisplaySettings', () => {
         'Controls how many significant digits OKLCH swatches use for rendering and labels.'
       )
     ).toBeInTheDocument();
-    const colorSpaceField = screen.getByLabelText('Display color space format').closest('.field');
-    const significantDigitsField = screen
-      .getByLabelText('OKLCH display significant digits')
-      .closest('.field');
-    const gamutField = screen.getByLabelText('Gamut mapping target').closest('.field');
-
-    expect(colorSpaceField?.nextElementSibling).toBe(significantDigitsField);
-    expect(significantDigitsField?.nextElementSibling).toBe(gamutField);
   });
 
   it('allows keyboard users to focus the significant digits info icon', async () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
+    await user.click(getAdvancedSummary());
     await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
     const infoButton = screen.getByRole('button', { name: 'Explain OKLCH significant digits' });
 
@@ -91,6 +98,7 @@ describe('DisplaySettings', () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
+    await user.click(getAdvancedSummary());
     await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
 
     expect(get(displayColorSpace)).toBe('oklch');
@@ -101,6 +109,7 @@ describe('DisplaySettings', () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
+    await user.click(getAdvancedSummary());
     await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
     await user.selectOptions(screen.getByLabelText('Gamut mapping target'), 'p3');
 
@@ -113,6 +122,7 @@ describe('DisplaySettings', () => {
     updateColorState({ displayColorSpace: 'oklch', gamutSpace: 'p3' });
     render(DisplaySettings);
 
+    await user.click(getAdvancedSummary());
     const gamutSelect = screen.getByLabelText('Gamut mapping target');
     expect(gamutSelect).not.toBeDisabled();
 
@@ -152,6 +162,7 @@ describe('DisplaySettings', () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
+    await user.click(getAdvancedSummary());
     await user.click(screen.getByLabelText('Show gamut warnings on mapped swatches'));
 
     expect(get(showSwatchGamutWarnings)).toBe(false);
@@ -162,6 +173,7 @@ describe('DisplaySettings', () => {
     const user = userEvent.setup();
     render(DisplaySettings);
 
+    await user.click(getAdvancedSummary());
     await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
     const input = screen.getByRole('spinbutton', {
       name: 'OKLCH significant digits value input'

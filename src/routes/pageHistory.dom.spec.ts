@@ -80,6 +80,25 @@ function getOklchDigitsInput(): HTMLInputElement | null {
   }) as HTMLInputElement | null;
 }
 
+function getOutputAdvancedGroup(): HTMLDetailsElement {
+  return screen.getByTestId('output-advanced-group') as HTMLDetailsElement;
+}
+
+async function openOutputAdvanced(): Promise<void> {
+  const advancedGroup = getOutputAdvancedGroup();
+  const summary = advancedGroup.querySelector('summary');
+  if (!(summary instanceof HTMLElement)) {
+    throw new Error('Expected output advanced summary to exist');
+  }
+
+  if (advancedGroup.open) {
+    return;
+  }
+
+  await fireEvent.click(summary);
+  await flushAppState();
+}
+
 function getUndoButton(): HTMLButtonElement {
   return screen.getByRole('button', { name: /undo last change/i }) as HTMLButtonElement;
 }
@@ -162,6 +181,7 @@ async function renderPage(
 ): Promise<void> {
   render(PageContent, { props: { scheduler } });
   await flushAppState();
+  await openOutputAdvanced();
   expect(getUndoButton()).toBeDisabled();
   expect(getRedoButton()).toBeDisabled();
 }
@@ -258,7 +278,6 @@ async function performAction(action: HistoryAction, user: ReturnType<typeof user
     case 'reset':
       await user.click(screen.getByRole('button', { name: /reset all settings to defaults/i }));
       await flushHistoryCommit();
-      expect(getThemeSelect()).toHaveValue('auto');
       return;
   }
 }
@@ -483,4 +502,23 @@ describe('page history integration', () => {
       { type: 'reset' }
     ]);
   }, 30000);
+
+  it('preserves theme preference when reset is triggered from the header', async () => {
+    const user = userEvent.setup();
+
+    await renderPage();
+    await performAction({ type: 'setThemePreference', value: 'dark' }, user);
+    await performAction({ type: 'setNumColors', value: 15 }, user);
+
+    await user.click(screen.getByRole('button', { name: /reset all settings to defaults/i }));
+    await flushHistoryCommit();
+
+    expect(getThemeSelect()).toHaveValue('dark');
+    expect(getNumColorsInput()).toHaveValue(11);
+
+    await user.click(getUndoButton());
+    await flushHistoryCommit();
+    expect(getThemeSelect()).toHaveValue('dark');
+    expect(getNumColorsInput()).toHaveValue(15);
+  });
 });

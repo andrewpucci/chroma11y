@@ -541,24 +541,26 @@ describe('stores', () => {
   });
 
   describe('resetColorState', () => {
-    it('resets to light theme preset', () => {
+    it('resets to light theme preset while preserving theme preference', () => {
       expect.assertions(3);
       updateColorState({ warmth: 100, chromaMultiplier: 5 });
+      setThemePreference('light');
 
       resetColorState('light');
 
       expect(get(warmth)).toBe(-7);
       expect(get(chromaMultiplier)).toBe(1);
-      expect(get(themePreference)).toBe('auto');
+      expect(get(themePreference)).toBe('light');
     });
 
-    it('resets to dark theme preset', () => {
+    it('resets to dark theme preset while preserving theme preference', () => {
       expect.assertions(3);
+      setThemePreference('dark');
       resetColorState('dark');
 
       expect(get(currentTheme)).toBe('dark');
       expect(get(chromaMultiplier)).toBe(0.83);
-      expect(get(themePreference)).toBe('auto');
+      expect(get(themePreference)).toBe('dark');
     });
 
     it('uses current theme when no theme specified', () => {
