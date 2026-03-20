@@ -25,17 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 200% text zoom support (WCAG 2.2 AA - 1.4.4)
   - Container query breakpoints
 - **Design token unit tests** (`src/lib/styles/tokens.spec.ts`) validating token definitions
-- **Settings card** in sidebar (between Contrast and Export) with configurable:
+- **Output card** in sidebar (between Contrast and Export) with configurable:
   - Display color space (Hex, RGB, OKLCH, HSL)
   - Gamut mapping target (sRGB, Display P3, Rec. 2020)
   - Theme preference (Light, Dark, Auto via `prefers-color-scheme`)
   - Swatch label display (Step + Value, Step Only, Value Only, None)
-  - Contrast algorithm (WCAG 2.2, APCA)
 - APCA contrast algorithm support with Lc (Lightness Contrast) values
 - Display P3 and Rec. 2020 color formatting (`colorToCssP3`, `colorToCssRec2020`)
 - Dynamic color display dispatcher (`colorToCssDisplay`)
 - URL persistence for all new settings (`ds`, `gs`, `tp`, `sl`, `ca` params)
 - CSS/SCSS exports now respect the selected display color space and gamut
+- Compact mobile sidebar cards with collapsible Generation, Contrast, Output, and Export sections
+- Header reset action that resets settings to theme-specific defaults while preserving theme preference
+- Local storage persistence for UI preferences under `chroma11y-ui-preferences`, including compact card state and advanced disclosure state
 
 ### Changed
 
@@ -43,14 +45,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Global styles** (`+layout.svelte`) updated with design token system
 - **Touch target minimum** updated from 44px to 24px (WCAG 2.2 AA compliance)
 - **Responsive layout** uses container queries where appropriate
-- Theme switching moved from header toggle to Settings card (supports Auto mode)
+- Theme switching moved from header toggle to the Output card (supports Auto mode)
 - Contrast badges show APCA Large/Body labels when APCA algorithm is selected
 - `ExportButtons` accepts display-formatted values for CSS/SCSS exports
 - `ColorSwatch` conditionally renders labels based on swatch label preference
+- Display/output controls now split basic options from advanced gamut-mapping and precision controls
+- Mobile-first layouts default compact control cards to collapsed so generated palettes stay visible sooner
 
 ### Removed
 
-- `ThemeToggle.svelte` component (replaced by theme preference in Settings card)
+- `ThemeToggle.svelte` component (replaced by theme preference in the Output card)
 - `toggleTheme()` store function (replaced by `setThemePreference()`)
 - Hardcoded CSS values throughout components (replaced with design tokens)
 

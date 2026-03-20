@@ -59,15 +59,16 @@ The visual suite captures these states:
 7. Focus indicator dark
 8. Mobile full page light (375x667)
 9. Mobile full page dark (375x667)
-10. Sidebar controls panel desktop
-11. Display settings tooltip open in OKLCH mode
-12. Contrast controls in custom mode
-13. Contrast algorithm switched to APCA
-14. Drawer open from neutral swatch
-15. Palette grid after hue nudger change
-16. Neutral palette after lightness nudger change
-17. Bezier editor after control point move
-18. Export controls panel
+10. Sidebar controls panel desktop expanded
+11. Sidebar controls panel compact default state
+12. Output settings tooltip open in OKLCH mode
+13. Contrast controls in custom mode
+14. Contrast algorithm switched to APCA
+15. Drawer open from neutral swatch
+16. Palette grid after hue nudger change
+17. Neutral palette after lightness nudger change
+18. Bezier editor after control point move
+19. Export controls panel
 
 ## Local Development
 

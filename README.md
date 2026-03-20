@@ -74,12 +74,12 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 - **Warmth control** - Add warmth to neutral palette
 - **Chroma multiplier** - Control overall saturation
 
-### Display Settings
+### Output Controls
 
 - **Color space display** - View colors as Hex, RGB, OKLCH, or HSL
-- **Gamut mapping** - Clamp to sRGB, Display P3, or Rec. 2020
+- **Theme preference** - Switch between Light, Dark, or Auto
 - **Swatch labels** - Show step numbers, color values, both, or none
-- **Contrast algorithm** - Switch between WCAG 2.1 ratios and APCA Lc values
+- **Advanced output controls** - Expand gamut mapping and OKLCH precision only when needed
 
 ### Export & Sharing
 
@@ -88,16 +88,17 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 - **SCSS variables** - Export as SCSS in selected color space
 - **Click-to-copy** - Copy individual colors instantly
 - **URL state sharing** - Share configurations via URL
-- **Local storage** - Save preferences automatically
+- **Local storage** - Save palette state and UI preferences automatically
 
 ### Experience
 
 - **Design token system** - Fluid typography and spacing that scales with viewport
 - **Theme switching** - Light, dark, and auto (follows system preference)
-- **Responsive** - Container queries and modern CSS for all screen sizes
+- **Responsive** - Container queries and compact collapsible mobile controls
 - **Fast performance** - All operations <200ms
 - **Intuitive controls** - Easy-to-use interface
 - **Direct slider value entry** - Use inline number inputs with native steppers beside each slider
+- **Quick reset** - Reset all settings from the header while preserving theme preference
 
 <p align="right"><a href="#chroma11y">↑ back to top</a></p>
 
@@ -150,12 +151,13 @@ npm run dev
 ### Basic Workflow
 
 1. **Choose a base color** - Click the color picker or enter a hex value
-2. **Adjust parameters** - Modify warmth, chroma, and bezier curve controls
+2. **Adjust parameters** - Modify warmth, chroma, and generation controls
 3. **Fine-tune colors** - Use lightness and hue nudgers for precise adjustments
 4. **Set contrast mode** - Choose auto or manual contrast for text colors
-5. **Export** - Download as JSON, CSS, or SCSS
+5. **Choose output options** - Set display format, theme preference, labels, and advanced output settings as needed
+6. **Export** - Download as JSON, CSS, or SCSS
 
-Tip: each slider includes an inline number input with native up/down arrows for precise adjustments.
+Tip: each slider includes an inline number input with native up/down arrows for precise adjustments. On smaller screens, the main control cards collapse by default and the advanced generation and output sections can be expanded independently.
 
 ### Control Explanations
 
@@ -163,7 +165,7 @@ Tip: each slider includes an inline number input with native up/down arrows for 
 
 The starting color for palette generation. All palettes derive from this color with hue variations.
 
-#### Warmth (-20 to +20)
+#### Warmth (-50 to +50)
 
 Adds warmth to the neutral palette. Negative values = cooler grays, positive = warmer grays.
 
@@ -294,7 +296,7 @@ src/
 - **Build Tool**: Vite + SvelteKit
 - **Color Library**: colorjs.io (OKLCH, contrast, color conversion)
 - **Easing**: bezier-easing (lightness curves)
-- **Testing**: Playwright (E2E), Vitest (unit)
+- **Testing**: Playwright (E2E), Vitest (unit and DOM)
 - **Styling**: Scoped Svelte CSS with design token system (fluid typography, container queries)
 
 ### Key Algorithms
@@ -341,14 +343,12 @@ const ratio = getContrast(backgroundColor, textColor);
 
 ### State Management
 
-Uses Svelte 5 stores for reactive state:
+Uses classic Svelte stores for shared reactive state:
 
-- `colorState` - Base color, warmth, chroma, bezier params
-- `lightnessNudgers` - Per-step lightness adjustments
-- `hueNudgers` - Per-palette hue adjustments
-- `contrastMode` - Auto/manual contrast mode
-- `contrastColors` - Low/high contrast colors
-- `theme` - Light/dark theme preference
+- `colorStore` - Central state for generation, contrast, output, export naming, and theme data
+- Derived stores expose focused slices such as `baseColor`, `warmth`, `contrastMode`, `displayColorSpace`, `themePreference`, `contrastAlgorithm`, and generated palette output
+- `PageContent.svelte` coordinates history, persistence, layout state, and color generation scheduling
+- URL state preserves shareable palette settings while local storage also keeps UI preferences such as compact card state and advanced-section disclosure state
 
 ### Performance
 
@@ -414,7 +414,7 @@ When upgrading dependencies, treat `package.json` and `package-lock.json` as a p
 
 - Algorithm validation, export formats, mobile responsiveness
 - Design token system (fluid typography, spacing, touch targets, motion preferences)
-- URL/localStorage persistence, UI interactions
+- URL/localStorage persistence, UI interactions, compact mobile controls
 - Bezier editor interaction, focus indicators
 - Visual regression tests (themes, palettes, mobile layouts, bezier editor)
 
