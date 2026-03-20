@@ -37,6 +37,32 @@ async function ensureGenerationControlsExpanded(page: Page): Promise<void> {
   await expect(baseColorInput).toBeVisible({ timeout: 5000 });
 }
 
+export async function ensureGenerationAdvancedExpanded(page: Page): Promise<void> {
+  await ensureGenerationControlsExpanded(page);
+
+  const p1xInput = page.getByLabel('P1 X coordinate');
+  if (await p1xInput.isVisible()) {
+    return;
+  }
+
+  const advancedSummary = page.getByTestId('generation-advanced-group').locator('summary');
+  await expect(advancedSummary).toBeVisible({ timeout: 5000 });
+  await advancedSummary.click();
+  await expect(p1xInput).toBeVisible({ timeout: 5000 });
+}
+
+export async function ensureOutputAdvancedExpanded(page: Page): Promise<void> {
+  const gamutSelect = page.locator('#gamut-space');
+  if (await gamutSelect.isVisible()) {
+    return;
+  }
+
+  const advancedSummary = page.getByTestId('output-advanced-group').locator('summary');
+  await expect(advancedSummary).toBeVisible({ timeout: 5000 });
+  await advancedSummary.click();
+  await expect(gamutSelect).toBeVisible({ timeout: 5000 });
+}
+
 /**
  * Wait for color generation to complete
  */

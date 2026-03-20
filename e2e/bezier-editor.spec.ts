@@ -4,12 +4,13 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { waitForAppReady } from './test-utils';
+import { ensureGenerationAdvancedExpanded, waitForAppReady } from './test-utils';
 
 test.describe('Bezier Editor', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);
+    await ensureGenerationAdvancedExpanded(page);
   });
 
   test.describe('Keyboard Navigation', () => {
