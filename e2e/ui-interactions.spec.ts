@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { waitForAppReady } from './test-utils';
+import { ensureOutputAdvancedExpanded, waitForAppReady } from './test-utils';
 
 test.describe('UI Interactions', () => {
   test.beforeEach(async ({ page }) => {
@@ -44,6 +44,7 @@ test.describe('UI Interactions', () => {
         select.dispatchEvent(new Event('change', { bubbles: true }));
       });
       await expect(displaySpace).toHaveValue('oklch');
+      await ensureOutputAdvancedExpanded(page);
 
       const significantDigitsSlider = page.locator('#oklch-significant-digits');
       await expect(significantDigitsSlider).toBeVisible({ timeout: 30000 });
@@ -131,6 +132,7 @@ test.describe('UI Interactions', () => {
       await expect(page.locator('#numPalettes')).toHaveValue('7');
 
       await page.locator('#display-color-space').selectOption('oklch');
+      await ensureOutputAdvancedExpanded(page);
       await page
         .getByRole('spinbutton', { name: 'OKLCH significant digits value input' })
         .fill('6');

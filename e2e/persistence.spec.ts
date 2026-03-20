@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { waitForAppReady } from './test-utils';
+import { ensureOutputAdvancedExpanded, waitForAppReady } from './test-utils';
 
 async function renameNeutralPalette(
   page: import('@playwright/test').Page,
@@ -113,6 +113,7 @@ test.describe('Local Storage Persistence', () => {
   });
 
   test('remembers swatch gamut warning visibility across sessions', async ({ page }) => {
+    await ensureOutputAdvancedExpanded(page);
     await page.locator('#show-swatch-gamut-warnings').uncheck();
 
     await page.waitForFunction(
@@ -248,6 +249,7 @@ test.describe('URL State Persistence', () => {
   });
 
   test('persists swatch gamut warning visibility in URL', async ({ page }) => {
+    await ensureOutputAdvancedExpanded(page);
     await page.locator('#show-swatch-gamut-warnings').uncheck();
 
     await page.waitForFunction(() => window.location.href.includes('gw=0'), { timeout: 5000 });
@@ -262,6 +264,7 @@ test.describe('URL State Persistence', () => {
 
   test('hex display locks gamut to sRGB', async ({ page }) => {
     await page.locator('#display-color-space').selectOption('oklch');
+    await ensureOutputAdvancedExpanded(page);
     await page.locator('#gamut-space').selectOption('p3');
     await expect(page.locator('#gamut-space')).toHaveValue('p3');
 
