@@ -4,6 +4,14 @@ Global instructions for agents working in this codebase. Directory-specific guid
 
 Chroma11y is an accessible color palette generator powered by OKLCH, with WCAG 2.2 and APCA contrast checking, configurable display color spaces, and multiple export formats. Single-page app (SPA) built with Svelte 5 + SvelteKit, deployed as a static site.
 
+## Design context reference
+
+Persistent UI and UX guidance lives in `.impeccable.md` at the project root. Read the `## Design Context`
+section before making meaningful visual, interaction, or product-design decisions. Expect that file to
+capture durable guidance about users, brand personality, aesthetic direction, and design principles.
+Update `.impeccable.md` when the project's long-term design direction changes instead of duplicating the
+same guidance elsewhere.
+
 ## Build commands
 
 | Command                     | Description                                   |
