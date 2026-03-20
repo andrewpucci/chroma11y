@@ -180,6 +180,38 @@ test.describe('Undo and Redo History', () => {
     await expect(warmthInput).toHaveValue('18');
   });
 
+  test('does not create history entries when collapsing or expanding control cards', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await waitForAppReady(page);
+
+    const generationCardSummary = page
+      .getByTestId('generation-controls-card')
+      .locator(':scope > summary.card-summary');
+    const warmthInput = page.getByRole('spinbutton', { name: 'Warmth value input' });
+    const undoButton = page.getByRole('button', { name: 'Undo last change' });
+    const generationAdvancedSummary = page
+      .getByTestId('generation-advanced-group')
+      .locator('summary');
+
+    await generationCardSummary.click();
+    await warmthInput.fill('12');
+    await warmthInput.blur();
+    await expect(warmthInput).toHaveValue('12');
+    await expect(undoButton).toBeEnabled();
+
+    await generationCardSummary.click();
+    await generationCardSummary.click();
+    await generationAdvancedSummary.click();
+    await generationAdvancedSummary.click();
+
+    await page.keyboard.press(undoShortcut);
+    await expect(warmthInput).toHaveValue('-7');
+    await expect(undoButton).toBeDisabled();
+  });
+
   test('keeps number input shortcut undo in sync after native stepper clicks', async ({ page }) => {
     const numColorsInput = page.getByRole('spinbutton', {
       name: 'Number of colors value input'

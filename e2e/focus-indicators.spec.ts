@@ -20,7 +20,7 @@ test.describe('Focus Indicators', () => {
       const hexInput = page.locator('#baseColorHex');
       await hexInput.focus();
 
-      // Verify strict tab order from hex input through the algorithm selector.
+      // Verify strict tab order from hex input through the collapsed Advanced disclosure.
       const expectedTabOrder = [
         { selector: '#warmth' },
         { selector: '[aria-label="Warmth value input"]' },
@@ -30,12 +30,7 @@ test.describe('Focus Indicators', () => {
         { selector: '[aria-label="Number of colors value input"]' },
         { selector: '#numPalettes' },
         { selector: '[aria-label="Number of palettes value input"]' },
-        { selector: '.bezier-editor [role="slider"]', index: 0 },
-        { selector: '.bezier-editor [role="slider"]', index: 1 },
-        { selector: '#bezier-p1-x' },
-        { selector: '#bezier-p1-y' },
-        { selector: '#bezier-p2-x' },
-        { selector: '#bezier-p2-y' },
+        { selector: '[data-testid="generation-advanced-group"] summary' },
         { selector: '#contrast-algorithm' }
       ];
 
@@ -121,6 +116,72 @@ test.describe('Focus Indicators', () => {
       expect(outline.outlineWidth).toBe(3);
       // Dark mode uses black inner ring
       expect(outline.outlineColor).toMatch(/rgb\(0,\s*0,\s*0\)/);
+    });
+
+    test('compact disclosure summaries keep their focus indicator fully visible', async ({
+      page
+    }) => {
+      await page.setViewportSize({ width: 375, height: 667 });
+      await page.goto('/');
+      await page.evaluate(() => localStorage.clear());
+      await page.reload();
+      await waitForAppReady(page);
+
+      const generationCard = page.getByTestId('generation-controls-card');
+      const generationSummary = generationCard.locator(':scope > summary.card-summary');
+
+      let generationSummaryFocused = false;
+      for (let i = 0; i < 20; i += 1) {
+        await page.keyboard.press('Tab');
+        if (await generationSummary.evaluate((el) => el === document.activeElement)) {
+          generationSummaryFocused = true;
+          break;
+        }
+      }
+
+      expect(generationSummaryFocused).toBe(true);
+
+      const generationFocusRing = await generationCard.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return {
+          outlineStyle: style.outlineStyle,
+          outlineWidth: parseFloat(style.outlineWidth),
+          boxShadow: style.boxShadow
+        };
+      });
+
+      expect(generationFocusRing.outlineStyle).toBe('solid');
+      expect(generationFocusRing.outlineWidth).toBeGreaterThanOrEqual(2);
+      expect(generationFocusRing.boxShadow).not.toBe('none');
+
+      await page.keyboard.press('Enter');
+      const advancedGroup = page.getByTestId('generation-advanced-group');
+      const advancedSummary = advancedGroup.locator('summary');
+
+      await page.getByRole('spinbutton', { name: 'Number of palettes value input' }).focus();
+      let advancedSummaryFocused = false;
+      for (let i = 0; i < 6; i += 1) {
+        await page.keyboard.press('Tab');
+        if (await advancedSummary.evaluate((el) => el === document.activeElement)) {
+          advancedSummaryFocused = true;
+          break;
+        }
+      }
+
+      expect(advancedSummaryFocused).toBe(true);
+
+      const advancedFocusRing = await advancedGroup.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return {
+          outlineStyle: style.outlineStyle,
+          outlineWidth: parseFloat(style.outlineWidth),
+          boxShadow: style.boxShadow
+        };
+      });
+
+      expect(advancedFocusRing.outlineStyle).toBe('solid');
+      expect(advancedFocusRing.outlineWidth).toBeGreaterThanOrEqual(2);
+      expect(advancedFocusRing.boxShadow).not.toBe('none');
     });
   });
 });

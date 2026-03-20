@@ -3,10 +3,21 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
 
 const MOBILE_VIEWPORT = { width: 375, height: 667 };
+const DESKTOP_VIEWPORT = { width: 1280, height: 800 };
 
 async function openMobileApp(page: Page): Promise<void> {
-  await page.setViewportSize(MOBILE_VIEWPORT);
+  await openApp(page, MOBILE_VIEWPORT);
+}
+
+async function openDesktopApp(page: Page): Promise<void> {
+  await openApp(page, DESKTOP_VIEWPORT);
+}
+
+async function openApp(page: Page, viewport: { width: number; height: number }): Promise<void> {
+  await page.setViewportSize(viewport);
   await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
   await waitForAppReady(page);
 }
 
@@ -47,8 +58,78 @@ test.describe('Mobile Responsiveness', () => {
     expect(sidebarBox!.width).toBeLessThanOrEqual(availableWidth + 2);
   });
 
+  test('defaults all compact control panels to collapsed so palettes are visible sooner', async ({
+    page
+  }) => {
+    await openMobileApp(page);
+
+    const generationCard = page.getByTestId('generation-controls-card');
+    const contrastCard = page.getByTestId('contrast-controls-card');
+    const outputCard = page.getByTestId('output-controls-card');
+    const exportCard = page.getByTestId('export-controls-card');
+
+    await expect(generationCard).toHaveJSProperty('open', false);
+    await expect(contrastCard).toHaveJSProperty('open', false);
+    await expect(outputCard).toHaveJSProperty('open', false);
+    await expect(exportCard).toHaveJSProperty('open', false);
+
+    await expect(
+      page.getByTestId('neutral-palette').getByRole('heading', {
+        level: 2,
+        name: 'Neutral Palette',
+        exact: true
+      })
+    ).toBeVisible();
+  });
+
+  test('keeps desktop sections always visible and non-collapsible', async ({ page }) => {
+    await openDesktopApp(page);
+
+    const generationCard = page.getByTestId('generation-controls-card');
+    const contrastCard = page.getByTestId('contrast-controls-card');
+    const outputCard = page.getByTestId('output-controls-card');
+    const exportCard = page.getByTestId('export-controls-card');
+
+    await expect(generationCard.locator(':scope > summary.card-summary')).toHaveCount(0);
+    await expect(contrastCard.locator(':scope > summary.card-summary')).toHaveCount(0);
+    await expect(outputCard.locator(':scope > summary.card-summary')).toHaveCount(0);
+    await expect(exportCard.locator(':scope > summary.card-summary')).toHaveCount(0);
+    await expect(page.locator('#baseColorHex')).toBeVisible();
+  });
+
+  test('keeps controls usable after expanding and collapsing cards on mobile', async ({ page }) => {
+    await openMobileApp(page);
+
+    const generationCard = page.getByTestId('generation-controls-card');
+    const generationSummary = generationCard.locator(':scope > summary.card-summary');
+
+    await generationSummary.click();
+    await expect(generationCard).toHaveJSProperty('open', true);
+    await generationSummary.click();
+    await expect(generationCard).toHaveJSProperty('open', false);
+    await generationSummary.click();
+    await expect(generationCard).toHaveJSProperty('open', true);
+
+    const baseColorInput = page.getByRole('textbox', { name: 'Base color hex value' });
+    await expect(baseColorInput).toBeVisible();
+    await baseColorInput.fill('#33aa66');
+    await baseColorInput.blur();
+    await expect(baseColorInput).toHaveValue('#33aa66');
+
+    await generationSummary.focus();
+    await page.keyboard.press('Enter');
+    await expect(generationCard).toHaveJSProperty('open', false);
+  });
+
   test('keeps primary mobile touch targets comfortably sized', async ({ page }) => {
     await openMobileApp(page);
+
+    await page
+      .getByTestId('generation-controls-card')
+      .locator(':scope > summary.card-summary')
+      .click();
+    await page.getByTestId('generation-advanced-group').locator('summary').click();
+    await page.getByTestId('export-controls-card').locator(':scope > summary.card-summary').click();
 
     await expectMinimumTouchTarget(page.locator('input[type="color"]'), 24);
     await expectMinimumTouchTarget(

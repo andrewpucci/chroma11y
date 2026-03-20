@@ -155,25 +155,48 @@ test.describe('Visual Regression', () => {
     });
   });
 
-  test('sidebar controls panel desktop', async ({ page }, testInfo) => {
+  test('sidebar controls panel desktop expanded', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await waitForAppReady(page);
 
     const sidebar = page.getByTestId('app-sidebar');
     await expect(sidebar).toBeVisible();
+    await expect(
+      page.getByTestId('generation-controls-card').locator(':scope > summary.card-summary')
+    ).toHaveCount(0);
 
     await maybeCaptureArgosVisual({
       page,
       testInfo,
-      name: 'sidebar-controls-desktop',
+      name: 'sidebar-controls-desktop-expanded',
       element: sidebar
     });
   });
 
-  test('display settings tooltip open in oklch mode', async ({ page }, testInfo) => {
+  test('sidebar controls panel compact default state', async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await waitForAppReady(page);
+
+    const sidebar = page.getByTestId('app-sidebar');
+    await expect(sidebar).toBeVisible();
+    await expect(page.getByTestId('generation-controls-card')).toHaveJSProperty('open', false);
+
+    await maybeCaptureArgosVisual({
+      page,
+      testInfo,
+      name: 'sidebar-controls-compact-default',
+      element: sidebar
+    });
+  });
+
+  test('output settings tooltip open in oklch mode', async ({ page }, testInfo) => {
     const displaySpace = page.locator('#display-color-space');
     await displaySpace.selectOption('oklch');
     await expect(displaySpace).toHaveValue('oklch');
 
+    await page.getByTestId('output-advanced-group').locator('summary').click();
     const infoButton = page.getByRole('button', { name: 'Explain OKLCH significant digits' });
     const tooltip = page.locator('#oklch-significant-digits-help');
     await infoButton.hover();
@@ -185,7 +208,7 @@ test.describe('Visual Regression', () => {
     await maybeCaptureArgosVisual({
       page,
       testInfo,
-      name: 'settings-tooltip-open',
+      name: 'output-tooltip-open',
       element: settingsPanel
     });
   });

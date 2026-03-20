@@ -6,9 +6,35 @@ import { Page, expect } from '@playwright/test';
 export async function waitForAppReady(page: Page): Promise<void> {
   // Wait for critical UI elements to be visible
   await expect(page.locator('#main-heading')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('#baseColor')).toBeVisible({ timeout: 5000 });
+  await expect
+    .poll(
+      async () =>
+        (await page.locator('#baseColor').isVisible()) ||
+        (await page
+          .getByTestId('generation-controls-card')
+          .locator(':scope > summary.card-summary')
+          .isVisible()),
+      { timeout: 5000 }
+    )
+    .toBe(true);
   // Wait for color generation to complete
   await expect(page.locator('.color-swatch').first()).toBeVisible({ timeout: 10000 });
+}
+
+async function ensureGenerationControlsExpanded(page: Page): Promise<void> {
+  const baseColorInput = page.locator('#baseColor');
+  if (await baseColorInput.isVisible()) {
+    return;
+  }
+
+  const generationSummary = page
+    .getByTestId('generation-controls-card')
+    .locator(':scope > summary.card-summary');
+  if (await generationSummary.isVisible()) {
+    await generationSummary.click();
+  }
+
+  await expect(baseColorInput).toBeVisible({ timeout: 5000 });
 }
 
 /**
@@ -29,6 +55,7 @@ export async function waitForColorGeneration(page: Page): Promise<void> {
  * Get the current base color value
  */
 export async function getBaseColor(page: Page): Promise<string> {
+  await ensureGenerationControlsExpanded(page);
   return await page.locator('#baseColor').inputValue();
 }
 
@@ -36,6 +63,7 @@ export async function getBaseColor(page: Page): Promise<string> {
  * Set the base color and wait for generation
  */
 export async function setBaseColor(page: Page, color: string): Promise<void> {
+  await ensureGenerationControlsExpanded(page);
   await page.locator('#baseColor').fill(color);
   await waitForColorGeneration(page);
 }
