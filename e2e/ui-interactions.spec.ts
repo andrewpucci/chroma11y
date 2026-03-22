@@ -139,4 +139,42 @@ test.describe('UI Interactions', () => {
       await expect(page.locator('#oklch-significant-digits')).toHaveValue('6');
     });
   });
+
+  test.describe('Constraints Panel', () => {
+    test('keeps closed constraints content out of the tab order until expanded and supports filter and enabled toggles', async ({
+      page
+    }) => {
+      await page.setViewportSize({ width: 375, height: 667 });
+      await page.goto('/');
+      await page.evaluate(() => localStorage.clear());
+      await page.goto(
+        '/?ct=W3siaWQiOiJjb25zdHJhaW50LTEiLCJ0eXBlIjoidGFyZ2V0LWNvbG9yIiwiZW5hYmxlZCI6dHJ1ZSwidGFyZ2V0SGV4IjoiIzVFRjc4NCIsIm11c3RQYXNzIjpmYWxzZSwibWV0cmljIjoib2sifSx7ImlkIjoiY29uc3RyYWludC0yIiwidHlwZSI6ImNvbnRyYXN0LXJ1bGUiLCJlbmFibGVkIjp0cnVlLCJzY29wZSI6ImFsbC1wYWxldHRlcyIsInN0ZXBJbmRleCI6NywicmVmZXJlbmNlIjoibG93IiwiYWxnb3JpdGhtIjoiV0NBRyIsImxldmVsIjoid2NhZ0FBIiwiZml0VG9UaHJlc2hvbGQiOnRydWV9XQ'
+      );
+      await waitForAppReady(page);
+
+      const constraintsCard = page.getByTestId('constraints-controls-card');
+      const constraintsSummary = constraintsCard.locator(':scope > summary.card-summary');
+
+      await constraintsSummary.focus();
+      await expect(constraintsSummary).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(
+        page.getByTestId('contrast-controls-card').locator(':scope > summary.card-summary')
+      ).toBeFocused();
+      await expect(page.locator('.constraint-editor')).toHaveCount(0);
+
+      await constraintsSummary.focus();
+      await page.keyboard.press('Enter');
+      await expect(constraintsCard).toHaveJSProperty('open', true);
+
+      await page.getByRole('button', { name: 'Edit' }).first().click();
+      await expect(page.getByLabel('Target color enabled')).toBeChecked();
+      await page.getByLabel('Target color enabled').click();
+      await expect(page.getByLabel('Target color enabled')).not.toBeChecked();
+      await expect(constraintsSummary).toContainText('1 disabled');
+
+      await page.getByLabel('Constraint status filter').selectOption('disabled');
+      await expect(page.getByText('1 of 2 constraints shown')).toBeVisible();
+    });
+  });
 });

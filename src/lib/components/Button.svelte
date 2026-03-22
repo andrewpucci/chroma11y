@@ -5,8 +5,13 @@
     onclick?: () => void;
     disabled?: boolean;
     variant?: 'primary' | 'secondary' | 'ghost';
+    compact?: boolean;
     type?: 'button' | 'submit' | 'reset';
+    class?: string;
+    id?: string;
     ariaLabel?: string;
+    ariaControls?: string;
+    ariaExpanded?: boolean;
     children: Snippet;
   }
 
@@ -14,15 +19,30 @@
     onclick,
     disabled = false,
     variant = 'secondary',
+    compact = false,
     type = 'button',
+    class: className = '',
+    id,
     ariaLabel,
+    ariaControls,
+    ariaExpanded,
     children
   }: Props = $props();
 
   const variantClass = $derived(`btn-${variant}`);
+  const compactClass = $derived(compact ? 'btn-compact' : '');
 </script>
 
-<button class="btn {variantClass}" {onclick} {disabled} {type} aria-label={ariaLabel || undefined}>
+<button
+  class="btn {variantClass} {compactClass} {className}"
+  {id}
+  {onclick}
+  {disabled}
+  {type}
+  aria-label={ariaLabel || undefined}
+  aria-controls={ariaControls || undefined}
+  aria-expanded={ariaExpanded}
+>
   {@render children()}
 </button>
 
@@ -84,5 +104,10 @@
   .btn-ghost:hover:not(:disabled) {
     color: var(--text-primary);
     border-color: color-mix(in oklab, var(--border) 45%, var(--accent));
+  }
+
+  .btn-compact {
+    min-width: var(--constraint-summary-action-min);
+    padding-inline: var(--space-sm);
   }
 </style>

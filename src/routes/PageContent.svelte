@@ -61,8 +61,14 @@
   import { generatePalettes } from '$lib/colorUtils';
   import type { ColorGenParams } from '$lib/colorUtils';
   import { clampChromaMultiplier } from '$lib/chromaMultiplier';
+  import { evaluateConstraints } from '$lib/constraintUtils';
   import { createHistoryManager, type HistorySnapshot, type HistoryViewModel } from '$lib/history';
   import { createPageScheduler, type PageScheduler } from '$lib/pageScheduler';
+  import {
+    DEFAULT_NEUTRAL_PALETTE_NAME,
+    resolveGeneratedPaletteNames,
+    resolveNeutralPaletteName
+  } from '$lib/paletteNameUtils';
   import ColorControls from '$lib/components/ColorControls.svelte';
   import ExportButtons from '$lib/components/ExportButtons.svelte';
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
@@ -130,6 +136,31 @@
   let constraintsLocal = $derived($constraints);
   let solverAdjustmentSnapshotLocal = $derived($solverAdjustmentSnapshot);
   let constraintSolverSummaryLocal = $derived($constraintSolverSummary);
+  let constraintNeutralLabel = $derived(
+    neutralsHexLocal.length > 0
+      ? resolveNeutralPaletteName(neutralsHexLocal, contrastColorsLocal.low, customNeutralNameLocal)
+      : DEFAULT_NEUTRAL_PALETTE_NAME
+  );
+  let constraintPaletteLabels = $derived(
+    palettesHexLocal.length > 0
+      ? resolveGeneratedPaletteNames(
+          palettesHexLocal,
+          contrastColorsLocal.low,
+          customPaletteNamesLocal
+        )
+      : []
+  );
+  let constraintEvaluation = $derived(
+    evaluateConstraints({
+      constraints: constraintsLocal,
+      neutrals: neutralsLocal,
+      palettes: palettesLocal,
+      neutralLabel: constraintNeutralLabel,
+      paletteLabels: constraintPaletteLabels,
+      lowContrastColor: contrastColorsLocal.low,
+      highContrastColor: contrastColorsLocal.high
+    })
+  );
 
   // Bindable state for controls
   let baseColorLocal = $state('#1862E6');
@@ -256,9 +287,28 @@
         )} / ${formatContrastStepLabel(highStepLocal)}`
   );
   const constraintsCardSummary = $derived(
-    constraintsLocal.length === 0
-      ? 'No constraints'
-      : `${constraintsLocal.length} active constraints`
+    (() => {
+      if (constraintsLocal.length === 0) {
+        return 'No constraints';
+      }
+
+      const disabledCount = constraintsLocal.length - constraintEvaluation.results.length;
+      const parts = [
+        `${constraintEvaluation.summary.failCount} fail`,
+        `${constraintEvaluation.summary.warningCount} warning`,
+        `${constraintEvaluation.summary.passCount} pass`
+      ];
+
+      if ((constraintEvaluation.summary.requiredUnsatisfiedCount ?? 0) > 0) {
+        parts.push(`${constraintEvaluation.summary.requiredUnsatisfiedCount} required unsatisfied`);
+      }
+
+      if (disabledCount > 0) {
+        parts.push(`${disabledCount} disabled`);
+      }
+
+      return parts.join(' · ');
+    })()
   );
   const outputCardSummary = $derived(
     `${formatDisplayColorSpace(displayColorSpaceLocal)}, ${formatThemePreference(
@@ -1246,9 +1296,11 @@
             onToggle={(open) => updateCompactSection('constraints', open)}
             data-testid="constraints-controls-card"
           >
-            {#key `constraints-${historyRestoreRevision}`}
-              <ConstraintsControls onHistoryCommit={scheduleHistoryCommit} />
-            {/key}
+            {#if compactSections.constraints}
+              {#key `constraints-${historyRestoreRevision}`}
+                <ConstraintsControls onHistoryCommit={scheduleHistoryCommit} />
+              {/key}
+            {/if}
           </Card>
 
           <Card

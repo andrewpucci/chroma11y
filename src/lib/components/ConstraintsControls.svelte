@@ -50,24 +50,50 @@
     getThresholdOptionsForAlgorithm
   } from '$lib/constraintUtils';
   import { getConstraintSolveRequestHash } from '$lib/constraintSolve';
-  import { solveConstraintsInWorker } from '$lib/constraintSolveClient';
+  import { startSolveConstraintsInWorker } from '$lib/constraintSolveClient';
   import {
     DEFAULT_NEUTRAL_PALETTE_NAME,
     resolveGeneratedPaletteNames,
     resolveNeutralPaletteName
   } from '$lib/paletteNameUtils';
+  import Badge from './Badge.svelte';
+  import Button from './Button.svelte';
+  import CheckboxRow from './CheckboxRow.svelte';
   import type {
     ColorDifferenceMetric,
-    ContrastAlgorithm,
+    Constraint,
+    ConstraintResult,
     ConstraintSolveRequest,
+    ConstraintStatus,
     ConstraintThresholdKey,
-    Constraint
+    ContrastAlgorithm,
+    ContrastRuleConstraintResult,
+    TargetColorConstraintResult
   } from '$lib/types';
   import { MAX_MUST_PASS_TARGETS } from '$lib/types';
 
   interface Props {
     onHistoryCommit?: (label: string) => void;
   }
+
+  interface ConstraintRowViewModel {
+    id: string;
+    type: Constraint['type'];
+    enabled: boolean;
+    required: boolean;
+    status: ConstraintStatus | 'disabled';
+    title: string;
+    descriptor: string;
+    summary: string;
+    swatches: {
+      target?: string;
+      closest?: string;
+    };
+    result: ConstraintResult | null;
+  }
+
+  type StatusFilter = 'all' | 'failing' | 'warning' | 'passing' | 'required' | 'disabled';
+  type TypeFilter = 'all' | Constraint['type'];
 
   let { onHistoryCommit }: Props = $props();
 
@@ -103,6 +129,11 @@
   let customNeutralNameLocal = $derived($customNeutralName);
   let customPaletteNamesLocal = $derived($customPaletteNames);
 
+  let expandedConstraintId = $state<string | null>(null);
+  let statusFilter = $state<StatusFilter>('all');
+  let typeFilter = $state<TypeFilter>('all');
+  let activeSolveCancel = $state<(() => void) | null>(null);
+
   let neutralLabel = $derived(
     neutralsHexLocal.length > 0
       ? resolveNeutralPaletteName(neutralsHexLocal, contrastColorsLocal.low, customNeutralNameLocal)
@@ -135,27 +166,203 @@
     })
   );
 
-  function getResult(constraintId: string) {
-    return evaluation.results.find((result) => result.id === constraintId) ?? null;
+  let resultById = $derived(
+    new Map(
+      evaluation.results.map((result) => [result.id, result] satisfies [string, ConstraintResult])
+    )
+  );
+
+  let enabledConstraintCount = $derived(
+    constraintsLocal.reduce((count, constraint) => count + (constraint.enabled ? 1 : 0), 0)
+  );
+  let disabledConstraintCount = $derived(constraintsLocal.length - enabledConstraintCount);
+
+  let rowViewModels = $derived(
+    constraintsLocal.map((constraint) =>
+      buildRowViewModel(constraint, resultById.get(constraint.id) ?? null)
+    )
+  );
+  let filteredRows = $derived(
+    rowViewModels.filter(
+      (row) => matchesStatusFilter(row, statusFilter) && matchesTypeFilter(row, typeFilter)
+    )
+  );
+  let isSolveLocked = $derived(constraintSolveRunStateLocal.status !== 'idle');
+
+  $effect(() => {
+    if (!expandedConstraintId) {
+      return;
+    }
+
+    if (!constraintsLocal.some((constraint) => constraint.id === expandedConstraintId)) {
+      expandedConstraintId = null;
+    }
+  });
+
+  function buildRowViewModel(
+    constraint: Constraint,
+    result: ConstraintResult | null
+  ): ConstraintRowViewModel {
+    if (!constraint.enabled) {
+      return {
+        id: constraint.id,
+        type: constraint.type,
+        enabled: false,
+        required: constraint.type === 'target-color' && constraint.mustPass === true,
+        status: 'disabled',
+        title: constraint.type === 'target-color' ? 'Target color' : 'Contrast rule',
+        descriptor:
+          constraint.type === 'target-color'
+            ? `${constraint.targetHex.toUpperCase()} · ${getTargetColorMetricLabel(constraint.metric ?? 'ok')}`
+            : formatRuleDescriptor(constraint),
+        summary: 'Disabled. Excluded from solve and evaluation.',
+        swatches:
+          constraint.type === 'target-color'
+            ? {
+                target: constraint.targetHex
+              }
+            : {},
+        result: null
+      };
+    }
+
+    if (constraint.type === 'target-color') {
+      const targetResult = result?.type === 'target-color' ? result : null;
+      const status = targetResult?.status ?? 'fail';
+
+      return {
+        id: constraint.id,
+        type: constraint.type,
+        enabled: true,
+        required: constraint.mustPass === true,
+        status,
+        title: 'Target color',
+        descriptor: `${constraint.targetHex.toUpperCase()} · ${getTargetColorMetricLabel(constraint.metric ?? 'ok')}`,
+        summary: formatTargetSummary(targetResult),
+        swatches: {
+          target: constraint.targetHex,
+          closest: targetResult?.closestHex ?? undefined
+        },
+        result: targetResult
+      };
+    }
+
+    const ruleResult = result?.type === 'contrast-rule' ? result : null;
+
+    return {
+      id: constraint.id,
+      type: constraint.type,
+      enabled: true,
+      required: false,
+      status: ruleResult?.passes ? 'pass' : 'fail',
+      title: 'Contrast rule',
+      descriptor: formatRuleDescriptor(constraint),
+      summary: formatRuleSummary(constraint, ruleResult),
+      swatches: {},
+      result: ruleResult
+    };
   }
 
-  function getTargetResult(constraintId: string) {
-    const result = getResult(constraintId);
-    return result?.type === 'target-color' ? result : null;
+  function formatRuleDescriptor(
+    constraint: Extract<Constraint, { type: 'contrast-rule' }>
+  ): string {
+    const scopeLabel = constraint.scope === 'neutral' ? 'Neutral' : 'All palettes';
+    const referenceLabel = constraint.reference === 'low' ? 'Low ref' : 'High ref';
+    return `${scopeLabel} · Step ${constraint.stepIndex * 10} · ${referenceLabel} · ${constraint.algorithm} ${getConstraintThresholdLabel(constraint.level)}`;
   }
 
-  function getRuleResult(constraintId: string) {
-    const result = getResult(constraintId);
-    return result?.type === 'contrast-rule' ? result : null;
+  function formatTargetSummary(result: TargetColorConstraintResult | null): string {
+    if (!result) {
+      return 'Closest swatch unavailable.';
+    }
+
+    return `${result.paletteLabel}, step ${result.swatchLabel} · ${getTargetColorMetricLabel(result.metric)} ${result.deltaE.toFixed(3)}`;
+  }
+
+  function formatRuleSummary(
+    constraint: Extract<Constraint, { type: 'contrast-rule' }>,
+    result: ContrastRuleConstraintResult | null
+  ): string {
+    if (!result) {
+      return 'Contrast result unavailable.';
+    }
+
+    const actualLabel = constraint.fitToThreshold ? 'Median' : 'Minimum';
+    const threshold = getConstraintThresholdValue(constraint.level);
+    return `${constraint.fitToThreshold ? 'Nearest' : 'Worst'} ${result.paletteLabel}, step ${result.swatchLabel} · ${actualLabel} ${formatConstraintValue(result.actualValue)} / ${threshold}`;
+  }
+
+  function formatConstraintValue(value: number): string {
+    return value.toFixed(value >= 10 ? 1 : 2);
+  }
+
+  function matchesStatusFilter(row: ConstraintRowViewModel, filter: StatusFilter): boolean {
+    if (filter === 'all') return true;
+    if (filter === 'disabled') return row.status === 'disabled';
+    if (filter === 'required') return row.required;
+    if (row.status === 'disabled') return false;
+    if (filter === 'failing') return row.status === 'fail';
+    if (filter === 'warning') return row.status === 'warning';
+    return row.status === 'pass';
+  }
+
+  function matchesTypeFilter(row: ConstraintRowViewModel, filter: TypeFilter): boolean {
+    return filter === 'all' || row.type === filter;
+  }
+
+  function getStatusBadgeLabel(status: ConstraintRowViewModel['status']): string {
+    return status === 'disabled' ? 'disabled' : status;
+  }
+
+  function getTopSummary(): string {
+    if (constraintsLocal.length === 0) {
+      return 'No constraints yet. Add a target color or contrast rule to guide the palette.';
+    }
+
+    const summaryParts = [
+      `${evaluation.summary.failCount} fail`,
+      `${evaluation.summary.warningCount} warning`,
+      `${evaluation.summary.passCount} pass`
+    ];
+
+    if ((evaluation.summary.requiredUnsatisfiedCount ?? 0) > 0) {
+      summaryParts.push(`${evaluation.summary.requiredUnsatisfiedCount} required unsatisfied`);
+    }
+
+    if (disabledConstraintCount > 0) {
+      summaryParts.push(`${disabledConstraintCount} disabled`);
+    }
+
+    return summaryParts.join(' · ');
+  }
+
+  function getFilterResultsLabel(): string {
+    if (constraintsLocal.length === 0) {
+      return 'No constraints';
+    }
+
+    if (filteredRows.length === constraintsLocal.length) {
+      return `${constraintsLocal.length} constraints shown`;
+    }
+
+    return `${filteredRows.length} of ${constraintsLocal.length} constraints shown`;
+  }
+
+  function toggleExpanded(id: string): void {
+    expandedConstraintId = expandedConstraintId === id ? null : id;
   }
 
   function addTargetColorConstraint(): void {
-    addConstraint(createDefaultTargetColorConstraint());
+    const constraint = createDefaultTargetColorConstraint();
+    addConstraint(constraint);
+    expandedConstraintId = constraint.id;
     onHistoryCommit?.('Target color constraint added');
   }
 
   function addContrastRuleConstraint(): void {
-    addConstraint(createDefaultContrastRuleConstraint(contrastAlgorithmLocal));
+    const constraint = createDefaultContrastRuleConstraint(contrastAlgorithmLocal);
+    addConstraint(constraint);
+    expandedConstraintId = constraint.id;
     onHistoryCommit?.('Contrast rule added');
   }
 
@@ -167,7 +374,21 @@
     ) {
       activeSwatchPicker.set(null);
     }
+    if (expandedConstraintId === id) {
+      expandedConstraintId = null;
+    }
     onHistoryCommit?.('Constraint removed');
+  }
+
+  function handleConstraintEnabledChange(id: string, checked: boolean): void {
+    updateConstraint(id, (constraint) => ({
+      ...constraint,
+      enabled: checked
+    }));
+
+    if (!checked && expandedConstraintId === id) {
+      expandedConstraintId = null;
+    }
   }
 
   function handleTargetHexChange(id: string, value: string): void {
@@ -329,8 +550,12 @@
   }
 
   async function runSolve(profile: 'fast' | 'deep'): Promise<void> {
-    if (constraintSolveRunStateLocal.status !== 'idle') {
+    if (isSolveLocked) {
       return;
+    }
+
+    if (activeSwatchPickerLocal?.kind === 'constraint-target') {
+      activeSwatchPicker.set(null);
     }
 
     const baseline = {
@@ -356,13 +581,13 @@
       requestHash,
       startedAt: Date.now(),
       source: 'client',
-      statusMessage: isDeepSolve
-        ? 'Running deep solve in browser...'
-        : 'Solving constraints in browser...'
+      statusMessage: isDeepSolve ? 'Running deep solve...' : 'Solving constraints...'
     });
 
     try {
-      const solved = await solveConstraintsInWorker(request, profile);
+      const solveTask = startSolveConstraintsInWorker(request, profile);
+      activeSolveCancel = solveTask.cancel;
+      const solved = await solveTask.promise;
       const currentHash = getConstraintSolveRequestHash(buildSolveRequest(), profile);
 
       if (currentHash !== requestHash) {
@@ -391,9 +616,14 @@
       }
       onHistoryCommit?.(isDeepSolve ? 'Constraints deep solved' : 'Constraints solved');
     } catch (error) {
-      console.error(error);
-      announce(isDeepSolve ? 'Deep solve failed.' : 'Local solve failed.');
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        announce(isDeepSolve ? 'Deep solve cancelled.' : 'Solve cancelled.');
+      } else {
+        console.error(error);
+        announce(isDeepSolve ? 'Deep solve failed.' : 'Local solve failed.');
+      }
     } finally {
+      activeSolveCancel = null;
       setConstraintSolveRunState({ status: 'idle' });
     }
   }
@@ -419,284 +649,436 @@
     announce('Solved adjustments cleared');
     onHistoryCommit?.('Solved adjustments cleared');
   }
+
+  function handleCancelSolve(): void {
+    if (!activeSolveCancel) {
+      return;
+    }
+
+    setConstraintSolveRunState({
+      ...constraintSolveRunStateLocal,
+      statusMessage:
+        constraintSolveRunStateLocal.status === 'running-deep'
+          ? 'Cancelling deep solve...'
+          : 'Cancelling solve...'
+    });
+    activeSolveCancel();
+  }
 </script>
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
 <section class="constraints-controls">
-  <div class="constraint-actions">
-    <button
-      type="button"
-      class="action-button"
-      onclick={addTargetColorConstraint}
-      disabled={constraintSolveRunStateLocal.status !== 'idle'}
-    >
-      Add target color
-    </button>
-    <button
-      type="button"
-      class="action-button"
-      onclick={addContrastRuleConstraint}
-      disabled={constraintSolveRunStateLocal.status !== 'idle'}
-    >
-      Add contrast rule
-    </button>
+  <div class="constraints-toolbar">
+    <div class="toolbar-copy">
+      <p class="toolbar-summary">{getTopSummary()}</p>
+      <div class="toolbar-chips" aria-label="Constraint health summary">
+        <Badge>{enabledConstraintCount} enabled</Badge>
+        <Badge variant="fail">{evaluation.summary.failCount} fail</Badge>
+        <Badge variant="warning">{evaluation.summary.warningCount} warning</Badge>
+        <Badge variant="pass">{evaluation.summary.passCount} pass</Badge>
+        {#if (evaluation.summary.requiredUnsatisfiedCount ?? 0) > 0}
+          <Badge variant="accent">
+            {evaluation.summary.requiredUnsatisfiedCount} required unsatisfied
+          </Badge>
+        {/if}
+        {#if disabledConstraintCount > 0}
+          <Badge>{disabledConstraintCount} disabled</Badge>
+        {/if}
+      </div>
+      {#if constraintSolverSummaryLocal}
+        <p class="solver-summary">
+          Last solve: {constraintSolverSummaryLocal.profile === 'deep' ? 'deep solve' : 'solve'},
+          {constraintSolverSummaryLocal.passCount} pass,
+          {constraintSolverSummaryLocal.warningCount} warning,
+          {constraintSolverSummaryLocal.failCount} fail.
+          {#if (constraintSolverSummaryLocal.requiredUnsatisfiedCount ?? 0) > 0}
+            {constraintSolverSummaryLocal.requiredUnsatisfiedCount ?? 0} required unsatisfied.
+          {:else if constraintSolverSummaryLocal.changed}
+            Adjustments applied.
+          {:else}
+            No meaningful adjustments found.
+          {/if}
+        </p>
+      {/if}
+    </div>
+
+    <div class="toolbar-actions">
+      <div class="action-row">
+        <Button onclick={addTargetColorConstraint} disabled={isSolveLocked}>
+          Add target color
+        </Button>
+        <Button onclick={addContrastRuleConstraint} disabled={isSolveLocked}>
+          Add contrast rule
+        </Button>
+      </div>
+
+      <div class="action-row">
+        <Button onclick={handleSolve} disabled={constraintsLocal.length === 0 || isSolveLocked}>
+          Solve constraints
+        </Button>
+        <Button onclick={handleDeepSolve} disabled={constraintsLocal.length === 0 || isSolveLocked}>
+          Deep solve
+        </Button>
+        <Button
+          onclick={handleClearSolvedAdjustments}
+          disabled={!solverAdjustmentSnapshotLocal || isSolveLocked}
+          variant="ghost"
+        >
+          Clear solved adjustments
+        </Button>
+      </div>
+    </div>
   </div>
+
+  {#if isSolveLocked}
+    <div class="solve-status" aria-live="polite">
+      <span class="solve-spinner" aria-hidden="true"></span>
+      <strong
+        >{constraintSolveRunStateLocal.status === 'running-deep'
+          ? 'Deep solve running'
+          : 'Solve running'}</strong
+      >
+      <span>{constraintSolveRunStateLocal.statusMessage}</span>
+      <Button onclick={handleCancelSolve} variant="ghost">Cancel solve</Button>
+    </div>
+  {/if}
+
+  {#if constraintsLocal.length > 0}
+    <div class="constraint-filters">
+      <label class="field-block">
+        <span class="field-label">Status</span>
+        <select
+          class="select"
+          aria-label="Constraint status filter"
+          bind:value={statusFilter}
+          disabled={isSolveLocked}
+        >
+          <option value="all">All</option>
+          <option value="failing">Failing</option>
+          <option value="warning">Warning</option>
+          <option value="passing">Passing</option>
+          <option value="required">Required</option>
+          <option value="disabled">Disabled</option>
+        </select>
+      </label>
+
+      <label class="field-block">
+        <span class="field-label">Type</span>
+        <select
+          class="select"
+          aria-label="Constraint type filter"
+          bind:value={typeFilter}
+          disabled={isSolveLocked}
+        >
+          <option value="all">All</option>
+          <option value="target-color">Target color</option>
+          <option value="contrast-rule">Contrast rule</option>
+        </select>
+      </label>
+
+      <p class="filter-results">{getFilterResultsLabel()}</p>
+    </div>
+  {/if}
 
   {#if constraintsLocal.length === 0}
     <p class="empty-state">
       No constraints yet. Add a target color or contrast rule to guide the palette.
     </p>
+  {:else if filteredRows.length === 0}
+    <p class="empty-state">No constraints match the current filters.</p>
   {:else}
     <div class="constraint-list">
-      {#each constraintsLocal as constraint (constraint.id)}
-        <article class="constraint-row">
-          <div class="constraint-row-header">
-            <h3>{constraint.type === 'target-color' ? 'Target color' : 'Contrast rule'}</h3>
-            <button
-              type="button"
-              class="action-button action-button--ghost"
-              onclick={() => removeConstraintRow(constraint.id)}>Remove</button
-            >
-          </div>
-
-          {#if constraint.type === 'target-color'}
-            <div class="field-row">
-              <label class="field-label" for={`target-${constraint.id}`}>Target hex</label>
-              <input
-                id={`target-${constraint.id}`}
-                class="input mono"
-                type="text"
-                value={constraint.targetHex}
-                oninput={(event) =>
-                  handleTargetHexChange(constraint.id, (event.target as HTMLInputElement).value)}
+      {#each filteredRows as row (row.id)}
+        {@const isExpanded = expandedConstraintId === row.id}
+        {@const constraint = constraintsLocal.find((entry) => entry.id === row.id)}
+        {#if constraint}
+          <article class:constraint-row--disabled={!row.enabled} class="constraint-row">
+            <div class="constraint-row-summary">
+              <CheckboxRow
+                id={`constraint-enabled-${row.id}`}
+                label={constraint.enabled ? 'Enabled' : 'Disabled'}
+                checked={constraint.enabled}
+                disabled={isSolveLocked}
+                ariaLabel={`${row.title} enabled`}
+                onChange={(checked) => handleConstraintEnabledChange(row.id, checked)}
               />
-              <button
-                type="button"
-                class="action-button action-button--ghost"
-                onclick={() => beginTargetColorPick(constraint.id)}>Pick from palette</button
-              >
-            </div>
-            <div class="field-row">
-              <label class="field-label" for={`metric-${constraint.id}`}>Metric</label>
-              <select
-                id={`metric-${constraint.id}`}
-                class="select"
-                value={constraint.metric ?? 'ok'}
-                onchange={(event) =>
-                  handleTargetMetricChange(
-                    constraint.id,
-                    (event.target as HTMLSelectElement).value as ColorDifferenceMetric
-                  )}
-              >
-                <option value="ok">Delta E OK</option>
-                <option value="2000">Delta E 2000</option>
-              </select>
-            </div>
-            <div class="target-options-row">
-              <label class="must-pass-toggle">
-                <input
-                  type="checkbox"
-                  aria-label="Must pass"
-                  checked={constraint.mustPass ?? false}
-                  disabled={!canEnableMustPass(constraint.id)}
-                  onchange={(event) =>
-                    handleTargetMustPassChange(
-                      constraint.id,
-                      (event.target as HTMLInputElement).checked
-                    )}
-                />
-                <span>Must pass</span>
-              </label>
-              <span class="field-hint">
-                Up to {MAX_MUST_PASS_TARGETS} target colors can be marked must pass.
-              </span>
-            </div>
-          {:else}
-            <div class="field-grid">
-              <label class="field-block">
-                <span class="field-label">Scope</span>
-                <select
-                  class="select"
-                  value={constraint.scope}
-                  onchange={(event) =>
-                    handleRuleScopeChange(
-                      constraint.id,
-                      (event.target as HTMLSelectElement).value as 'neutral' | 'all-palettes'
-                    )}
-                >
-                  <option value="all-palettes">All generated palettes</option>
-                  <option value="neutral">Neutral palette</option>
-                </select>
-              </label>
 
-              <label class="field-block">
-                <span class="field-label">Step</span>
-                <input
-                  class="input mono"
-                  type="number"
-                  min="0"
-                  max={Math.max(0, numColorsLocal - 1)}
-                  value={constraint.stepIndex}
-                  oninput={(event) =>
-                    handleRuleStepChange(
-                      constraint.id,
-                      Number.parseInt((event.target as HTMLInputElement).value, 10) || 0
-                    )}
-                />
-              </label>
-
-              <label class="field-block">
-                <span class="field-label">Reference</span>
-                <select
-                  class="select"
-                  value={constraint.reference}
-                  onchange={(event) =>
-                    handleRuleReferenceChange(
-                      constraint.id,
-                      (event.target as HTMLSelectElement).value as 'low' | 'high'
-                    )}
-                >
-                  <option value="low">Low reference</option>
-                  <option value="high">High reference</option>
-                </select>
-              </label>
-
-              <label class="field-block">
-                <span class="field-label">Algorithm</span>
-                <select
-                  class="select"
-                  value={constraint.algorithm}
-                  onchange={(event) =>
-                    handleRuleAlgorithmChange(
-                      constraint.id,
-                      (event.target as HTMLSelectElement).value as ContrastAlgorithm
-                    )}
-                >
-                  <option value="WCAG">WCAG 2.2</option>
-                  <option value="APCA">APCA</option>
-                </select>
-              </label>
-
-              <label class="field-block">
-                <span class="field-label">Threshold</span>
-                <select
-                  class="select"
-                  value={constraint.level}
-                  onchange={(event) =>
-                    handleRuleLevelChange(
-                      constraint.id,
-                      (event.target as HTMLSelectElement).value as ConstraintThresholdKey
-                    )}
-                >
-                  {#each getThresholdOptionsForAlgorithm(constraint.algorithm) as level (level)}
-                    <option value={level}>{getConstraintThresholdLabel(level)}</option>
-                  {/each}
-                </select>
-              </label>
-            </div>
-            <div class="target-options-row">
-              <label class="must-pass-toggle">
-                <input
-                  type="checkbox"
-                  aria-label="Fit to threshold"
-                  checked={constraint.fitToThreshold ?? false}
-                  onchange={(event) =>
-                    handleRuleFitToThresholdChange(
-                      constraint.id,
-                      (event.target as HTMLInputElement).checked
-                    )}
-                />
-                <span>Fit to threshold</span>
-              </label>
-              <span class="field-hint">
-                Fit the step median to the selected threshold while keeping the minimum at or above
-                it.
-              </span>
-            </div>
-          {/if}
-
-          {#if getResult(constraint.id)}
-            <div class="result-row">
-              {#if constraint.type === 'target-color'}
-                <span
-                  class={`result-badge result-badge--${getTargetResult(constraint.id)?.status}`}
-                >
-                  {getTargetResult(constraint.id)?.status}
-                </span>
-                {#if constraint.mustPass}
-                  <span class="priority-badge">
-                    {getTargetResult(constraint.id)?.requiredSatisfied
-                      ? 'Required satisfied'
-                      : 'Required unsatisfied'}
-                  </span>
-                {/if}
-                <div class="target-preview-pair">
-                  <div class="target-preview-card">
-                    <span class="field-label">Target</span>
-                    <span
-                      class="target-preview-swatch"
-                      style={`background-color: ${constraint.targetHex};`}
-                      aria-hidden="true"
-                    ></span>
-                    <span class="mono">{constraint.targetHex}</span>
-                  </div>
-                  <div class="target-preview-card">
-                    <span class="field-label">Closest</span>
-                    <span
-                      class="target-preview-swatch"
-                      style={`background-color: ${getTargetResult(constraint.id)?.closestHex ?? 'transparent'};`}
-                      aria-hidden="true"
-                    ></span>
-                    <span class="mono"
-                      >{getTargetResult(constraint.id)?.closestHex ?? 'Unavailable'}</span
-                    >
-                  </div>
+              <div class="summary-main">
+                <div class="summary-labels">
+                  <Badge
+                    variant={row.status === 'disabled' ? 'disabled' : row.status}
+                    uppercase={row.status !== 'disabled'}
+                  >
+                    {getStatusBadgeLabel(row.status)}
+                  </Badge>
+                  {#if row.required}
+                    <Badge variant="accent">
+                      {row.result?.type === 'target-color' && row.result.requiredSatisfied
+                        ? 'Required satisfied'
+                        : 'Required'}
+                    </Badge>
+                  {/if}
+                  <span class="constraint-kind">{row.title}</span>
                 </div>
-                <span>
-                  Closest swatch: {getTargetResult(constraint.id)?.paletteLabel}, step {getTargetResult(
-                    constraint.id
-                  )?.swatchLabel}
-                </span>
-                <span>
-                  {getTargetColorMetricLabel(getTargetResult(constraint.id)?.metric ?? 'ok')}
-                  {getTargetResult(constraint.id)?.deltaE.toFixed(3)}
-                </span>
-              {:else}
-                <span
-                  class={`result-badge ${
-                    getRuleResult(constraint.id)?.passes
-                      ? 'result-badge--pass'
-                      : 'result-badge--fail'
-                  }`}
-                >
-                  {getRuleResult(constraint.id)?.passes ? 'pass' : 'fail'}
-                </span>
-                <span>
-                  {constraint.fitToThreshold ? 'Nearest swatch' : 'Worst case'}:
-                  {getRuleResult(constraint.id)?.paletteLabel}, step {getRuleResult(constraint.id)
-                    ?.swatchLabel}
-                </span>
-                <span>
-                  {constraint.fitToThreshold ? 'Median' : 'Minimum'}
-                  {getRuleResult(constraint.id)?.actualValue.toFixed(
-                    (getRuleResult(constraint.id)?.actualValue ?? 0) >= 10 ? 1 : 2
-                  )} /
-                  {getConstraintThresholdValue(
-                    (constraint as Extract<Constraint, { type: 'contrast-rule' }>).level
-                  )}
-                </span>
-                {#if constraint.fitToThreshold && getRuleResult(constraint.id)?.minimumValue !== undefined}
-                  <span>
-                    Minimum {getRuleResult(constraint.id)?.minimumValue?.toFixed(
-                      (getRuleResult(constraint.id)?.minimumValue ?? 0) >= 10 ? 1 : 2
-                    )}
-                  </span>
+
+                <div class="summary-text">
+                  <strong>{row.descriptor}</strong>
+                  <span>{row.summary}</span>
+                </div>
+
+                {#if row.type === 'target-color'}
+                  <div class="summary-swatches" aria-hidden="true">
+                    <span
+                      class="summary-swatch"
+                      style={`background-color: ${row.swatches.target ?? 'transparent'};`}
+                    ></span>
+                    <span class="summary-swatch-connector"></span>
+                    <span
+                      class="summary-swatch"
+                      style={`background-color: ${row.swatches.closest ?? 'transparent'};`}
+                    ></span>
+                  </div>
                 {/if}
-              {/if}
+              </div>
+
+              <Button
+                ariaExpanded={isExpanded}
+                ariaControls={`constraint-panel-${row.id}`}
+                compact
+                disabled={isSolveLocked}
+                onclick={() => toggleExpanded(row.id)}
+                variant="ghost"
+              >
+                {isExpanded ? 'Collapse' : 'Edit'}
+              </Button>
             </div>
-          {/if}
-        </article>
+
+            {#if isExpanded}
+              <div class="constraint-editor" id={`constraint-panel-${row.id}`}>
+                {#if constraint.type === 'target-color'}
+                  <div class="editor-grid">
+                    <div class="field-row">
+                      <label class="field-label" for={`target-${constraint.id}`}>Target hex</label>
+                      <input
+                        id={`target-${constraint.id}`}
+                        class="input mono"
+                        type="text"
+                        value={constraint.targetHex}
+                        disabled={isSolveLocked}
+                        oninput={(event) =>
+                          handleTargetHexChange(
+                            constraint.id,
+                            (event.target as HTMLInputElement).value
+                          )}
+                      />
+                    </div>
+
+                    <div class="field-row">
+                      <label class="field-label" for={`metric-${constraint.id}`}>Metric</label>
+                      <select
+                        id={`metric-${constraint.id}`}
+                        class="select"
+                        value={constraint.metric ?? 'ok'}
+                        disabled={isSolveLocked}
+                        onchange={(event) =>
+                          handleTargetMetricChange(
+                            constraint.id,
+                            (event.target as HTMLSelectElement).value as ColorDifferenceMetric
+                          )}
+                      >
+                        <option value="ok">Delta E OK</option>
+                        <option value="2000">Delta E 2000</option>
+                      </select>
+                    </div>
+
+                    <div class="field-row field-row--actions">
+                      <span class="field-label">Target source</span>
+                      <Button
+                        disabled={isSolveLocked}
+                        onclick={() => beginTargetColorPick(constraint.id)}
+                        variant="ghost"
+                      >
+                        Pick from palette
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div class="target-options-row">
+                    <CheckboxRow
+                      id={`must-pass-${constraint.id}`}
+                      label="Must pass"
+                      checked={constraint.mustPass ?? false}
+                      disabled={isSolveLocked || !canEnableMustPass(constraint.id)}
+                      ariaLabel="Must pass"
+                      onChange={(checked) => handleTargetMustPassChange(constraint.id, checked)}
+                    />
+                    <span class="field-hint">
+                      Up to {MAX_MUST_PASS_TARGETS} target colors can be marked must pass.
+                    </span>
+                  </div>
+
+                  {#if row.result?.type === 'target-color'}
+                    <div class="expanded-result">
+                      <div class="target-preview-card">
+                        <span class="field-label">Target</span>
+                        <span
+                          class="target-preview-swatch"
+                          style={`background-color: ${constraint.targetHex};`}
+                          aria-hidden="true"
+                        ></span>
+                        <span class="mono">{constraint.targetHex.toUpperCase()}</span>
+                      </div>
+
+                      <div class="target-preview-card">
+                        <span class="field-label">Closest</span>
+                        <span
+                          class="target-preview-swatch"
+                          style={`background-color: ${row.result.closestHex ?? 'transparent'};`}
+                          aria-hidden="true"
+                        ></span>
+                        <span class="mono">{row.result.closestHex ?? 'Unavailable'}</span>
+                      </div>
+
+                      <p class="expanded-copy">
+                        Closest swatch: {row.result.paletteLabel}, step {row.result.swatchLabel}.
+                        {getTargetColorMetricLabel(row.result.metric)}
+                        {row.result.deltaE.toFixed(3)}
+                      </p>
+                    </div>
+                  {/if}
+                {:else}
+                  <div class="editor-grid">
+                    <label class="field-block">
+                      <span class="field-label">Scope</span>
+                      <select
+                        class="select"
+                        value={constraint.scope}
+                        disabled={isSolveLocked}
+                        onchange={(event) =>
+                          handleRuleScopeChange(
+                            constraint.id,
+                            (event.target as HTMLSelectElement).value as 'neutral' | 'all-palettes'
+                          )}
+                      >
+                        <option value="all-palettes">All generated palettes</option>
+                        <option value="neutral">Neutral palette</option>
+                      </select>
+                    </label>
+
+                    <label class="field-block">
+                      <span class="field-label">Step</span>
+                      <input
+                        class="input mono"
+                        type="number"
+                        min="0"
+                        max={Math.max(0, numColorsLocal - 1)}
+                        value={constraint.stepIndex}
+                        disabled={isSolveLocked}
+                        oninput={(event) =>
+                          handleRuleStepChange(
+                            constraint.id,
+                            Number.parseInt((event.target as HTMLInputElement).value, 10) || 0
+                          )}
+                      />
+                    </label>
+
+                    <label class="field-block">
+                      <span class="field-label">Reference</span>
+                      <select
+                        class="select"
+                        value={constraint.reference}
+                        disabled={isSolveLocked}
+                        onchange={(event) =>
+                          handleRuleReferenceChange(
+                            constraint.id,
+                            (event.target as HTMLSelectElement).value as 'low' | 'high'
+                          )}
+                      >
+                        <option value="low">Low reference</option>
+                        <option value="high">High reference</option>
+                      </select>
+                    </label>
+
+                    <label class="field-block">
+                      <span class="field-label">Algorithm</span>
+                      <select
+                        class="select"
+                        value={constraint.algorithm}
+                        disabled={isSolveLocked}
+                        onchange={(event) =>
+                          handleRuleAlgorithmChange(
+                            constraint.id,
+                            (event.target as HTMLSelectElement).value as ContrastAlgorithm
+                          )}
+                      >
+                        <option value="WCAG">WCAG 2.2</option>
+                        <option value="APCA">APCA</option>
+                      </select>
+                    </label>
+
+                    <label class="field-block">
+                      <span class="field-label">Threshold</span>
+                      <select
+                        class="select"
+                        value={constraint.level}
+                        disabled={isSolveLocked}
+                        onchange={(event) =>
+                          handleRuleLevelChange(
+                            constraint.id,
+                            (event.target as HTMLSelectElement).value as ConstraintThresholdKey
+                          )}
+                      >
+                        {#each getThresholdOptionsForAlgorithm(constraint.algorithm) as level (level)}
+                          <option value={level}>{getConstraintThresholdLabel(level)}</option>
+                        {/each}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div class="target-options-row">
+                    <CheckboxRow
+                      id={`fit-threshold-${constraint.id}`}
+                      label="Fit to threshold"
+                      checked={constraint.fitToThreshold ?? false}
+                      disabled={isSolveLocked}
+                      ariaLabel="Fit to threshold"
+                      onChange={(checked) => handleRuleFitToThresholdChange(constraint.id, checked)}
+                    />
+                    <span class="field-hint">
+                      Fit the step median to the selected threshold while keeping the minimum at or
+                      above it.
+                    </span>
+                  </div>
+
+                  {#if row.result?.type === 'contrast-rule'}
+                    <p class="expanded-copy">
+                      {constraint.fitToThreshold ? 'Nearest swatch' : 'Worst case'}:
+                      {row.result.paletteLabel}, step {row.result.swatchLabel}. {constraint.fitToThreshold
+                        ? 'Median'
+                        : 'Minimum'}
+                      {row.result.actualValue.toFixed(row.result.actualValue >= 10 ? 1 : 2)} /
+                      {getConstraintThresholdValue(constraint.level)}.
+                      {#if constraint.fitToThreshold && row.result.minimumValue !== undefined}
+                        Minimum {formatConstraintValue(row.result.minimumValue)}.
+                      {/if}
+                    </p>
+                  {/if}
+                {/if}
+
+                <div class="editor-actions">
+                  <Button
+                    disabled={isSolveLocked}
+                    onclick={() => removeConstraintRow(constraint.id)}
+                    variant="ghost"
+                  >
+                    Remove constraint
+                  </Button>
+                </div>
+              </div>
+            {/if}
+          </article>
+        {/if}
       {/each}
     </div>
   {/if}
@@ -704,59 +1086,8 @@
   {#if activeSwatchPickerLocal?.kind === 'constraint-target'}
     <div class="picker-banner" role="status">
       <span>Select a swatch to use as the target color.</span>
-      <button type="button" class="action-button action-button--ghost" onclick={cancelPicker}>
-        Cancel
-      </button>
+      <Button onclick={cancelPicker} variant="ghost">Cancel</Button>
     </div>
-  {/if}
-
-  <div class="solver-actions">
-    <button
-      type="button"
-      class="action-button"
-      onclick={handleSolve}
-      disabled={constraintsLocal.length === 0 || constraintSolveRunStateLocal.status !== 'idle'}
-      >Solve constraints</button
-    >
-    <button
-      type="button"
-      class="action-button"
-      onclick={handleDeepSolve}
-      disabled={constraintsLocal.length === 0 || constraintSolveRunStateLocal.status !== 'idle'}
-      >Deep solve</button
-    >
-    <button
-      type="button"
-      class="action-button action-button--ghost"
-      onclick={handleClearSolvedAdjustments}
-      disabled={!solverAdjustmentSnapshotLocal || constraintSolveRunStateLocal.status !== 'idle'}
-      >Clear solved adjustments</button
-    >
-  </div>
-
-  {#if constraintSolveRunStateLocal.status !== 'idle'}
-    <p class="solve-status" aria-live="polite">
-      <span class="solve-spinner" aria-hidden="true"></span>
-      {constraintSolveRunStateLocal.statusMessage}
-    </p>
-  {/if}
-
-  {#if constraintSolverSummaryLocal}
-    <p class="solver-summary">
-      Last solve: {constraintSolverSummaryLocal.profile === 'deep'
-        ? 'browser deep solve'
-        : 'browser solve'},
-      {constraintSolverSummaryLocal.passCount} pass,
-      {constraintSolverSummaryLocal.warningCount} warning,
-      {constraintSolverSummaryLocal.failCount} fail.
-      {#if (constraintSolverSummaryLocal.requiredUnsatisfiedCount ?? 0) > 0}
-        {constraintSolverSummaryLocal.requiredUnsatisfiedCount ?? 0} required unsatisfied.
-      {:else if constraintSolverSummaryLocal.changed}
-        Adjustments applied.
-      {:else}
-        No meaningful adjustments found.
-      {/if}
-    </p>
   {/if}
 </section>
 
@@ -766,80 +1097,146 @@
     gap: var(--space-md);
   }
 
-  .constraint-actions,
-  .solver-actions {
-    display: flex;
-    flex-wrap: wrap;
+  .constraints-toolbar {
+    display: grid;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 60%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in oklab, var(--bg-secondary) 92%, transparent);
+  }
+
+  .toolbar-copy,
+  .toolbar-actions,
+  .action-row {
+    display: grid;
     gap: var(--space-sm);
   }
 
-  .action-button {
-    min-height: var(--touch-target-comfortable);
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font: inherit;
-    cursor: pointer;
+  .toolbar-summary,
+  .empty-state,
+  .solver-summary,
+  .filter-results,
+  .expanded-copy {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
   }
 
-  .action-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .toolbar-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
   }
 
-  .action-button--ghost {
-    background: var(--bg-secondary);
+  .constraint-filters {
+    display: grid;
+    gap: var(--space-sm);
+    grid-template-columns: repeat(auto-fit, minmax(var(--constraint-field-min), 1fr));
+    align-items: end;
   }
 
   .constraint-list {
     display: grid;
-    gap: var(--space-md);
+    gap: var(--space-sm);
   }
 
   .constraint-row {
     display: grid;
     gap: var(--space-sm);
     padding: var(--space-md);
-    border: 1px solid var(--border);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 60%, transparent);
     border-radius: var(--radius-lg);
-    background: var(--bg-secondary);
+    background: color-mix(in oklab, var(--bg-secondary) 94%, transparent);
   }
 
-  .constraint-row-header {
-    display: flex;
-    justify-content: space-between;
+  .constraint-row--disabled {
+    opacity: 0.78;
+  }
+
+  .constraint-row-summary {
+    display: grid;
     gap: var(--space-sm);
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
     align-items: center;
   }
 
-  .constraint-row-header h3 {
-    margin: 0;
-    font-size: var(--font-size-md);
+  .summary-main,
+  .summary-text,
+  .summary-labels {
+    display: grid;
+    gap: var(--space-xs);
+    min-width: 0;
+  }
+
+  .summary-labels {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .constraint-kind {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: var(--letter-spacing-wide);
+  }
+
+  .summary-text strong,
+  .summary-text span {
+    overflow-wrap: anywhere;
+  }
+
+  .summary-text strong {
     color: var(--text-primary);
+    font-size: var(--font-size-sm);
+  }
+
+  .summary-text span {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .summary-swatches {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .summary-swatch {
+    width: var(--constraint-summary-swatch-size);
+    height: var(--constraint-summary-swatch-size);
+    border-radius: var(--radius-sm);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 70%, transparent);
+    background: transparent;
+  }
+
+  .summary-swatch-connector {
+    width: var(--space-md);
+    border-top: var(--border-width-thin) dashed color-mix(in oklab, var(--border) 75%, transparent);
+  }
+
+  .constraint-editor {
+    display: grid;
+    gap: var(--space-md);
+    padding-top: var(--space-sm);
+    border-top: var(--border-width-thin) solid color-mix(in oklab, var(--border) 42%, transparent);
+  }
+
+  .editor-grid {
+    display: grid;
+    gap: var(--space-sm);
+    grid-template-columns: repeat(auto-fit, minmax(var(--constraint-field-min), 1fr));
   }
 
   .field-row,
-  .field-grid {
-    display: grid;
-    gap: var(--space-sm);
-  }
-
-  .target-options-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    align-items: center;
-  }
-
-  .field-grid {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  }
-
   .field-block {
     display: grid;
     gap: var(--space-xs);
+  }
+
+  .field-row--actions {
+    align-content: start;
   }
 
   .field-label {
@@ -852,108 +1249,78 @@
     color: var(--text-secondary);
   }
 
-  .must-pass-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    min-height: var(--touch-target-min);
-    color: var(--text-primary);
-  }
-
-  .result-row,
-  .picker-banner {
+  .target-options-row,
+  .picker-banner,
+  .expanded-result,
+  .editor-actions {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-sm);
     align-items: center;
   }
 
-  .solve-status {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: var(--font-size-sm);
-  }
-
-  .solve-spinner {
-    width: var(--space-md);
-    height: var(--space-md);
-    border: 2px solid color-mix(in oklab, var(--text-secondary) 22%, transparent);
-    border-top-color: var(--text-primary);
-    border-radius: var(--radius-full);
-    animation: constraints-spin 0.8s linear infinite;
-  }
-
-  .result-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 72px;
-    min-height: var(--touch-target-min);
-    padding: 0 var(--space-sm);
-    border-radius: var(--radius-full);
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-semibold);
-    text-transform: uppercase;
-  }
-
-  .result-badge--pass {
-    background: color-mix(in oklab, #15803d 18%, var(--bg-primary));
-    color: color-mix(in oklab, #15803d 85%, white);
-  }
-
-  .result-badge--warning {
-    background: color-mix(in oklab, #b45309 18%, var(--bg-primary));
-    color: color-mix(in oklab, #b45309 85%, white);
-  }
-
-  .result-badge--fail {
-    background: color-mix(in oklab, #b91c1c 18%, var(--bg-primary));
-    color: color-mix(in oklab, #b91c1c 85%, white);
-  }
-
-  .priority-badge {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--touch-target-min);
-    padding: 0 var(--space-sm);
-    border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--border));
-    border-radius: var(--radius-full);
-    color: var(--text-primary);
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .target-preview-pair {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
+  .expanded-result {
+    align-items: stretch;
   }
 
   .target-preview-card {
     display: grid;
     gap: var(--space-xs);
-    min-width: 120px;
+    min-width: var(--constraint-preview-min);
     padding: var(--space-sm);
-    border: 1px solid var(--border);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 70%, transparent);
     border-radius: var(--radius-md);
     background: var(--bg-primary);
   }
 
   .target-preview-swatch {
-    width: var(--space-xl);
-    height: var(--space-xl);
+    width: var(--constraint-preview-swatch-size);
+    height: var(--constraint-preview-swatch-size);
     border-radius: var(--radius-sm);
-    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 70%, transparent);
   }
 
-  .empty-state,
-  .solver-summary {
+  .solve-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
     margin: 0;
-    color: var(--text-secondary);
+    padding: var(--space-sm) var(--space-md);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--accent) 30%, var(--border));
+    border-radius: var(--radius-md);
+    background: color-mix(in oklab, var(--accent) 8%, var(--bg-primary));
+    color: var(--text-primary);
     font-size: var(--font-size-sm);
+  }
+
+  .solve-status strong {
+    color: var(--text-primary);
+  }
+
+  .solve-spinner {
+    width: var(--space-md);
+    height: var(--space-md);
+    border: var(--border-width-medium) solid
+      color-mix(in oklab, var(--text-secondary) 22%, transparent);
+    border-top-color: var(--text-primary);
+    border-radius: var(--radius-full);
+    animation: constraints-spin 0.8s linear infinite;
+  }
+
+  @media (max-width: 780px) {
+    .constraint-row-summary {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+
+    .summary-swatches {
+      order: 3;
+    }
+
+    .editor-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   @keyframes constraints-spin {

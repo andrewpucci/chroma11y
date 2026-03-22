@@ -10,6 +10,11 @@ const CACHE_STORAGE_KEY = 'chroma11y-solve-cache';
 
 const solveResponseCache = new Map<string, ConstraintSolveResponse>();
 
+export interface ConstraintSolveTask {
+  promise: Promise<ConstraintSolveResponse>;
+  cancel: () => void;
+}
+
 function getCacheKey(profile: ConstraintSolveProfile, requestHash: string): string {
   return `${CACHE_STORAGE_KEY}:${profile}:${requestHash}`;
 }
@@ -60,30 +65,77 @@ function cacheSolveResponse(
   }
 }
 
-export function solveConstraintsInWorker(
+function createAbortError(): Error {
+  return new DOMException('Constraint solve cancelled', 'AbortError');
+}
+
+export function startSolveConstraintsInWorker(
   request: ConstraintSolveRequest,
   profile: ConstraintSolveProfile = 'fast'
-): Promise<ConstraintSolveResponse> {
+): ConstraintSolveTask {
   const requestHash = getConstraintSolveRequestHash(request, profile);
   const cached = readCachedSolveResponse(profile, requestHash);
   if (cached) {
-    return Promise.resolve(cached);
+    return {
+      promise: Promise.resolve(cached),
+      cancel: () => {}
+    };
   }
 
-  return new Promise((resolve, reject) => {
-    const worker = new ConstraintSolveWorker();
+  let cancelled = false;
+  let settled = false;
+  let rejectPromise: ((reason?: unknown) => void) | null = null;
+  const worker = new ConstraintSolveWorker();
+
+  const promise = new Promise<ConstraintSolveResponse>((resolve, reject) => {
+    rejectPromise = reject;
     worker.onmessage = (event: MessageEvent<ConstraintSolveResponse>) => {
+      if (cancelled || settled) {
+        worker.terminate();
+        return;
+      }
+
+      settled = true;
       cacheSolveResponse(profile, requestHash, event.data);
       worker.terminate();
       resolve(event.data);
     };
+
     worker.onerror = (event) => {
+      if (settled) {
+        worker.terminate();
+        return;
+      }
+
+      settled = true;
       worker.terminate();
       reject(event.error ?? new Error('Constraint solve worker failed'));
     };
+
     worker.postMessage({
       request,
       profile
     });
   });
+
+  return {
+    promise,
+    cancel: () => {
+      if (cancelled || settled) {
+        return;
+      }
+
+      cancelled = true;
+      settled = true;
+      worker.terminate();
+      rejectPromise?.(createAbortError());
+    }
+  };
+}
+
+export function solveConstraintsInWorker(
+  request: ConstraintSolveRequest,
+  profile: ConstraintSolveProfile = 'fast'
+): Promise<ConstraintSolveResponse> {
+  return startSolveConstraintsInWorker(request, profile).promise;
 }
