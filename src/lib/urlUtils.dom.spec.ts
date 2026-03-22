@@ -3,13 +3,20 @@
  * Tests for browser-dependent functions (updateBrowserUrl, getUrlState)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const { replaceStateMock } = vi.hoisted(() => ({
+  replaceStateMock: vi.fn()
+}));
+
+vi.mock('$app/navigation', () => ({
+  replaceState: replaceStateMock
+}));
+
 import { updateBrowserUrl, getUrlState } from './urlUtils';
 
 describe('urlUtils DOM', () => {
-  let replaceStateSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
-    replaceStateSpy = vi.spyOn(window.history, 'replaceState').mockImplementation(() => {});
+    replaceStateMock.mockReset();
   });
 
   afterEach(() => {
@@ -22,8 +29,8 @@ describe('urlUtils DOM', () => {
 
       updateBrowserUrl({ baseColor: '#ff0000', warmth: 5 });
 
-      expect(replaceStateSpy).toHaveBeenCalledTimes(1);
-      const newUrl = replaceStateSpy.mock.calls[0][2] as string;
+      expect(replaceStateMock).toHaveBeenCalledTimes(1);
+      const newUrl = replaceStateMock.mock.calls[0][0] as string;
       expect(newUrl).toContain('c=ff0000');
     });
 
@@ -32,8 +39,8 @@ describe('urlUtils DOM', () => {
 
       updateBrowserUrl({});
 
-      expect(replaceStateSpy).toHaveBeenCalledTimes(1);
-      const newUrl = replaceStateSpy.mock.calls[0][2] as string;
+      expect(replaceStateMock).toHaveBeenCalledTimes(1);
+      const newUrl = replaceStateMock.mock.calls[0][0] as string;
       expect(newUrl).toBe(window.location.pathname);
     });
 
@@ -42,7 +49,7 @@ describe('urlUtils DOM', () => {
 
       updateBrowserUrl({ warmth: 10 });
 
-      const newUrl = replaceStateSpy.mock.calls[0][2] as string;
+      const newUrl = replaceStateMock.mock.calls[0][0] as string;
       expect(newUrl).toMatch(/^\?/);
     });
   });

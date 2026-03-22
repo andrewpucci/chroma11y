@@ -120,6 +120,8 @@
             oklchColor={neutrals[index] ?? null}
             paletteName={neutralName}
             isNeutral={true}
+            stepIndex={index}
+            {onHistoryCommit}
           />
           <div class="nudger-container">
             <label for="lightness-nudger-{index}" class="visually-hidden"
