@@ -25,9 +25,13 @@
     contrastMode,
     lowStep,
     highStep,
+    lowReference,
+    highReference,
     displayColorSpace,
     gamutSpace,
+    paletteSaturationNudgers,
     themePreference,
+    stepSaturationNudgers,
     swatchLabels,
     showSwatchGamutWarnings,
     showSwatchContrastIndicators,
@@ -36,6 +40,9 @@
     oklchDisplaySignificantDigits,
     customNeutralName,
     customPaletteNames,
+    constraints,
+    solverAdjustmentSnapshot,
+    constraintSolverSummary,
     updateColorState,
     updateContrastFromNeutrals,
     resetColorState,
@@ -61,6 +68,7 @@
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
   import PaletteGrid from '$lib/components/PaletteGrid.svelte';
   import ContrastControls from '$lib/components/ContrastControls.svelte';
+  import ConstraintsControls from '$lib/components/ConstraintsControls.svelte';
   import DisplaySettings from '$lib/components/DisplaySettings.svelte';
   import Card from '$lib/components/Card.svelte';
   import AppHeader from '$lib/components/AppHeader.svelte';
@@ -73,6 +81,7 @@
 
   interface CompactSectionState {
     generation: boolean;
+    constraints: boolean;
     contrast: boolean;
     output: boolean;
     export: boolean;
@@ -83,6 +92,7 @@
   const COMPACT_LAYOUT_MEDIA_QUERY = '(max-width: 980px)';
   const DEFAULT_COMPACT_SECTIONS: CompactSectionState = {
     generation: false,
+    constraints: false,
     contrast: false,
     output: false,
     export: false
@@ -97,11 +107,15 @@
   let palettesSwatchDisplayLocal = $derived($palettesSwatchDisplay);
   let lightnessNudgerValues = $derived($lightnessNudgers);
   let hueNudgerValues = $derived($hueNudgers);
+  let stepSaturationNudgerValues = $derived($stepSaturationNudgers);
+  let paletteSaturationNudgerValues = $derived($paletteSaturationNudgers);
   let currentThemeLocal = $derived($currentTheme);
   let contrastColorsLocal = $derived($contrastColors);
   let contrastModeLocal = $derived($contrastMode);
   let lowStepLocal = $derived($lowStep);
   let highStepLocal = $derived($highStep);
+  let lowReferenceLocal = $derived($lowReference);
+  let highReferenceLocal = $derived($highReference);
   let displayColorSpaceLocal = $derived($displayColorSpace);
   let gamutSpaceLocal = $derived($gamutSpace);
   let themePreferenceLocal = $derived($themePreference);
@@ -113,6 +127,9 @@
   let oklchDisplaySignificantDigitsLocal = $derived($oklchDisplaySignificantDigits);
   let customNeutralNameLocal = $derived($customNeutralName);
   let customPaletteNamesLocal = $derived($customPaletteNames);
+  let constraintsLocal = $derived($constraints);
+  let solverAdjustmentSnapshotLocal = $derived($solverAdjustmentSnapshot);
+  let constraintSolverSummaryLocal = $derived($constraintSolverSummary);
 
   // Bindable state for controls
   let baseColorLocal = $state('#1862E6');
@@ -238,6 +255,11 @@
           lowStepLocal
         )} / ${formatContrastStepLabel(highStepLocal)}`
   );
+  const constraintsCardSummary = $derived(
+    constraintsLocal.length === 0
+      ? 'No constraints'
+      : `${constraintsLocal.length} active constraints`
+  );
   const outputCardSummary = $derived(
     `${formatDisplayColorSpace(displayColorSpaceLocal)}, ${formatThemePreference(
       themePreferenceLocal
@@ -262,12 +284,16 @@
         contrastMode: storeState.contrastMode,
         lowStep: storeState.lowStep,
         highStep: storeState.highStep,
+        lowReference: structuredClone(storeState.lowReference),
+        highReference: structuredClone(storeState.highReference),
         contrast: {
           low: storeState.contrast.low,
           high: storeState.contrast.high
         },
         lightnessNudgers: [...storeState.lightnessNudgers],
         hueNudgers: [...storeState.hueNudgers],
+        stepSaturationNudgers: [...storeState.stepSaturationNudgers],
+        paletteSaturationNudgers: [...storeState.paletteSaturationNudgers],
         currentTheme: storeState.currentTheme,
         displayColorSpace: storeState.displayColorSpace,
         gamutSpace: storeState.gamutSpace,
@@ -279,7 +305,10 @@
         contrastAlgorithm: storeState.contrastAlgorithm,
         oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits,
         customNeutralName: storeState.customNeutralName,
-        customPaletteNames: storeState.customPaletteNames
+        customPaletteNames: storeState.customPaletteNames,
+        constraints: structuredClone(storeState.constraints),
+        solverAdjustmentSnapshot: structuredClone(storeState.solverAdjustmentSnapshot),
+        constraintSolverSummary: structuredClone(storeState.constraintSolverSummary)
       };
     }
 
@@ -296,12 +325,16 @@
       contrastMode: contrastModeLocal,
       lowStep: lowStepLocal,
       highStep: highStepLocal,
+      lowReference: structuredClone(lowReferenceLocal),
+      highReference: structuredClone(highReferenceLocal),
       contrast: {
         low: contrastColorsLocal.low,
         high: contrastColorsLocal.high
       },
       lightnessNudgers: [...lightnessNudgerValues],
       hueNudgers: [...hueNudgerValues],
+      stepSaturationNudgers: [...stepSaturationNudgerValues],
+      paletteSaturationNudgers: [...paletteSaturationNudgerValues],
       currentTheme: currentThemeLocal,
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
@@ -313,7 +346,10 @@
       contrastAlgorithm: contrastAlgorithmLocal,
       oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
       customNeutralName: customNeutralNameLocal,
-      customPaletteNames: customPaletteNamesLocal
+      customPaletteNames: customPaletteNamesLocal,
+      constraints: structuredClone(constraintsLocal),
+      solverAdjustmentSnapshot: structuredClone(solverAdjustmentSnapshotLocal),
+      constraintSolverSummary: structuredClone(constraintSolverSummaryLocal)
     };
   }
 
@@ -355,9 +391,13 @@
       contrastMode: snapshot.contrastMode,
       lowStep: snapshot.lowStep,
       highStep: snapshot.highStep,
+      lowReference: snapshot.lowReference,
+      highReference: snapshot.highReference,
       contrast: snapshot.contrast,
       lightnessNudgers: snapshot.lightnessNudgers,
       hueNudgers: snapshot.hueNudgers,
+      stepSaturationNudgers: snapshot.stepSaturationNudgers,
+      paletteSaturationNudgers: snapshot.paletteSaturationNudgers,
       currentTheme: snapshot.currentTheme,
       displayColorSpace: snapshot.displayColorSpace,
       gamutSpace: snapshot.gamutSpace,
@@ -369,7 +409,10 @@
       contrastAlgorithm: snapshot.contrastAlgorithm,
       oklchDisplaySignificantDigits: snapshot.oklchDisplaySignificantDigits,
       customNeutralName: snapshot.customNeutralName,
-      customPaletteNames: snapshot.customPaletteNames
+      customPaletteNames: snapshot.customPaletteNames,
+      constraints: snapshot.constraints,
+      solverAdjustmentSnapshot: snapshot.solverAdjustmentSnapshot,
+      constraintSolverSummary: snapshot.constraintSolverSummary
     });
 
     void tick().then(() => {
@@ -969,8 +1012,12 @@
       contrastMode: contrastModeLocal,
       lowStep: lowStepLocal,
       highStep: highStepLocal,
+      lowReference: lowReferenceLocal,
+      highReference: highReferenceLocal,
       lightnessNudgers: lightnessNudgerValues,
       hueNudgers: hueNudgerValues,
+      stepSaturationNudgers: stepSaturationNudgerValues,
+      paletteSaturationNudgers: paletteSaturationNudgerValues,
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
       swatchLabels: swatchLabelsLocal,
@@ -981,7 +1028,10 @@
       oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
       themePreference: themePreferenceLocal,
       customNeutralName: customNeutralNameLocal,
-      customPaletteNames: customPaletteNamesLocal
+      customPaletteNames: customPaletteNamesLocal,
+      constraints: constraintsLocal,
+      solverAdjustmentSnapshot: solverAdjustmentSnapshotLocal,
+      constraintSolverSummary: constraintSolverSummaryLocal
     };
 
     // theme (resolved theme) is persisted to localStorage only, not the URL
@@ -1028,8 +1078,16 @@
     if (urlState.contrastMode) stateUpdate.contrastMode = urlState.contrastMode;
     if (urlState.lowStep !== undefined) stateUpdate.lowStep = urlState.lowStep;
     if (urlState.highStep !== undefined) stateUpdate.highStep = urlState.highStep;
+    if (urlState.lowReference !== undefined) stateUpdate.lowReference = urlState.lowReference;
+    if (urlState.highReference !== undefined) stateUpdate.highReference = urlState.highReference;
     if (urlState.lightnessNudgers) stateUpdate.lightnessNudgers = urlState.lightnessNudgers;
     if (urlState.hueNudgers) stateUpdate.hueNudgers = urlState.hueNudgers;
+    if (urlState.stepSaturationNudgers) {
+      stateUpdate.stepSaturationNudgers = urlState.stepSaturationNudgers;
+    }
+    if (urlState.paletteSaturationNudgers) {
+      stateUpdate.paletteSaturationNudgers = urlState.paletteSaturationNudgers;
+    }
     if (urlState.displayColorSpace) stateUpdate.displayColorSpace = urlState.displayColorSpace;
     if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
     if (urlState.swatchLabels) stateUpdate.swatchLabels = urlState.swatchLabels;
@@ -1062,6 +1120,15 @@
     if (urlState.customPaletteNames !== undefined) {
       stateUpdate.customPaletteNames = urlState.customPaletteNames;
     }
+    if (urlState.constraints !== undefined) {
+      stateUpdate.constraints = urlState.constraints;
+    }
+    if (urlState.solverAdjustmentSnapshot !== undefined) {
+      stateUpdate.solverAdjustmentSnapshot = urlState.solverAdjustmentSnapshot;
+    }
+    if (urlState.constraintSolverSummary !== undefined) {
+      stateUpdate.constraintSolverSummary = urlState.constraintSolverSummary;
+    }
 
     // Apply stored values after theme preference to ensure they override any defaults
     if (Object.keys(stateUpdate).length > 0) {
@@ -1083,6 +1150,8 @@
       currentTheme: currentThemeLocal,
       lightnessNudgers: lightnessNudgerValues,
       hueNudgers: hueNudgerValues,
+      stepSaturationNudgers: stepSaturationNudgerValues,
+      paletteSaturationNudgers: paletteSaturationNudgerValues,
       gamutSpace: gamutSpaceLocal
     };
 
@@ -1169,6 +1238,20 @@
           </Card>
 
           <Card
+            title="Constraints"
+            subtitle="Goals for the palette"
+            summary={constraintsCardSummary}
+            collapsible
+            open={compactSections.constraints}
+            onToggle={(open) => updateCompactSection('constraints', open)}
+            data-testid="constraints-controls-card"
+          >
+            {#key `constraints-${historyRestoreRevision}`}
+              <ConstraintsControls onHistoryCommit={scheduleHistoryCommit} />
+            {/key}
+          </Card>
+
+          <Card
             title="Contrast"
             subtitle="Contrast and indicators"
             summary={contrastCardSummary}
@@ -1249,6 +1332,16 @@
                 onBezierInteractionStart={beginBezierInteraction}
                 onBezierCommit={handleBezierCommit}
               />
+            {/key}
+          </Card>
+
+          <Card
+            title="Constraints"
+            subtitle="Goals for the palette"
+            data-testid="constraints-controls-card"
+          >
+            {#key `constraints-${historyRestoreRevision}`}
+              <ConstraintsControls onHistoryCommit={scheduleHistoryCommit} />
             {/key}
           </Card>
 

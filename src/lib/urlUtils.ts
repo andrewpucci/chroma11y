@@ -10,7 +10,9 @@ import type {
   SwatchLabels,
   ContrastAlgorithm,
   OklchDisplaySignificantDigits,
-  SwatchContrastIndicators
+  SwatchContrastIndicators,
+  ContrastReference,
+  Constraint
 } from './types';
 import { getChromaMultiplierBounds } from './chromaMultiplier';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
@@ -39,6 +41,70 @@ const INDICATOR_KEY_BY_CODE = {
   b: 'apcaBody'
 } as const satisfies Record<string, keyof SwatchContrastIndicators>;
 const INDICATOR_CODE_ORDER = ['c', 'a', 'A', 'l', 'f', 'b'] as const;
+
+function encodeContrastReference(reference: ContrastReference): string {
+  if (reference.kind === 'palette') {
+    return `p:${reference.paletteIndex ?? 0}:${reference.stepIndex}`;
+  }
+
+  return `n:${reference.stepIndex}`;
+}
+
+function decodeContrastReference(encoded: string): ContrastReference | null {
+  const parts = encoded.split(':');
+  if (parts[0] === 'n' && parts.length === 2) {
+    const stepIndex = parseInt(parts[1], 10);
+    if (Number.isInteger(stepIndex) && stepIndex >= 0) {
+      return { kind: 'neutral', stepIndex };
+    }
+  }
+
+  if (parts[0] === 'p' && parts.length === 3) {
+    const paletteIndex = parseInt(parts[1], 10);
+    const stepIndex = parseInt(parts[2], 10);
+    if (
+      Number.isInteger(paletteIndex) &&
+      paletteIndex >= 0 &&
+      Number.isInteger(stepIndex) &&
+      stepIndex >= 0
+    ) {
+      return { kind: 'palette', paletteIndex, stepIndex };
+    }
+  }
+
+  return null;
+}
+
+function encodeJsonState<T>(value: T): string {
+  const json = JSON.stringify(value);
+
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(json, 'utf8').toString('base64url');
+  }
+
+  const bytes = new TextEncoder().encode(json);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function decodeJsonState<T>(value: string): T | null {
+  try {
+    if (typeof Buffer !== 'undefined') {
+      return JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as T;
+    }
+
+    const padded = value + '==='.slice((value.length + 3) % 4);
+    const binary = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as T;
+  } catch {
+    return null;
+  }
+}
 
 function areAllIndicatorsVisible(indicators: SwatchContrastIndicators): boolean {
   return Object.values(indicators).every(Boolean);
@@ -110,6 +176,8 @@ export function encodeStateToUrl(state: UrlColorState): string {
   if (state.contrastMode) params.set('m', state.contrastMode);
   if (state.lowStep !== undefined) params.set('ls', state.lowStep.toString());
   if (state.highStep !== undefined) params.set('hs', state.highStep.toString());
+  if (state.lowReference) params.set('lr', encodeContrastReference(state.lowReference));
+  if (state.highReference) params.set('hr', encodeContrastReference(state.highReference));
 
   // Encode nudgers as comma-separated values (only non-zero values with index)
   if (state.lightnessNudgers?.some((v) => v !== 0)) {
@@ -126,6 +194,22 @@ export function encodeStateToUrl(state: UrlColorState): string {
       .filter(Boolean)
       .join(',');
     if (nudgerStr) params.set('hn', nudgerStr);
+  }
+
+  if (state.stepSaturationNudgers?.some((v) => v !== 0)) {
+    const nudgerStr = state.stepSaturationNudgers
+      .map((v, i) => (v !== 0 ? `${i}:${v}` : null))
+      .filter(Boolean)
+      .join(',');
+    if (nudgerStr) params.set('scn', nudgerStr);
+  }
+
+  if (state.paletteSaturationNudgers?.some((v) => v !== 0)) {
+    const nudgerStr = state.paletteSaturationNudgers
+      .map((v, i) => (v !== 0 ? `${i}:${v}` : null))
+      .filter(Boolean)
+      .join(',');
+    if (nudgerStr) params.set('psn', nudgerStr);
   }
 
   const customNeutralName = normalizeCustomPaletteName(state.customNeutralName);
@@ -183,6 +267,15 @@ export function encodeStateToUrl(state: UrlColorState): string {
     state.oklchDisplaySignificantDigits !== 4
   )
     params.set('os', state.oklchDisplaySignificantDigits.toString());
+  if (state.constraints?.length) {
+    params.set('ct', encodeJsonState(state.constraints));
+  }
+  if (state.solverAdjustmentSnapshot) {
+    params.set('sa', encodeJsonState(state.solverAdjustmentSnapshot));
+  }
+  if (state.constraintSolverSummary) {
+    params.set('cs', encodeJsonState(state.constraintSolverSummary));
+  }
 
   return params.toString();
 }
@@ -289,6 +382,14 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
       state.highStep = parsed;
     }
   }
+  const lowReference = searchParams.get('lr');
+  if (lowReference) {
+    state.lowReference = decodeContrastReference(lowReference) ?? undefined;
+  }
+  const highReference = searchParams.get('hr');
+  if (highReference) {
+    state.highReference = decodeContrastReference(highReference) ?? undefined;
+  }
 
   // Decode nudgers with appropriate bounds
   const lightnessNudgers = searchParams.get('ln');
@@ -299,6 +400,16 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   const hueNudgers = searchParams.get('hn');
   if (hueNudgers) {
     state.hueNudgers = parseNudgers(hueNudgers, 11, -180, 180);
+  }
+
+  const stepSaturationNudgers = searchParams.get('scn');
+  if (stepSaturationNudgers) {
+    state.stepSaturationNudgers = parseNudgers(stepSaturationNudgers, 11, -0.035, 0.035);
+  }
+
+  const paletteSaturationNudgers = searchParams.get('psn');
+  if (paletteSaturationNudgers) {
+    state.paletteSaturationNudgers = parseNudgers(paletteSaturationNudgers, 11, -0.03, 0.03);
   }
 
   const neutralName = searchParams.get('nn');
@@ -347,6 +458,18 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
     if (VALID_OKLCH_SIG_DIGITS.includes(parsed as OklchDisplaySignificantDigits)) {
       state.oklchDisplaySignificantDigits = parsed as OklchDisplaySignificantDigits;
     }
+  }
+  const constraints = searchParams.get('ct');
+  if (constraints) {
+    state.constraints = decodeJsonState<Constraint[]>(constraints) ?? undefined;
+  }
+  const solverAdjustmentSnapshot = searchParams.get('sa');
+  if (solverAdjustmentSnapshot) {
+    state.solverAdjustmentSnapshot = decodeJsonState(solverAdjustmentSnapshot) ?? undefined;
+  }
+  const constraintSolverSummary = searchParams.get('cs');
+  if (constraintSolverSummary) {
+    state.constraintSolverSummary = decodeJsonState(constraintSolverSummary) ?? undefined;
   }
 
   const effectiveDisplaySpace = state.displayColorSpace ?? 'hex';
@@ -448,8 +571,8 @@ export function updateBrowserUrl(state: UrlColorState): void {
   const queryString = encodeStateToUrl(state);
   const newUrl = queryString ? `?${queryString}` : window.location.pathname;
 
-  // Use replaceState to avoid polluting browser history
-  window.history.replaceState({}, '', newUrl);
+  // Keep the URL in sync without triggering a navigation.
+  window.history.replaceState(window.history.state ?? {}, '', newUrl);
 }
 
 /**

@@ -2,9 +2,13 @@ import { createTravels } from 'travels';
 
 import type {
   ContrastAlgorithm,
+  Constraint,
+  ConstraintSolverSummary,
+  ContrastReference,
   DisplayColorSpace,
   GamutSpace,
   OklchDisplaySignificantDigits,
+  SolverAdjustmentSnapshot,
   SwatchContrastIndicators,
   SwatchLabels,
   ThemePreference
@@ -30,12 +34,16 @@ export interface HistorySnapshot {
   contrastMode: 'auto' | 'manual';
   lowStep: number;
   highStep: number;
+  lowReference?: ContrastReference;
+  highReference?: ContrastReference;
   contrast: {
     low: string;
     high: string;
   };
   lightnessNudgers: number[];
   hueNudgers: number[];
+  stepSaturationNudgers?: number[];
+  paletteSaturationNudgers?: number[];
   currentTheme: 'light' | 'dark';
   displayColorSpace: DisplayColorSpace;
   gamutSpace: GamutSpace;
@@ -48,6 +56,9 @@ export interface HistorySnapshot {
   oklchDisplaySignificantDigits: OklchDisplaySignificantDigits;
   customNeutralName?: string;
   customPaletteNames?: string[];
+  constraints?: Constraint[];
+  solverAdjustmentSnapshot?: SolverAdjustmentSnapshot | null;
+  constraintSolverSummary?: ConstraintSolverSummary | null;
 }
 
 export interface HistoryEntryMeta {

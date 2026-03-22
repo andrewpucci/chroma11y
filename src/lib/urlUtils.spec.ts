@@ -63,12 +63,42 @@ describe('urlUtils', () => {
       expect(encoded).toContain('m=manual');
     });
 
+    it('encodes contrast references and constraints', () => {
+      const state: UrlColorState = {
+        lowReference: { kind: 'neutral', stepIndex: 0 },
+        highReference: { kind: 'palette', paletteIndex: 2, stepIndex: 8 },
+        constraints: [
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784'
+          }
+        ]
+      };
+      const encoded = encodeStateToUrl(state);
+
+      expect(encoded).toContain('lr=n%3A0');
+      expect(encoded).toContain('hr=p%3A2%3A8');
+      expect(encoded).toContain('ct=');
+    });
+
     it('encodes lightness nudgers with index:value format', () => {
       const state: UrlColorState = {
         lightnessNudgers: [0, 0, 0.1, 0, 0, -0.05, 0, 0, 0, 0, 0]
       };
       const encoded = encodeStateToUrl(state);
       expect(encoded).toContain('ln=2%3A0.1%2C5%3A-0.05'); // URL encoded 2:0.1,5:-0.05
+    });
+
+    it('encodes hidden saturation nudgers with sparse params', () => {
+      const state: UrlColorState = {
+        stepSaturationNudgers: [0, 0.01, 0, 0, -0.01],
+        paletteSaturationNudgers: [0.015, 0, -0.0075]
+      };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('scn=1%3A0.01%2C4%3A-0.01');
+      expect(encoded).toContain('psn=0%3A0.015%2C2%3A-0.0075');
     });
 
     it('omits nudgers when all values are zero', () => {
@@ -150,6 +180,39 @@ describe('urlUtils', () => {
       expect(state.contrastMode).toBe('manual');
     });
 
+    it('decodes contrast references and constraints', () => {
+      const encodedConstraints = Buffer.from(
+        JSON.stringify([
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784'
+          }
+        ]),
+        'utf-8'
+      )
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+      const params = new URLSearchParams(
+        `lr=n:0&hr=p:2:8&ct=${encodeURIComponent(encodedConstraints)}`
+      );
+      const state = decodeStateFromUrl(params);
+
+      expect(state.lowReference).toEqual({ kind: 'neutral', stepIndex: 0 });
+      expect(state.highReference).toEqual({ kind: 'palette', paletteIndex: 2, stepIndex: 8 });
+      expect(state.constraints).toEqual([
+        {
+          id: 'constraint-1',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784'
+        }
+      ]);
+    });
+
     it('decodes theme preference parameter', () => {
       const params = new URLSearchParams('t=dark');
       const state = decodeStateFromUrl(params);
@@ -175,6 +238,13 @@ describe('urlUtils', () => {
       const params = new URLSearchParams('ln=2:0.1,5:-0.05');
       const state = decodeStateFromUrl(params);
       expect(state.lightnessNudgers).toEqual([0, 0, 0.1, 0, 0, -0.05, 0, 0, 0, 0, 0]);
+    });
+
+    it('decodes hidden saturation nudgers from index:value format', () => {
+      const params = new URLSearchParams('scn=1:0.01,4:-0.01&psn=0:0.015,2:-0.0075');
+      const state = decodeStateFromUrl(params);
+      expect(state.stepSaturationNudgers).toEqual([0, 0.01, 0, 0, -0.01, 0, 0, 0, 0, 0, 0]);
+      expect(state.paletteSaturationNudgers).toEqual([0.015, 0, -0.0075, 0, 0, 0, 0, 0, 0, 0, 0]);
     });
 
     it('returns empty state for empty params', () => {

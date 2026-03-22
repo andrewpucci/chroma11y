@@ -5,13 +5,17 @@
 
 import type { SerializableColorState } from './types';
 import type {
+  ColorDifferenceMetric,
   DisplayColorSpace,
   GamutSpace,
   ThemePreference,
   SwatchLabels,
   ContrastAlgorithm,
   OklchDisplaySignificantDigits,
-  SwatchContrastIndicators
+  SwatchContrastIndicators,
+  Constraint,
+  ContrastReference,
+  ConstraintThresholdKey
 } from './types';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
 
@@ -19,6 +23,7 @@ export type StoredColorState = SerializableColorState;
 export interface StoredUiPreferences {
   compactSections: {
     generation: boolean;
+    constraints: boolean;
     contrast: boolean;
     output: boolean;
     export: boolean;
@@ -36,6 +41,15 @@ const VALID_THEME_PREFS: ThemePreference[] = ['light', 'dark', 'auto'];
 const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
 const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
 const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
+const VALID_CONSTRAINT_LEVELS: ConstraintThresholdKey[] = [
+  'wcagThreeToOne',
+  'wcagAA',
+  'wcagAAA',
+  'apcaLarge',
+  'apcaFluent',
+  'apcaBody'
+];
+const VALID_COLOR_DIFFERENCE_METRICS: ColorDifferenceMetric[] = ['ok', '2000'];
 
 function isValidSwatchContrastIndicators(value: unknown): value is SwatchContrastIndicators {
   if (typeof value !== 'object' || value === null) return false;
@@ -50,6 +64,46 @@ function isValidSwatchContrastIndicators(value: unknown): value is SwatchContras
     'apcaBody'
   ];
   return keys.every((key) => typeof candidate[key] === 'boolean');
+}
+
+function isValidContrastReference(value: unknown): value is ContrastReference {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.kind !== 'neutral' && candidate.kind !== 'palette') return false;
+  if (typeof candidate.stepIndex !== 'number' || !Number.isInteger(candidate.stepIndex))
+    return false;
+  if (candidate.kind === 'palette') {
+    return typeof candidate.paletteIndex === 'number' && Number.isInteger(candidate.paletteIndex);
+  }
+  return candidate.paletteIndex === undefined;
+}
+
+function isValidConstraint(value: unknown): value is Constraint {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.id !== 'string' || typeof candidate.enabled !== 'boolean') return false;
+
+  if (candidate.type === 'target-color') {
+    return (
+      typeof candidate.targetHex === 'string' &&
+      (candidate.mustPass === undefined || typeof candidate.mustPass === 'boolean') &&
+      (candidate.metric === undefined ||
+        VALID_COLOR_DIFFERENCE_METRICS.includes(candidate.metric as ColorDifferenceMetric))
+    );
+  }
+
+  if (candidate.type === 'contrast-rule') {
+    return (
+      (candidate.scope === 'neutral' || candidate.scope === 'all-palettes') &&
+      typeof candidate.stepIndex === 'number' &&
+      Number.isInteger(candidate.stepIndex) &&
+      (candidate.reference === 'low' || candidate.reference === 'high') &&
+      (candidate.algorithm === 'WCAG' || candidate.algorithm === 'APCA') &&
+      VALID_CONSTRAINT_LEVELS.includes(candidate.level as ConstraintThresholdKey)
+    );
+  }
+
+  return false;
 }
 
 /**
@@ -180,6 +234,50 @@ export function loadStateFromStorage(): StoredColorState | null {
     ) {
       delete state.oklchDisplaySignificantDigits;
     }
+    if (state.lowReference && !isValidContrastReference(state.lowReference)) {
+      delete state.lowReference;
+    }
+    if (state.highReference && !isValidContrastReference(state.highReference)) {
+      delete state.highReference;
+    }
+    if (state.constraints && !Array.isArray(state.constraints)) {
+      delete state.constraints;
+    } else if (state.constraints) {
+      state.constraints = state.constraints.filter((constraint) => isValidConstraint(constraint));
+    }
+    if (
+      state.constraintSolverSummary &&
+      (typeof state.constraintSolverSummary !== 'object' ||
+        typeof state.constraintSolverSummary.solvedAt !== 'number' ||
+        typeof state.constraintSolverSummary.passCount !== 'number' ||
+        typeof state.constraintSolverSummary.warningCount !== 'number' ||
+        typeof state.constraintSolverSummary.failCount !== 'number' ||
+        typeof state.constraintSolverSummary.applied !== 'boolean' ||
+        typeof state.constraintSolverSummary.changed !== 'boolean' ||
+        typeof state.constraintSolverSummary.scoreBefore !== 'number' ||
+        typeof state.constraintSolverSummary.scoreAfter !== 'number')
+    ) {
+      delete state.constraintSolverSummary;
+    }
+    if (
+      state.solverAdjustmentSnapshot &&
+      (typeof state.solverAdjustmentSnapshot !== 'object' ||
+        typeof state.solverAdjustmentSnapshot.baseColor !== 'string' ||
+        typeof state.solverAdjustmentSnapshot.warmth !== 'number' ||
+        typeof state.solverAdjustmentSnapshot.chromaMultiplier !== 'number' ||
+        typeof state.solverAdjustmentSnapshot.x1 !== 'number' ||
+        typeof state.solverAdjustmentSnapshot.y1 !== 'number' ||
+        typeof state.solverAdjustmentSnapshot.x2 !== 'number' ||
+        typeof state.solverAdjustmentSnapshot.y2 !== 'number' ||
+        !Array.isArray(state.solverAdjustmentSnapshot.lightnessNudgers) ||
+        !Array.isArray(state.solverAdjustmentSnapshot.hueNudgers) ||
+        (state.solverAdjustmentSnapshot.stepSaturationNudgers !== undefined &&
+          !Array.isArray(state.solverAdjustmentSnapshot.stepSaturationNudgers)) ||
+        (state.solverAdjustmentSnapshot.paletteSaturationNudgers !== undefined &&
+          !Array.isArray(state.solverAdjustmentSnapshot.paletteSaturationNudgers)))
+    ) {
+      delete state.solverAdjustmentSnapshot;
+    }
 
     state.customNeutralName = normalizeCustomPaletteName(state.customNeutralName);
     state.customPaletteNames = normalizeCustomPaletteNames(
@@ -224,6 +322,7 @@ function isValidStoredUiPreferences(value: unknown): value is StoredUiPreference
 
   return (
     typeof sectionState.generation === 'boolean' &&
+    typeof sectionState.constraints === 'boolean' &&
     typeof sectionState.contrast === 'boolean' &&
     typeof sectionState.output === 'boolean' &&
     typeof sectionState.export === 'boolean' &&

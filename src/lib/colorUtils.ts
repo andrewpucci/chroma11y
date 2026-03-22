@@ -99,10 +99,26 @@ export const LIGHTNESS_NUDGER_BOUNDS = {
   MAX: 0.5
 } as const;
 
+const MIN_GENERATED_LIGHTNESS_STEP_DELTA = 0.02;
+const MAX_GENERATED_LIGHTNESS_STEP_DELTA_MIN = 0.08;
+const MAX_GENERATED_LIGHTNESS_STEP_DELTA_MAX = 0.2;
+
 /** Hue nudger bounds */
 export const HUE_NUDGER_BOUNDS = {
   MIN: -180,
   MAX: 180
+} as const;
+
+/** Step saturation nudger bounds */
+export const STEP_SATURATION_NUDGER_BOUNDS = {
+  MIN: -0.035,
+  MAX: 0.035
+} as const;
+
+/** Palette saturation nudger bounds */
+export const PALETTE_SATURATION_NUDGER_BOUNDS = {
+  MIN: -0.03,
+  MAX: 0.03
 } as const;
 
 /** Default significant digits for OKLCH values shown on swatches */
@@ -165,6 +181,14 @@ function normalizeRoundedHue(value: number): number {
   return ((bounded % 360) + 360) % 360;
 }
 
+function clampRange(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function clamp01(value: number): number {
+  return clampRange(value, 0, 1);
+}
+
 // ===== VALIDATION FUNCTIONS =====
 
 /** Regex pattern for validating hex colors - supports #RGB, #RRGGBB formats */
@@ -210,6 +234,8 @@ export interface ColorGenParams {
   currentTheme: 'light' | 'dark';
   lightnessNudgers?: number[];
   hueNudgers?: number[];
+  stepSaturationNudgers?: number[];
+  paletteSaturationNudgers?: number[];
   gamutSpace?: GamutSpace;
 }
 
@@ -384,6 +410,74 @@ export function generateBaseNeutrals(params: ColorGenParams): Color[] {
   return baseNeutrals;
 }
 
+function getPerceptualSaturation(color: Color): number {
+  try {
+    const candidate = color.to('jzazbz');
+    const neutralReference = oklchColor(color.oklch.l ?? 0, 0, 0).to('jzazbz');
+    const deltaJ = (candidate.jzazbz.jz ?? 0) - (neutralReference.jzazbz.jz ?? 0);
+    const deltaA = (candidate.jzazbz.az ?? 0) - (neutralReference.jzazbz.az ?? 0);
+    const deltaB = (candidate.jzazbz.bz ?? 0) - (neutralReference.jzazbz.bz ?? 0);
+
+    return Math.sqrt(deltaJ * deltaJ + deltaA * deltaA + deltaB * deltaB);
+  } catch {
+    return 0;
+  }
+}
+
+function solveChromaForPerceptualSaturation(
+  l: number,
+  h: number,
+  targetSaturation: number,
+  gamut: GamutSpace
+): number {
+  if (l <= 0.0001 || l >= 0.9999 || targetSaturation <= 0) return 0;
+
+  const maxChroma = maxChromaInGamut(l, h, gamut);
+  if (maxChroma <= 1e-6) return 0;
+
+  let lo = 0;
+  let hi = maxChroma;
+  let bestChroma = 0;
+  let bestDelta = Number.POSITIVE_INFINITY;
+
+  for (let iteration = 0; iteration < 18; iteration += 1) {
+    const mid = (lo + hi) / 2;
+    const midSaturation = getPerceptualSaturation(oklchColor(l, mid, h));
+    const delta = Math.abs(midSaturation - targetSaturation);
+
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      bestChroma = mid;
+    }
+
+    if (midSaturation < targetSaturation) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+
+  return bestChroma;
+}
+
+const PERCEPTUAL_SATURATION_RELAXATION = 0.35;
+
+function clampSaturationNudger(value: number, bounds: { MIN: number; MAX: number }): number {
+  return clampRange(value, bounds.MIN, bounds.MAX);
+}
+
+function getQuantile(values: number[], quantile: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((left, right) => left - right);
+  const position = clampRange(quantile, 0, 1) * (sorted.length - 1);
+  const lowerIndex = Math.floor(position);
+  const upperIndex = Math.ceil(position);
+  const lower = sorted[lowerIndex] ?? 0;
+  const upper = sorted[upperIndex] ?? lower;
+  const ratio = position - lowerIndex;
+  return lower + (upper - lower) * ratio;
+}
+
 // ===== GAMUT BOUNDARY HELPERS =====
 
 /** Resolve a GamutSpace value to the colorjs.io space id */
@@ -531,61 +625,190 @@ export function maxChromaInGamut(l: number, h: number, gamut: GamutSpace = 'srgb
 // ===== PALETTE GENERATION =====
 
 /**
- * Generates a single color palette based on base neutrals and a hue-shifted base color.
- * Uses gamut-boundary-relative chroma so that every hue uses the same proportion
- * of its available gamut, producing visually even saturation across palettes.
+ * Applies lightness nudgers to the neutral scaffold before palette chroma is derived.
+ * This ensures final palette chroma normalization uses the nudged lightness at each step.
  */
-function generatePalette(
-  baseNeutrals: Color[],
-  baseColor: Color,
-  baseChromaRatio: number,
-  gamut: GamutSpace = 'srgb'
-): Color[] {
-  const paletteHue = baseColor.oklch.h ?? 0;
-  const clampedBaseChromaRatio =
-    isFinite(baseChromaRatio) && baseChromaRatio > 0 ? Math.min(baseChromaRatio, 1) : 0;
-
-  return baseNeutrals.map((neutralColor) => {
-    const l = neutralColor.oklch.l ?? 0;
-    // Preserve pure black/white endpoints — don't apply chroma to extremes
-    if (l >= 0.9999 || l <= 0.0001) return oklchColor(l, 0, paletteHue);
-
-    const hueMaxC = maxChromaInGamut(l, paletteHue, gamut);
-
-    // Scale chroma proportionally: apply the base color's reference-hue gamut
-    // fraction consistently at every lightness step and hue.
-    const c = clampedBaseChromaRatio * hueMaxC;
-
-    return oklchColor(l, c, paletteHue);
-  });
-}
-
-/**
- * Applies lightness nudgers to neutrals and palettes after all other calculations
- * This is the FINAL step in the algorithm
- */
-function applyLightnessNudgers(
-  neutrals: Color[],
-  palettes: Color[][],
-  lightnessNudgers: number[]
-): { neutrals: Color[]; palettes: Color[][] } {
-  const updatedNeutrals = neutrals.map((color, index) => {
+function applyLightnessNudgers(neutrals: Color[], lightnessNudgers: number[]): Color[] {
+  const nudged = neutrals.map((color, index) => {
     const nudger = lightnessNudgers[index] || 0;
     const c = color.clone();
-    c.oklch.l = (c.oklch.l ?? 0) + nudger;
+    c.oklch.l = clamp01((c.oklch.l ?? 0) + nudger);
     return c;
   });
 
-  const updatedPalettes = palettes.map((palette) => {
-    return palette.map((color, index) => {
-      const nudger = lightnessNudgers[index] || 0;
-      const c = color.clone();
-      c.oklch.l = (c.oklch.l ?? 0) + nudger;
-      return c;
-    });
-  });
+  const { minimumDelta, maximumDelta } = getAdaptiveGeneratedLightnessStepBounds(nudged);
+  return enforceMonotonicLightness(nudged, minimumDelta, maximumDelta);
+}
 
-  return { neutrals: updatedNeutrals, palettes: updatedPalettes };
+/**
+ * Derives lightness-step guardrails from the current ramp span and number of steps.
+ * Longer ramps get tighter per-step caps; shorter ramps can tolerate larger jumps.
+ */
+export function getAdaptiveGeneratedLightnessStepBounds(colors: Color[]): {
+  minimumDelta: number;
+  maximumDelta: number;
+} {
+  if (colors.length <= 2) {
+    return {
+      minimumDelta: MIN_GENERATED_LIGHTNESS_STEP_DELTA,
+      maximumDelta: Math.max(
+        MIN_GENERATED_LIGHTNESS_STEP_DELTA,
+        MAX_GENERATED_LIGHTNESS_STEP_DELTA_MIN
+      )
+    };
+  }
+
+  const firstLightness = clamp01(colors[0]?.oklch.l ?? 0);
+  const lastLightness = clamp01(colors[colors.length - 1]?.oklch.l ?? 0);
+  const span = Math.abs(firstLightness - lastLightness);
+  const averageDelta = span / Math.max(1, colors.length - 1);
+  const adaptiveMaximum = clampRange(
+    averageDelta * 1.4,
+    MAX_GENERATED_LIGHTNESS_STEP_DELTA_MIN,
+    MAX_GENERATED_LIGHTNESS_STEP_DELTA_MAX
+  );
+
+  return {
+    minimumDelta: MIN_GENERATED_LIGHTNESS_STEP_DELTA,
+    maximumDelta: Math.max(MIN_GENERATED_LIGHTNESS_STEP_DELTA, adaptiveMaximum)
+  };
+}
+
+function enforceMonotonicLightness(
+  colors: Color[],
+  minimumDelta: number,
+  maximumDelta: number
+): Color[] {
+  if (colors.length <= 2 || minimumDelta <= 0) return colors;
+  const boundedMaximumDelta = Math.max(minimumDelta, maximumDelta);
+
+  const adjusted = colors.map((color) => color.clone());
+  const firstLightness = clamp01(adjusted[0]?.oklch.l ?? 0);
+  const lastIndex = adjusted.length - 1;
+  const lastLightness = clamp01(adjusted[lastIndex]?.oklch.l ?? 0);
+  const descending = firstLightness >= lastLightness;
+
+  adjusted[0].oklch.l = firstLightness;
+  adjusted[lastIndex].oklch.l = lastLightness;
+
+  for (let index = 1; index < lastIndex; index += 1) {
+    const distanceFromStart = index;
+    const distanceFromEnd = lastIndex - index;
+
+    const startLowerBound = descending
+      ? firstLightness - distanceFromStart * boundedMaximumDelta
+      : firstLightness + distanceFromStart * minimumDelta;
+    const startUpperBound = descending
+      ? firstLightness - distanceFromStart * minimumDelta
+      : firstLightness + distanceFromStart * boundedMaximumDelta;
+    const endLowerBound = descending
+      ? lastLightness + distanceFromEnd * minimumDelta
+      : lastLightness - distanceFromEnd * boundedMaximumDelta;
+    const endUpperBound = descending
+      ? lastLightness + distanceFromEnd * boundedMaximumDelta
+      : lastLightness - distanceFromEnd * minimumDelta;
+
+    const minimumLightness = Math.max(0, Math.max(startLowerBound, endLowerBound));
+    const maximumLightness = Math.min(1, Math.min(startUpperBound, endUpperBound));
+    adjusted[index].oklch.l = clampRange(
+      adjusted[index]?.oklch.l ?? 0,
+      minimumLightness,
+      maximumLightness
+    );
+  }
+
+  if (descending) {
+    for (let pass = 0; pass < 3; pass += 1) {
+      for (let index = 1; index < lastIndex; index += 1) {
+        adjusted[index].oklch.l = clampRange(
+          adjusted[index]?.oklch.l ?? 0,
+          (adjusted[index - 1]?.oklch.l ?? 0) - boundedMaximumDelta,
+          (adjusted[index - 1]?.oklch.l ?? 0) - minimumDelta
+        );
+      }
+
+      for (let index = lastIndex - 1; index >= 1; index -= 1) {
+        adjusted[index].oklch.l = clampRange(
+          adjusted[index]?.oklch.l ?? 0,
+          (adjusted[index + 1]?.oklch.l ?? 0) + minimumDelta,
+          (adjusted[index + 1]?.oklch.l ?? 0) + boundedMaximumDelta
+        );
+      }
+    }
+  } else {
+    for (let pass = 0; pass < 3; pass += 1) {
+      for (let index = 1; index < lastIndex; index += 1) {
+        adjusted[index].oklch.l = clampRange(
+          adjusted[index]?.oklch.l ?? 0,
+          (adjusted[index - 1]?.oklch.l ?? 0) + minimumDelta,
+          (adjusted[index - 1]?.oklch.l ?? 0) + boundedMaximumDelta
+        );
+      }
+
+      for (let index = lastIndex - 1; index >= 1; index -= 1) {
+        adjusted[index].oklch.l = clampRange(
+          adjusted[index]?.oklch.l ?? 0,
+          (adjusted[index + 1]?.oklch.l ?? 0) - boundedMaximumDelta,
+          (adjusted[index + 1]?.oklch.l ?? 0) - minimumDelta
+        );
+      }
+    }
+  }
+
+  preserveUniqueRenderedEndpoint(adjusted, minimumDelta, descending ? '#000000' : '#ffffff');
+
+  return adjusted.map((color) => {
+    const next = color.clone();
+    next.oklch.l = clamp01(next.oklch.l ?? 0);
+    return next;
+  });
+}
+
+function preserveUniqueRenderedEndpoint(
+  colors: Color[],
+  minimumDelta: number,
+  endpointHex: '#000000' | '#ffffff'
+): void {
+  const lastIndex = colors.length - 1;
+
+  for (let index = 1; index < lastIndex; index += 1) {
+    const current = colors[index];
+    if (!current || toHex(current).toLowerCase() !== endpointHex) continue;
+
+    const previousLightness = colors[index - 1]?.oklch.l ?? 0;
+    const nextLightness = colors[index + 1]?.oklch.l ?? 0;
+    const lowerBound = Math.min(previousLightness, nextLightness) + minimumDelta;
+    const upperBound = Math.max(previousLightness, nextLightness) - minimumDelta;
+
+    if (!(upperBound > lowerBound)) continue;
+
+    let lo = lowerBound;
+    let hi = upperBound;
+    let best = upperBound;
+
+    for (let iteration = 0; iteration < 18; iteration += 1) {
+      const mid = (lo + hi) / 2;
+      const probe = current.clone();
+      probe.oklch.l = mid;
+
+      if (toHex(probe).toLowerCase() === endpointHex) {
+        if (endpointHex === '#000000') {
+          lo = mid;
+        } else {
+          hi = mid;
+        }
+      } else {
+        best = mid;
+        if (endpointHex === '#000000') {
+          hi = mid;
+        } else {
+          lo = mid;
+        }
+      }
+    }
+
+    current.oklch.l = best;
+  }
 }
 
 /**
@@ -596,8 +819,10 @@ export function generatePalettes(params: ColorGenParams): {
   neutrals: Color[];
   palettes: Color[][];
 } {
-  // Generate base neutrals WITHOUT nudgers
+  // Generate base neutrals, then apply lightness nudgers before palette chroma is derived.
   const baseNeutrals = generateBaseNeutrals(params);
+  const lightnessNudgers = params.lightnessNudgers || [];
+  const nudgedNeutrals = applyLightnessNudgers(baseNeutrals, lightnessNudgers);
 
   // Parse and validate base color
   const baseColor = toOklch(params.baseColor);
@@ -617,26 +842,86 @@ export function generatePalettes(params: ColorGenParams): {
   const baseChromaRatio =
     referenceMaxAtBase > 1e-6 ? Math.min(baseChroma / referenceMaxAtBase, 1) : 0;
 
-  // Generate palettes with hue variations using BASE neutrals (without nudgers)
-  const palettes: Color[][] = Array.from({ length: params.numPalettes }, (_, i) => {
+  const paletteHues = Array.from({ length: params.numPalettes }, (_, i) => {
     const hueNudger = params.hueNudgers?.[i] || 0;
     const hueOffset = (360 / params.numPalettes) * i + hueNudger;
-    const tempColor = baseColor.clone();
-    tempColor.oklch.h = ((baseColor.oklch.h ?? 0) + hueOffset) % 360;
-    return generatePalette(baseNeutrals, tempColor, baseChromaRatio, gamut);
+    return ((baseColor.oklch.h ?? 0) + hueOffset) % 360;
+  });
+  const stepSaturationNudgers = Array.from({ length: params.numColors }, (_, index) =>
+    clampSaturationNudger(params.stepSaturationNudgers?.[index] ?? 0, STEP_SATURATION_NUDGER_BOUNDS)
+  );
+  const paletteSaturationNudgers = Array.from({ length: params.numPalettes }, (_, index) =>
+    clampSaturationNudger(
+      params.paletteSaturationNudgers?.[index] ?? 0,
+      PALETTE_SATURATION_NUDGER_BOUNDS
+    )
+  );
+
+  const clampedBaseChromaRatio =
+    isFinite(baseChromaRatio) && baseChromaRatio > 0 ? Math.min(baseChromaRatio, 1) : 0;
+
+  const stepSaturationModel = nudgedNeutrals.map((neutralColor) => {
+    const l = neutralColor.oklch.l ?? 0;
+    if (l >= 0.9999 || l <= 0.0001 || clampedBaseChromaRatio <= 0) {
+      return {
+        stepBaseSaturation: 0,
+        referenceTargetSaturation: 0,
+        caps: paletteHues.map(() => 0)
+      };
+    }
+
+    const referenceMaxAtStep = maxChromaInGamut(l, referenceHue, gamut);
+    const referenceTargetChroma = clampedBaseChromaRatio * referenceMaxAtStep;
+    const referenceTargetSaturation = getPerceptualSaturation(
+      oklchColor(l, referenceTargetChroma, referenceHue)
+    );
+    const caps = paletteHues.map((hue) => {
+      const hueMax = maxChromaInGamut(l, hue, gamut);
+      return getPerceptualSaturation(oklchColor(l, hueMax, hue));
+    });
+    const robustCap = getQuantile(
+      caps.filter((value) => isFinite(value)),
+      0.25
+    );
+    const relaxedCap = robustCap * (1 + PERCEPTUAL_SATURATION_RELAXATION * 0.2285714286);
+    return {
+      stepBaseSaturation: Math.min(referenceTargetSaturation, relaxedCap),
+      referenceTargetSaturation,
+      caps
+    };
   });
 
-  // Apply lightness nudgers as the FINAL step
-  const lightnessNudgers = params.lightnessNudgers || [];
-  const { neutrals: neutralsWithNudgers, palettes: palettesWithNudgers } = applyLightnessNudgers(
-    baseNeutrals,
-    palettes,
-    lightnessNudgers
+  const palettes: Color[][] = paletteHues.map((paletteHue, paletteIndex) =>
+    nudgedNeutrals.map((neutralColor, stepIndex) => {
+      const l = neutralColor.oklch.l ?? 0;
+      if (l >= 0.9999 || l <= 0.0001) return oklchColor(l, 0, paletteHue);
+
+      const stepModel = stepSaturationModel[stepIndex];
+      const stepBaseSaturation = stepModel?.stepBaseSaturation ?? 0;
+      const referenceTargetSaturation = stepModel?.referenceTargetSaturation ?? 0;
+      const requestedExtra = Math.max(
+        0,
+        referenceTargetSaturation -
+          stepBaseSaturation +
+          (stepSaturationNudgers[stepIndex] ?? 0) +
+          (paletteSaturationNudgers[paletteIndex] ?? 0)
+      );
+      const capSaturation = stepModel?.caps[paletteIndex] ?? 0;
+      const headroom = Math.max(0, capSaturation - stepBaseSaturation);
+      const achievedSaturation =
+        headroom <= 1e-6
+          ? Math.min(stepBaseSaturation, capSaturation)
+          : stepBaseSaturation +
+            headroom * (1 - Math.exp(-requestedExtra / Math.max(headroom, 1e-6)));
+      const c = solveChromaForPerceptualSaturation(l, paletteHue, achievedSaturation, gamut);
+
+      return oklchColor(l, c, paletteHue);
+    })
   );
 
   return {
-    neutrals: neutralsWithNudgers,
-    palettes: palettesWithNudgers
+    neutrals: nudgedNeutrals,
+    palettes
   };
 }
 
