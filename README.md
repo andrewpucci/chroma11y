@@ -95,7 +95,7 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 - **Design token system** - Fluid typography and spacing that scales with viewport
 - **Theme switching** - Light, dark, and auto (follows system preference)
 - **Responsive** - Container queries and compact collapsible mobile controls
-- **Fast performance** - All operations <200ms
+- **Responsive generation** - Interactive palette generation stays fast, while constraint solving offers fast and deep modes
 - **Intuitive controls** - Easy-to-use interface
 - **Direct slider value entry** - Use inline number inputs with native steppers beside each slider
 - **Quick reset** - Reset all settings from the header while preserving theme preference
@@ -158,6 +158,16 @@ npm run dev
 6. **Export** - Download as JSON, CSS, or SCSS
 
 Tip: each slider includes an inline number input with native up/down arrows for precise adjustments. On smaller screens, the main control cards collapse by default and the advanced generation and output sections can be expanded independently.
+
+### Constraint Solving
+
+Use the Constraints card when you need the generated palettes to hit specific color or contrast goals.
+
+- **Solve constraints** runs a bounded in-browser pass tuned for quick iteration.
+- **Deep solve** runs a more exhaustive in-browser search and may take noticeably longer on complex requests.
+- **Base color stays fixed during solving**. The solver adjusts curve controls and nudgers, not the original base color.
+- **Fit to threshold** targets the step median for the selected contrast rule while still requiring the minimum swatch in scope to meet the threshold.
+- **Must pass** target colors remain hard priorities in both solve modes.
 
 ### Control Explanations
 
