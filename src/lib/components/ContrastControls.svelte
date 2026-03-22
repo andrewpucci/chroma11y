@@ -20,6 +20,7 @@
     resolveGeneratedPaletteNames,
     resolveNeutralPaletteName
   } from '$lib/paletteNameUtils';
+  import CheckboxRow from './CheckboxRow.svelte';
   import type { ContrastAlgorithm, SwatchContrastIndicators } from '$lib/types';
 
   interface Props {
@@ -131,8 +132,7 @@
     onHistoryCommit?.('Contrast algorithm changed');
   }
 
-  function handleIndicatorToggle(key: keyof SwatchContrastIndicators, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
+  function handleIndicatorToggle(key: keyof SwatchContrastIndicators, checked: boolean): void {
     const nextIndicators = {
       ...swatchContrastIndicatorsLocal,
       [key]: checked
@@ -242,157 +242,61 @@
     <span class="label">Swatch Contrast Indicators</span>
     <div class="checklist" role="group" aria-label="Swatch contrast indicators">
       {#if contrastAlgorithmLocal === 'WCAG'}
-        <div class="check-item">
-          <input
-            id="indicator-wcag-3to1"
-            type="checkbox"
-            checked={swatchContrastIndicatorsLocal.wcagThreeToOne}
-            onchange={(event) => handleIndicatorToggle('wcagThreeToOne', event)}
-            aria-label="Show WCAG 3 to 1 indicator"
-          />
-          <span class="check-label-with-help">
-            <label class="check-label" for="indicator-wcag-3to1">3:1 (Large/UI/Links)</label>
-            <span class="help-popover">
-              <button
-                type="button"
-                class="info-button"
-                aria-label="Explain WCAG 3 to 1 level"
-                aria-describedby="wcag-3to1-help"
-              >
-                <span aria-hidden="true">i</span>
-              </button>
-              <span id="wcag-3to1-help" class="help-tooltip" role="tooltip">
-                {WCAG_LEVEL_DESCRIPTIONS.threeToOne}
-              </span>
-            </span>
-          </span>
-        </div>
-        <div class="check-item">
-          <input
-            id="indicator-wcag-aa"
-            type="checkbox"
-            checked={swatchContrastIndicatorsLocal.wcagAA}
-            onchange={(event) => handleIndicatorToggle('wcagAA', event)}
-            aria-label="Show WCAG AA indicator"
-          />
-          <span class="check-label-with-help">
-            <label class="check-label" for="indicator-wcag-aa">AA (4.5:1)</label>
-            <span class="help-popover">
-              <button
-                type="button"
-                class="info-button"
-                aria-label="Explain WCAG AA level"
-                aria-describedby="wcag-aa-help"
-              >
-                <span aria-hidden="true">i</span>
-              </button>
-              <span id="wcag-aa-help" class="help-tooltip" role="tooltip">
-                {WCAG_LEVEL_DESCRIPTIONS.aa}
-              </span>
-            </span>
-          </span>
-        </div>
-        <div class="check-item">
-          <input
-            id="indicator-wcag-aaa"
-            type="checkbox"
-            checked={swatchContrastIndicatorsLocal.wcagAAA}
-            onchange={(event) => handleIndicatorToggle('wcagAAA', event)}
-            aria-label="Show WCAG AAA indicator"
-          />
-          <span class="check-label-with-help">
-            <label class="check-label" for="indicator-wcag-aaa">AAA (7:1)</label>
-            <span class="help-popover">
-              <button
-                type="button"
-                class="info-button"
-                aria-label="Explain WCAG AAA level"
-                aria-describedby="wcag-aaa-help"
-              >
-                <span aria-hidden="true">i</span>
-              </button>
-              <span id="wcag-aaa-help" class="help-tooltip" role="tooltip">
-                {WCAG_LEVEL_DESCRIPTIONS.aaa}
-              </span>
-            </span>
-          </span>
-        </div>
+        <CheckboxRow
+          id="indicator-wcag-3to1"
+          label="3:1 (Large/UI/Links)"
+          checked={swatchContrastIndicatorsLocal.wcagThreeToOne}
+          ariaLabel="Show WCAG 3 to 1 indicator"
+          helpLabel="Explain WCAG 3 to 1 level"
+          helpText={WCAG_LEVEL_DESCRIPTIONS.threeToOne}
+          onChange={(checked) => handleIndicatorToggle('wcagThreeToOne', checked)}
+        />
+        <CheckboxRow
+          id="indicator-wcag-aa"
+          label="AA (4.5:1)"
+          checked={swatchContrastIndicatorsLocal.wcagAA}
+          ariaLabel="Show WCAG AA indicator"
+          helpLabel="Explain WCAG AA level"
+          helpText={WCAG_LEVEL_DESCRIPTIONS.aa}
+          onChange={(checked) => handleIndicatorToggle('wcagAA', checked)}
+        />
+        <CheckboxRow
+          id="indicator-wcag-aaa"
+          label="AAA (7:1)"
+          checked={swatchContrastIndicatorsLocal.wcagAAA}
+          ariaLabel="Show WCAG AAA indicator"
+          helpLabel="Explain WCAG AAA level"
+          helpText={WCAG_LEVEL_DESCRIPTIONS.aaa}
+          onChange={(checked) => handleIndicatorToggle('wcagAAA', checked)}
+        />
       {:else}
-        <div class="check-item">
-          <input
-            id="indicator-apca-large"
-            type="checkbox"
-            checked={swatchContrastIndicatorsLocal.apcaLarge}
-            onchange={(event) => handleIndicatorToggle('apcaLarge', event)}
-            aria-label="Show APCA Large indicator"
-          />
-          <span class="check-label-with-help">
-            <label class="check-label" for="indicator-apca-large">Large</label>
-            <span class="help-popover">
-              <button
-                type="button"
-                class="info-button"
-                aria-label="Explain APCA Large level"
-                aria-describedby="apca-large-help"
-              >
-                <span aria-hidden="true">i</span>
-              </button>
-              <span id="apca-large-help" class="help-tooltip" role="tooltip">
-                {APCA_LEVEL_DESCRIPTIONS.large}
-              </span>
-            </span>
-          </span>
-        </div>
-        <div class="check-item">
-          <input
-            id="indicator-apca-fluent"
-            type="checkbox"
-            checked={swatchContrastIndicatorsLocal.apcaFluent}
-            onchange={(event) => handleIndicatorToggle('apcaFluent', event)}
-            aria-label="Show APCA Fluent indicator"
-          />
-          <span class="check-label-with-help">
-            <label class="check-label" for="indicator-apca-fluent">Fluent</label>
-            <span class="help-popover">
-              <button
-                type="button"
-                class="info-button"
-                aria-label="Explain APCA Fluent level"
-                aria-describedby="apca-fluent-help"
-              >
-                <span aria-hidden="true">i</span>
-              </button>
-              <span id="apca-fluent-help" class="help-tooltip" role="tooltip">
-                {APCA_LEVEL_DESCRIPTIONS.fluent}
-              </span>
-            </span>
-          </span>
-        </div>
-        <div class="check-item">
-          <input
-            id="indicator-apca-body"
-            type="checkbox"
-            checked={swatchContrastIndicatorsLocal.apcaBody}
-            onchange={(event) => handleIndicatorToggle('apcaBody', event)}
-            aria-label="Show APCA Body indicator"
-          />
-          <span class="check-label-with-help">
-            <label class="check-label" for="indicator-apca-body">Body</label>
-            <span class="help-popover">
-              <button
-                type="button"
-                class="info-button"
-                aria-label="Explain APCA Body level"
-                aria-describedby="apca-body-help"
-              >
-                <span aria-hidden="true">i</span>
-              </button>
-              <span id="apca-body-help" class="help-tooltip" role="tooltip">
-                {APCA_LEVEL_DESCRIPTIONS.body}
-              </span>
-            </span>
-          </span>
-        </div>
+        <CheckboxRow
+          id="indicator-apca-large"
+          label="Large"
+          checked={swatchContrastIndicatorsLocal.apcaLarge}
+          ariaLabel="Show APCA Large indicator"
+          helpLabel="Explain APCA Large level"
+          helpText={APCA_LEVEL_DESCRIPTIONS.large}
+          onChange={(checked) => handleIndicatorToggle('apcaLarge', checked)}
+        />
+        <CheckboxRow
+          id="indicator-apca-fluent"
+          label="Fluent"
+          checked={swatchContrastIndicatorsLocal.apcaFluent}
+          ariaLabel="Show APCA Fluent indicator"
+          helpLabel="Explain APCA Fluent level"
+          helpText={APCA_LEVEL_DESCRIPTIONS.fluent}
+          onChange={(checked) => handleIndicatorToggle('apcaFluent', checked)}
+        />
+        <CheckboxRow
+          id="indicator-apca-body"
+          label="Body"
+          checked={swatchContrastIndicatorsLocal.apcaBody}
+          ariaLabel="Show APCA Body indicator"
+          helpLabel="Explain APCA Body level"
+          helpText={APCA_LEVEL_DESCRIPTIONS.body}
+          onChange={(checked) => handleIndicatorToggle('apcaBody', checked)}
+        />
       {/if}
     </div>
   </div>
@@ -507,87 +411,6 @@
     display: grid;
     gap: var(--space-xs);
     padding: var(--space-xs) 0;
-  }
-
-  .check-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    min-height: var(--touch-target-comfortable);
-    font-size: var(--font-size-sm);
-    color: var(--text-primary);
-  }
-
-  .check-label-with-help {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-  }
-
-  .check-label {
-    cursor: pointer;
-  }
-
-  .check-item input {
-    width: var(--touch-target-min);
-    height: var(--touch-target-min);
-    margin: 0;
-    accent-color: var(--accent);
-  }
-
-  .help-popover {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .info-button {
-    width: var(--touch-target-min);
-    min-width: var(--touch-target-min);
-    height: var(--touch-target-min);
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--bg-primary);
-    color: var(--text-secondary);
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-semibold);
-    line-height: 1;
-    cursor: help;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-  }
-
-  .help-tooltip {
-    position: absolute;
-    inset-block-start: calc(100% + var(--space-xs));
-    inset-inline-start: 0;
-    z-index: 20;
-    inline-size: min(40ch, calc(100vw - var(--space-xl)));
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: var(--font-size-sm);
-    line-height: var(--line-height-normal);
-    box-shadow: 0 6px 16px color-mix(in oklab, black 14%, transparent);
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(-2px);
-    pointer-events: none;
-    transition:
-      opacity var(--transition-fast),
-      transform var(--transition-fast),
-      visibility var(--transition-fast);
-  }
-
-  .help-popover:hover .help-tooltip,
-  .help-popover:focus-within .help-tooltip {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
   }
 
   .color-input-group {
