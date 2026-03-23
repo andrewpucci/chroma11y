@@ -173,8 +173,12 @@ test.describe('UI Interactions', () => {
       await expect(page.getByLabel('Target color enabled')).not.toBeChecked();
       await expect(constraintsSummary).toContainText('1 disabled');
 
-      await page.getByLabel('Constraint status filter').selectOption('disabled');
-      await expect(page.getByText('1 of 2 constraints shown')).toBeVisible();
+      await constraintsCard
+        .locator('select[aria-label="Constraint status filter"]:visible')
+        .selectOption('disabled');
+      await expect(constraintsCard.locator('.filter-results:visible')).toHaveText(
+        '1 of 2 constraints shown'
+      );
     });
   });
 });

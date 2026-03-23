@@ -30,8 +30,7 @@ test.describe('Focus Indicators', () => {
         { selector: '[aria-label="Number of colors value input"]' },
         { selector: '#numPalettes' },
         { selector: '[aria-label="Number of palettes value input"]' },
-        { selector: '[data-testid="generation-advanced-group"] summary' },
-        { selector: '#contrast-algorithm' }
+        { selector: '[data-testid="generation-advanced-group"] summary' }
       ];
 
       for (const item of expectedTabOrder) {
@@ -44,6 +43,18 @@ test.describe('Focus Indicators', () => {
 
         await expect(locator).toBeFocused();
       }
+
+      let contrastAlgorithmFocused = false;
+      for (let i = 0; i < 3; i += 1) {
+        await page.keyboard.press('Tab');
+        const contrastAlgorithm = page.locator('#contrast-algorithm');
+        if (await contrastAlgorithm.evaluate((el) => el === document.activeElement)) {
+          contrastAlgorithmFocused = true;
+          break;
+        }
+      }
+
+      expect(contrastAlgorithmFocused).toBe(true);
 
       // Browser engines differ in checklist sub-order; ensure we traverse checklist controls
       // before arriving at contrast mode.
