@@ -317,6 +317,61 @@ describe('ConstraintsControls', () => {
     expect(screen.getByText('1 disabled')).toBeInTheDocument();
   });
 
+  it('commits history for inline constraint edits', async () => {
+    const onHistoryCommit = vi.fn();
+
+    updateColorState({
+      constraints: [
+        {
+          id: 'constraint-1',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784',
+          mustPass: false,
+          metric: 'ok'
+        },
+        {
+          id: 'constraint-2',
+          type: 'contrast-rule',
+          enabled: true,
+          scope: 'all-palettes',
+          stepIndex: 0,
+          reference: 'low',
+          algorithm: 'WCAG',
+          level: 'wcagAA',
+          fitToThreshold: false
+        }
+      ]
+    });
+
+    render(ConstraintsControls, { onHistoryCommit });
+
+    await fireEvent.click(screen.getByRole('checkbox', { name: /target color enabled/i }));
+    expect(onHistoryCommit).toHaveBeenCalledWith('Constraint enabled changed');
+
+    await expandRow(0);
+    await fireEvent.change(screen.getByLabelText(/metric/i), {
+      target: { value: '2000' }
+    });
+    expect(onHistoryCommit).toHaveBeenCalledWith('Constraint target metric changed');
+
+    const targetInput = screen.getByLabelText(/target hex/i);
+    await fireEvent.input(targetInput, {
+      target: { value: '#112233' }
+    });
+    await fireEvent.blur(targetInput);
+    expect(onHistoryCommit).toHaveBeenCalledWith('Constraint target color changed');
+
+    await expandRow(1);
+    await fireEvent.change(screen.getByDisplayValue('0'), {
+      target: { value: '2' }
+    });
+    expect(onHistoryCommit).toHaveBeenCalledWith('Constraint rule step changed');
+
+    await fireEvent.click(screen.getByRole('checkbox', { name: /fit to threshold/i }));
+    expect(onHistoryCommit).toHaveBeenCalledWith('Constraint fit-to-threshold changed');
+  });
+
   it('filters constraints by status and type', async () => {
     updateColorState({
       constraints: [

@@ -1020,6 +1020,8 @@
     const _theme = currentThemeLocal;
     const _lightnessNudgers = lightnessNudgerValues;
     const _hueNudgers = hueNudgerValues;
+    const _stepSaturationNudgers = stepSaturationNudgerValues;
+    const _paletteSaturationNudgers = paletteSaturationNudgerValues;
     const _gamutSpace = gamutSpaceLocal;
     const _isDragging = isDraggingSlider;
     void _numColors;
@@ -1034,6 +1036,8 @@
     void _theme;
     void _lightnessNudgers;
     void _hueNudgers;
+    void _stepSaturationNudgers;
+    void _paletteSaturationNudgers;
     void _gamutSpace;
 
     // Skip generation while dragging to prevent layout reflow

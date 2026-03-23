@@ -367,6 +367,10 @@
     expandedConstraintId = expandedConstraintId === id ? null : id;
   }
 
+  function commitConstraintHistory(label: string): void {
+    onHistoryCommit?.(label);
+  }
+
   function addTargetColorConstraint(): void {
     const constraint = createDefaultTargetColorConstraint();
     addConstraint(constraint);
@@ -404,6 +408,8 @@
     if (!checked && expandedConstraintId === id) {
       expandedConstraintId = null;
     }
+
+    commitConstraintHistory('Constraint enabled changed');
   }
 
   function handleTargetHexChange(id: string, value: string): void {
@@ -454,6 +460,7 @@
     }
     setTargetHexDraft(id, normalized);
     setTargetHexError(id);
+    commitConstraintHistory('Constraint target color changed');
   }
 
   function handleTargetMetricChange(id: string, metric: ColorDifferenceMetric): void {
@@ -465,6 +472,7 @@
           }
         : constraint
     );
+    commitConstraintHistory('Constraint target metric changed');
   }
 
   function canEnableMustPass(constraintId: string): boolean {
@@ -490,6 +498,7 @@
           }
         : constraint
     );
+    commitConstraintHistory('Constraint must-pass changed');
   }
 
   function handleRuleScopeChange(id: string, value: 'neutral' | 'all-palettes'): void {
@@ -501,6 +510,7 @@
           }
         : constraint
     );
+    commitConstraintHistory('Constraint rule scope changed');
   }
 
   function handleRuleStepChange(id: string, value: number): void {
@@ -514,6 +524,10 @@
     );
   }
 
+  function handleRuleStepCommit(): void {
+    commitConstraintHistory('Constraint rule step changed');
+  }
+
   function handleRuleReferenceChange(id: string, value: 'low' | 'high'): void {
     updateConstraint(id, (constraint) =>
       constraint.type === 'contrast-rule'
@@ -523,6 +537,7 @@
           }
         : constraint
     );
+    commitConstraintHistory('Constraint rule reference changed');
   }
 
   function handleRuleAlgorithmChange(id: string, value: ContrastAlgorithm): void {
@@ -535,6 +550,7 @@
           }
         : constraint
     );
+    commitConstraintHistory('Constraint rule algorithm changed');
   }
 
   function handleRuleLevelChange(id: string, value: ConstraintThresholdKey): void {
@@ -546,6 +562,7 @@
           }
         : constraint
     );
+    commitConstraintHistory('Constraint rule threshold changed');
   }
 
   function handleRuleFitToThresholdChange(id: string, checked: boolean): void {
@@ -557,6 +574,7 @@
           }
         : constraint
     );
+    commitConstraintHistory('Constraint fit-to-threshold changed');
   }
 
   function beginTargetColorPick(id: string): void {
@@ -1047,6 +1065,7 @@
                             constraint.id,
                             Number.parseInt((event.target as HTMLInputElement).value, 10) || 0
                           )}
+                        onchange={handleRuleStepCommit}
                       />
                     </label>
 
