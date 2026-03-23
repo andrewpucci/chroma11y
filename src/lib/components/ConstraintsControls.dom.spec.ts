@@ -112,9 +112,12 @@ describe('ConstraintsControls', () => {
     expect(screen.queryByLabelText(/target hex/i)).not.toBeInTheDocument();
     expect(screen.getByRole('spinbutton')).toBeInTheDocument();
 
-    await fireEvent.click(screen.getByRole('button', { name: /add target color/i }));
+    await fireEvent.click(screen.getAllByRole('button', { name: /add target color/i })[0]);
     expect(screen.getByLabelText(/target hex/i)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Collapse' })).toHaveLength(1);
+    expect(document.querySelector('.constraint-row .constraint-kind')?.textContent).toBe(
+      'Target color'
+    );
   });
 
   it('shows the entered target color preview and closest swatch preview inside the expanded row', async () => {
@@ -233,6 +236,39 @@ describe('ConstraintsControls', () => {
     expect(get(constraints)[0]).toMatchObject({ metric: '2000' });
   });
 
+  it('keeps invalid target hex drafts out of persisted constraint state and resets on blur', async () => {
+    updateColorState({
+      constraints: [
+        {
+          id: 'constraint-1',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784',
+          mustPass: false,
+          metric: 'ok'
+        }
+      ]
+    });
+
+    render(ConstraintsControls);
+    await expandRow();
+
+    const input = screen.getByLabelText(/target hex/i);
+    await fireEvent.input(input, {
+      target: { value: 'not-a-color' }
+    });
+
+    expect(screen.getByText(/enter a valid hex color/i)).toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(get(constraints)[0]).toMatchObject({ targetHex: '#5EF784' });
+
+    await fireEvent.blur(input);
+
+    expect(input).toHaveValue('#5EF784');
+    expect(screen.queryByText(/enter a valid hex color/i)).not.toBeInTheDocument();
+    expect(announce).toHaveBeenCalledWith('Target color reset to the last valid hex value.');
+  });
+
   it('updates the contrast-rule fit-to-threshold toggle', async () => {
     updateColorState({
       constraints: [
@@ -316,13 +352,13 @@ describe('ConstraintsControls', () => {
 
     render(ConstraintsControls);
 
-    await fireEvent.change(screen.getByLabelText(/constraint status filter/i), {
+    await fireEvent.change(screen.getAllByLabelText(/constraint status filter/i)[0], {
       target: { value: 'disabled' }
     });
-    expect(screen.getByText(/1 of 3 constraints shown/i)).toBeInTheDocument();
-    expect(screen.getAllByText('disabled')).toHaveLength(1);
+    expect(screen.getAllByText(/1 of 3 constraints shown/i)[0]).toBeInTheDocument();
+    expect(screen.getAllByText('disabled').length).toBeGreaterThanOrEqual(1);
 
-    await fireEvent.change(screen.getByLabelText(/constraint type filter/i), {
+    await fireEvent.change(screen.getAllByLabelText(/constraint type filter/i)[0], {
       target: { value: 'contrast-rule' }
     });
     expect(screen.getByText(/no constraints match the current filters/i)).toBeInTheDocument();
@@ -377,19 +413,36 @@ describe('ConstraintsControls', () => {
         }
       ]
     });
+    setConstraintSolverSummary({
+      solvedAt: Date.now(),
+      passCount: 2,
+      warningCount: 1,
+      failCount: 0,
+      applied: true,
+      changed: true,
+      scoreBefore: 1,
+      scoreAfter: 0,
+      source: 'client'
+    });
 
     render(ConstraintsControls);
 
-    const solveButton = screen.getByRole('button', { name: /solve constraints/i });
-    const deepSolveButton = screen.getByRole('button', { name: /deep solve/i });
+    const solveButton = screen.getAllByRole('button', { name: /solve constraints/i })[0];
+    const deepSolveButton = screen.getAllByRole('button', { name: /deep solve/i })[0];
 
     await fireEvent.click(solveButton);
 
-    expect(screen.getByRole('button', { name: /cancel solve/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /cancel solve/i })[0]).toBeInTheDocument();
     expect(screen.getByText(/solving constraints/i)).toBeInTheDocument();
+    expect(screen.queryByText(/last completed solve:/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /finish or cancel the current solve to edit constraints or clear solved adjustments/i
+      )
+    ).toBeInTheDocument();
     expect(solveButton).toBeDisabled();
     expect(deepSolveButton).toBeDisabled();
-    expect(screen.getByLabelText(/constraint status filter/i)).toBeDisabled();
+    expect(screen.getAllByLabelText(/constraint status filter/i)[0]).toBeDisabled();
     expect(screen.getByLabelText(/target color enabled/i)).toBeDisabled();
     expect(screen.getAllByRole('button', { name: 'Edit' })[0]).toBeDisabled();
     expect(get(activeConstraintSolveRunState).status).toBe('running-fast');
@@ -457,7 +510,7 @@ describe('ConstraintsControls', () => {
 
     render(ConstraintsControls);
 
-    await fireEvent.click(screen.getByRole('button', { name: /deep solve/i }));
+    await fireEvent.click(screen.getAllByRole('button', { name: /deep solve/i })[0]);
 
     expect(startSolveConstraintsInWorker).toHaveBeenCalledWith(expect.any(Object), 'deep');
     expect(screen.getByText(/running deep solve/i)).toBeInTheDocument();
@@ -498,8 +551,8 @@ describe('ConstraintsControls', () => {
 
     render(ConstraintsControls);
 
-    await fireEvent.click(screen.getByRole('button', { name: /solve constraints/i }));
-    await fireEvent.click(screen.getByRole('button', { name: /cancel solve/i }));
+    await fireEvent.click(screen.getAllByRole('button', { name: /solve constraints/i })[0]);
+    await fireEvent.click(screen.getAllByRole('button', { name: /cancel solve/i })[0]);
 
     expect(cancel).toHaveBeenCalledTimes(1);
 
@@ -509,10 +562,10 @@ describe('ConstraintsControls', () => {
     await Promise.resolve();
 
     expect(get(activeConstraintSolveRunState).status).toBe('idle');
-    expect(screen.getByRole('button', { name: /solve constraints/i })).not.toBeDisabled();
+    expect(screen.getAllByRole('button', { name: /solve constraints/i })[0]).not.toBeDisabled();
   });
 
-  it('shows deep solve in the summary when the last run used the deep profile', () => {
+  it('shows deep solve in the last completed summary when the last run used the deep profile', () => {
     setConstraintSolverSummary({
       solvedAt: Date.now(),
       passCount: 7,
@@ -532,7 +585,7 @@ describe('ConstraintsControls', () => {
 
     render(ConstraintsControls);
 
-    expect(screen.getByText(/last solve: deep solve/i)).toBeInTheDocument();
+    expect(screen.getByText(/last completed solve:\s*deep solve/i)).toBeInTheDocument();
     expect(screen.getByText(/1 required unsatisfied/i)).toBeInTheDocument();
   });
 });

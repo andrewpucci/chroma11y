@@ -17,6 +17,7 @@ import type {
   ContrastReference,
   ConstraintThresholdKey
 } from './types';
+import { isValidHexColor } from './colorUtils';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
 
 export type StoredColorState = SerializableColorState;
@@ -86,6 +87,7 @@ function isValidConstraint(value: unknown): value is Constraint {
   if (candidate.type === 'target-color') {
     return (
       typeof candidate.targetHex === 'string' &&
+      isValidHexColor(candidate.targetHex) &&
       (candidate.mustPass === undefined || typeof candidate.mustPass === 'boolean') &&
       (candidate.metric === undefined ||
         VALID_COLOR_DIFFERENCE_METRICS.includes(candidate.metric as ColorDifferenceMetric))

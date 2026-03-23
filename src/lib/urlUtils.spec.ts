@@ -83,6 +83,40 @@ describe('urlUtils', () => {
       expect(encoded).toContain('ct=');
     });
 
+    it('omits invalid target-color constraints from encoded URL state', () => {
+      const state: UrlColorState = {
+        constraints: [
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: 'not-a-color'
+          },
+          {
+            id: 'constraint-2',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784'
+          }
+        ]
+      };
+
+      const encoded = encodeStateToUrl(state);
+      const params = new URLSearchParams(encoded);
+      const decodedConstraints = JSON.parse(
+        Buffer.from(params.get('ct') ?? '', 'base64url').toString('utf8')
+      );
+
+      expect(decodedConstraints).toEqual([
+        {
+          id: 'constraint-2',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784'
+        }
+      ]);
+    });
+
     it('encodes lightness nudgers with index:value format', () => {
       const state: UrlColorState = {
         lightnessNudgers: [0, 0, 0.1, 0, 0, -0.05, 0, 0, 0, 0, 0]
@@ -206,6 +240,38 @@ describe('urlUtils', () => {
       expect(state.constraints).toEqual([
         {
           id: 'constraint-1',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784'
+        }
+      ]);
+    });
+
+    it('drops invalid target-color constraints from decoded URL state', () => {
+      const encodedConstraints = Buffer.from(
+        JSON.stringify([
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: 'not-a-color'
+          },
+          {
+            id: 'constraint-2',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784'
+          }
+        ]),
+        'utf-8'
+      ).toString('base64url');
+      const params = new URLSearchParams(`ct=${encodeURIComponent(encodedConstraints)}`);
+
+      const state = decodeStateFromUrl(params);
+
+      expect(state.constraints).toEqual([
+        {
+          id: 'constraint-2',
           type: 'target-color',
           enabled: true,
           targetHex: '#5EF784'

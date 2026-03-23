@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Color from 'colorjs.io';
   import {
     activeSwatchPicker,
     activeConstraintSolveRunState,
@@ -40,6 +41,7 @@
     y2
   } from '$lib/stores';
   import { announce } from '$lib/announce';
+  import { colorToCssHex, isValidHexColor } from '$lib/colorUtils';
   import {
     createDefaultContrastRuleConstraint,
     createDefaultTargetColorConstraint,
@@ -133,6 +135,8 @@
   let statusFilter = $state<StatusFilter>('all');
   let typeFilter = $state<TypeFilter>('all');
   let activeSolveCancel = $state<(() => void) | null>(null);
+  let targetHexDrafts = $state<Record<string, string>>({});
+  let targetHexErrors = $state<Record<string, string>>({});
 
   let neutralLabel = $derived(
     neutralsHexLocal.length > 0
@@ -314,26 +318,37 @@
     return status === 'disabled' ? 'disabled' : status;
   }
 
-  function getTopSummary(): string {
-    if (constraintsLocal.length === 0) {
-      return 'No constraints yet. Add a target color or contrast rule to guide the palette.';
+  function normalizeHexColor(value: string): string {
+    return colorToCssHex(new Color(value)).toUpperCase();
+  }
+
+  function getTargetHexDraft(id: string, fallback: string): string {
+    return targetHexDrafts[id] ?? fallback;
+  }
+
+  function getTargetHexError(id: string): string | undefined {
+    return targetHexErrors[id];
+  }
+
+  function setTargetHexDraft(id: string, value: string): void {
+    targetHexDrafts = {
+      ...targetHexDrafts,
+      [id]: value
+    };
+  }
+
+  function setTargetHexError(id: string, message?: string): void {
+    if (message) {
+      targetHexErrors = {
+        ...targetHexErrors,
+        [id]: message
+      };
+      return;
     }
 
-    const summaryParts = [
-      `${evaluation.summary.failCount} fail`,
-      `${evaluation.summary.warningCount} warning`,
-      `${evaluation.summary.passCount} pass`
-    ];
-
-    if ((evaluation.summary.requiredUnsatisfiedCount ?? 0) > 0) {
-      summaryParts.push(`${evaluation.summary.requiredUnsatisfiedCount} required unsatisfied`);
-    }
-
-    if (disabledConstraintCount > 0) {
-      summaryParts.push(`${disabledConstraintCount} disabled`);
-    }
-
-    return summaryParts.join(' · ');
+    targetHexErrors = Object.fromEntries(
+      Object.entries(targetHexErrors).filter(([entryId]) => entryId !== id)
+    );
   }
 
   function getFilterResultsLabel(): string {
@@ -392,14 +407,53 @@
   }
 
   function handleTargetHexChange(id: string, value: string): void {
+    setTargetHexDraft(id, value);
+
+    if (!isValidHexColor(value)) {
+      setTargetHexError(id, 'Enter a valid hex color like #5EF784 or #5E7.');
+      return;
+    }
+
+    const normalized = normalizeHexColor(value);
+    setTargetHexError(id);
+    setTargetHexDraft(id, normalized);
     updateConstraint(id, (constraint) =>
       constraint.type === 'target-color'
         ? {
             ...constraint,
-            targetHex: value
+            targetHex: normalized
           }
         : constraint
     );
+  }
+
+  function handleTargetHexBlur(id: string): void {
+    const constraint = constraintsLocal.find((entry) => entry.id === id);
+    if (!constraint || constraint.type !== 'target-color') {
+      return;
+    }
+
+    const draft = getTargetHexDraft(id, constraint.targetHex);
+    if (!isValidHexColor(draft)) {
+      setTargetHexDraft(id, constraint.targetHex);
+      setTargetHexError(id);
+      announce('Target color reset to the last valid hex value.');
+      return;
+    }
+
+    const normalized = normalizeHexColor(draft);
+    if (normalized !== constraint.targetHex) {
+      updateConstraint(id, (entry) =>
+        entry.type === 'target-color'
+          ? {
+              ...entry,
+              targetHex: normalized
+            }
+          : entry
+      );
+    }
+    setTargetHexDraft(id, normalized);
+    setTargetHexError(id);
   }
 
   function handleTargetMetricChange(id: string, metric: ColorDifferenceMetric): void {
@@ -671,7 +725,6 @@
 <section class="constraints-controls">
   <div class="constraints-toolbar">
     <div class="toolbar-copy">
-      <p class="toolbar-summary">{getTopSummary()}</p>
       <div class="toolbar-chips" aria-label="Constraint health summary">
         <Badge>{enabledConstraintCount} enabled</Badge>
         <Badge variant="fail">{evaluation.summary.failCount} fail</Badge>
@@ -686,9 +739,10 @@
           <Badge>{disabledConstraintCount} disabled</Badge>
         {/if}
       </div>
-      {#if constraintSolverSummaryLocal}
+      {#if constraintSolverSummaryLocal && !isSolveLocked}
         <p class="solver-summary">
-          Last solve: {constraintSolverSummaryLocal.profile === 'deep' ? 'deep solve' : 'solve'},
+          Last completed solve:
+          {constraintSolverSummaryLocal.profile === 'deep' ? ' deep solve' : ' solve'},
           {constraintSolverSummaryLocal.passCount} pass,
           {constraintSolverSummaryLocal.warningCount} warning,
           {constraintSolverSummaryLocal.failCount} fail.
@@ -703,7 +757,7 @@
       {/if}
     </div>
 
-    <div class="toolbar-actions">
+    <div class="toolbar-actions toolbar-actions--desktop">
       <div class="action-row">
         <Button onclick={addTargetColorConstraint} disabled={isSolveLocked}>
           Add target color
@@ -741,11 +795,14 @@
       >
       <span>{constraintSolveRunStateLocal.statusMessage}</span>
       <Button onclick={handleCancelSolve} variant="ghost">Cancel solve</Button>
+      <span class="solve-status-hint">
+        Finish or cancel the current solve to edit constraints or clear solved adjustments.
+      </span>
     </div>
   {/if}
 
   {#if constraintsLocal.length > 0}
-    <div class="constraint-filters">
+    <div class="constraint-filters constraint-filters--desktop">
       <label class="field-block">
         <span class="field-label">Status</span>
         <select
@@ -782,9 +839,7 @@
   {/if}
 
   {#if constraintsLocal.length === 0}
-    <p class="empty-state">
-      No constraints yet. Add a target color or contrast rule to guide the palette.
-    </p>
+    <p class="empty-state">Add a target color or contrast rule to guide the palette.</p>
   {:else if filteredRows.length === 0}
     <p class="empty-state">No constraints match the current filters.</p>
   {:else}
@@ -864,14 +919,26 @@
                         id={`target-${constraint.id}`}
                         class="input mono"
                         type="text"
-                        value={constraint.targetHex}
+                        value={getTargetHexDraft(constraint.id, constraint.targetHex)}
+                        aria-invalid={getTargetHexError(constraint.id) ? 'true' : undefined}
+                        aria-describedby={getTargetHexError(constraint.id)
+                          ? `target-${constraint.id}-error`
+                          : undefined}
+                        autocapitalize="characters"
+                        spellcheck="false"
                         disabled={isSolveLocked}
                         oninput={(event) =>
                           handleTargetHexChange(
                             constraint.id,
                             (event.target as HTMLInputElement).value
                           )}
+                        onblur={() => handleTargetHexBlur(constraint.id)}
                       />
+                      {#if getTargetHexError(constraint.id)}
+                        <span class="field-error" id={`target-${constraint.id}-error`}>
+                          {getTargetHexError(constraint.id)}
+                        </span>
+                      {/if}
                     </div>
 
                     <div class="field-row">
@@ -1083,6 +1150,70 @@
     </div>
   {/if}
 
+  {#if constraintsLocal.length > 0}
+    <div class="constraint-filters constraint-filters--mobile">
+      <label class="field-block">
+        <span class="field-label">Status</span>
+        <select
+          class="select"
+          aria-label="Constraint status filter"
+          bind:value={statusFilter}
+          disabled={isSolveLocked}
+        >
+          <option value="all">All</option>
+          <option value="failing">Failing</option>
+          <option value="warning">Warning</option>
+          <option value="passing">Passing</option>
+          <option value="required">Required</option>
+          <option value="disabled">Disabled</option>
+        </select>
+      </label>
+
+      <label class="field-block">
+        <span class="field-label">Type</span>
+        <select
+          class="select"
+          aria-label="Constraint type filter"
+          bind:value={typeFilter}
+          disabled={isSolveLocked}
+        >
+          <option value="all">All</option>
+          <option value="target-color">Target color</option>
+          <option value="contrast-rule">Contrast rule</option>
+        </select>
+      </label>
+
+      <p class="filter-results">{getFilterResultsLabel()}</p>
+    </div>
+
+    <div class="toolbar-actions toolbar-actions--mobile">
+      <div class="action-row">
+        <Button onclick={addTargetColorConstraint} disabled={isSolveLocked}>
+          Add target color
+        </Button>
+        <Button onclick={addContrastRuleConstraint} disabled={isSolveLocked}>
+          Add contrast rule
+        </Button>
+      </div>
+
+      <div class="action-row">
+        <Button onclick={handleSolve} disabled={constraintsLocal.length === 0 || isSolveLocked}>
+          Solve constraints
+        </Button>
+        <Button onclick={handleDeepSolve} disabled={constraintsLocal.length === 0 || isSolveLocked}>
+          Deep solve
+        </Button>
+        <Button
+          onclick={handleClearSolvedAdjustments}
+          disabled={!solverAdjustmentSnapshotLocal || isSolveLocked}
+          variant="ghost"
+        >
+          Clear solved adjustments
+        </Button>
+      </div>
+    </div>
+  {/if}
+
   {#if activeSwatchPickerLocal?.kind === 'constraint-target'}
     <div class="picker-banner" role="status">
       <span>Select a swatch to use as the target color.</span>
@@ -1113,7 +1244,6 @@
     gap: var(--space-sm);
   }
 
-  .toolbar-summary,
   .empty-state,
   .solver-summary,
   .filter-results,
@@ -1134,6 +1264,11 @@
     gap: var(--space-sm);
     grid-template-columns: repeat(auto-fit, minmax(var(--constraint-field-min), 1fr));
     align-items: end;
+  }
+
+  .constraint-filters--mobile,
+  .toolbar-actions--mobile {
+    display: none;
   }
 
   .constraint-list {
@@ -1249,6 +1384,11 @@
     color: var(--text-secondary);
   }
 
+  .field-error {
+    color: var(--danger-text, var(--text-primary));
+    font-size: var(--font-size-xs);
+  }
+
   .target-options-row,
   .picker-banner,
   .expanded-result,
@@ -1261,6 +1401,8 @@
 
   .expanded-result {
     align-items: stretch;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .target-preview-card {
@@ -1298,6 +1440,11 @@
     color: var(--text-primary);
   }
 
+  .solve-status-hint {
+    color: var(--text-secondary);
+    min-width: min(100%, 28rem);
+  }
+
   .solve-spinner {
     width: var(--space-md);
     height: var(--space-md);
@@ -1309,17 +1456,35 @@
   }
 
   @media (max-width: 780px) {
+    .constraint-filters--desktop,
+    .toolbar-actions--desktop {
+      display: none;
+    }
+
+    .constraint-filters--mobile,
+    .toolbar-actions--mobile {
+      display: grid;
+    }
+
     .constraint-row-summary {
       grid-template-columns: 1fr;
       align-items: start;
     }
 
     .summary-swatches {
-      order: 3;
+      display: none;
     }
 
     .editor-grid {
       grid-template-columns: 1fr;
+    }
+
+    .expanded-result {
+      grid-template-columns: 1fr;
+    }
+
+    .target-preview-card {
+      min-width: 0;
     }
   }
 

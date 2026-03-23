@@ -358,6 +358,42 @@ describe('storageUtils', () => {
       expect(result?.customNeutralName).toBeUndefined();
       expect(result?.customPaletteNames).toEqual(['Ocean', '', '', 'Bloom']);
     });
+
+    it('removes invalid target-color constraints from stored state', () => {
+      expect.assertions(1);
+
+      localStorage.setItem(
+        'chroma11y-state',
+        JSON.stringify({
+          ...mockState,
+          constraints: [
+            {
+              id: 'constraint-1',
+              type: 'target-color',
+              enabled: true,
+              targetHex: 'not-a-color'
+            },
+            {
+              id: 'constraint-2',
+              type: 'target-color',
+              enabled: true,
+              targetHex: '#5EF784'
+            }
+          ]
+        })
+      );
+
+      const result = loadStateFromStorage();
+
+      expect(result?.constraints).toEqual([
+        {
+          id: 'constraint-2',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784'
+        }
+      ]);
+    });
   });
 
   describe('clearStoredState', () => {

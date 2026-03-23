@@ -567,7 +567,7 @@ export const updateConstraint = (id: string, updater: (constraint: Constraint) =
 export const addConstraint = (constraint: Constraint) => {
   colorStore.update((currentState) => ({
     ...currentState,
-    constraints: [...currentState.constraints, constraint]
+    constraints: [constraint, ...currentState.constraints]
   }));
 };
 

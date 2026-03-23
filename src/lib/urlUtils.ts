@@ -14,6 +14,7 @@ import type {
   ContrastReference,
   Constraint
 } from './types';
+import { isValidHexColor } from './colorUtils';
 import { getChromaMultiplierBounds } from './chromaMultiplier';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
 
@@ -41,6 +42,28 @@ const INDICATOR_KEY_BY_CODE = {
   b: 'apcaBody'
 } as const satisfies Record<string, keyof SwatchContrastIndicators>;
 const INDICATOR_CODE_ORDER = ['c', 'a', 'A', 'l', 'f', 'b'] as const;
+
+function sanitizeConstraints(
+  constraints: Constraint[] | null | undefined
+): Constraint[] | undefined {
+  if (!constraints?.length) {
+    return undefined;
+  }
+
+  const sanitized = constraints.filter((constraint) => {
+    if (!constraint || typeof constraint !== 'object') {
+      return false;
+    }
+
+    if (constraint.type === 'target-color') {
+      return typeof constraint.id === 'string' && isValidHexColor(constraint.targetHex);
+    }
+
+    return typeof constraint.id === 'string';
+  });
+
+  return sanitized.length > 0 ? sanitized : undefined;
+}
 
 function encodeContrastReference(reference: ContrastReference): string {
   if (reference.kind === 'palette') {
@@ -267,8 +290,9 @@ export function encodeStateToUrl(state: UrlColorState): string {
     state.oklchDisplaySignificantDigits !== 4
   )
     params.set('os', state.oklchDisplaySignificantDigits.toString());
-  if (state.constraints?.length) {
-    params.set('ct', encodeJsonState(state.constraints));
+  const sanitizedConstraints = sanitizeConstraints(state.constraints);
+  if (sanitizedConstraints?.length) {
+    params.set('ct', encodeJsonState(sanitizedConstraints));
   }
   if (state.solverAdjustmentSnapshot) {
     params.set('sa', encodeJsonState(state.solverAdjustmentSnapshot));
@@ -461,7 +485,7 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   }
   const constraints = searchParams.get('ct');
   if (constraints) {
-    state.constraints = decodeJsonState<Constraint[]>(constraints) ?? undefined;
+    state.constraints = sanitizeConstraints(decodeJsonState<Constraint[]>(constraints));
   }
   const solverAdjustmentSnapshot = searchParams.get('sa');
   if (solverAdjustmentSnapshot) {
