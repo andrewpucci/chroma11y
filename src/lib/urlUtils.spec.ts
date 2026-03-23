@@ -2,6 +2,7 @@
  * URL Utilities Unit Tests
  */
 import { describe, it, expect } from 'vitest';
+import type { Constraint } from './types';
 import { encodeStateToUrl, decodeStateFromUrl, type UrlColorState } from './urlUtils';
 
 describe('urlUtils', () => {
@@ -113,6 +114,50 @@ describe('urlUtils', () => {
           type: 'target-color',
           enabled: true,
           targetHex: '#5EF784'
+        }
+      ]);
+    });
+
+    it('omits invalid contrast-rule constraints from encoded URL state', () => {
+      const state: UrlColorState = {
+        constraints: [
+          {
+            id: 'constraint-1',
+            type: 'contrast-rule',
+            enabled: true,
+            scope: 'all-palettes',
+            stepIndex: 4,
+            reference: 'low',
+            algorithm: 'WCAG',
+            level: 'wcagAA'
+          },
+          {
+            id: 'constraint-2',
+            type: 'contrast-rule',
+            enabled: true,
+            scope: 'all-palettes',
+            stepIndex: 4,
+            reference: 'invalid'
+          } as unknown as Constraint
+        ]
+      };
+
+      const encoded = encodeStateToUrl(state);
+      const params = new URLSearchParams(encoded);
+      const decodedConstraints = JSON.parse(
+        Buffer.from(params.get('ct') ?? '', 'base64url').toString('utf8')
+      );
+
+      expect(decodedConstraints).toEqual([
+        {
+          id: 'constraint-1',
+          type: 'contrast-rule',
+          enabled: true,
+          scope: 'all-palettes',
+          stepIndex: 4,
+          reference: 'low',
+          algorithm: 'WCAG',
+          level: 'wcagAA'
         }
       ]);
     });
@@ -275,6 +320,50 @@ describe('urlUtils', () => {
           type: 'target-color',
           enabled: true,
           targetHex: '#5EF784'
+        }
+      ]);
+    });
+
+    it('drops invalid contrast-rule constraints from decoded URL state', () => {
+      const encodedConstraints = Buffer.from(
+        JSON.stringify([
+          {
+            id: 'constraint-1',
+            type: 'contrast-rule',
+            enabled: true,
+            scope: 'all-palettes',
+            stepIndex: 4,
+            reference: 'low',
+            algorithm: 'WCAG',
+            level: 'wcagAA'
+          },
+          {
+            id: 'constraint-2',
+            type: 'contrast-rule',
+            enabled: true,
+            scope: 'all-palettes',
+            stepIndex: 4,
+            reference: 'low',
+            algorithm: 'WCAG',
+            level: 'not-a-level'
+          }
+        ]),
+        'utf-8'
+      ).toString('base64url');
+      const params = new URLSearchParams(`ct=${encodeURIComponent(encodedConstraints)}`);
+
+      const state = decodeStateFromUrl(params);
+
+      expect(state.constraints).toEqual([
+        {
+          id: 'constraint-1',
+          type: 'contrast-rule',
+          enabled: true,
+          scope: 'all-palettes',
+          stepIndex: 4,
+          reference: 'low',
+          algorithm: 'WCAG',
+          level: 'wcagAA'
         }
       ]);
     });

@@ -5,7 +5,6 @@
 
 import type { SerializableColorState } from './types';
 import type {
-  ColorDifferenceMetric,
   DisplayColorSpace,
   GamutSpace,
   ThemePreference,
@@ -13,11 +12,9 @@ import type {
   ContrastAlgorithm,
   OklchDisplaySignificantDigits,
   SwatchContrastIndicators,
-  Constraint,
-  ContrastReference,
-  ConstraintThresholdKey
+  ContrastReference
 } from './types';
-import { isValidHexColor } from './colorUtils';
+import { isValidConstraint } from './constraintValidation';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
 
 export type StoredColorState = SerializableColorState;
@@ -42,16 +39,6 @@ const VALID_THEME_PREFS: ThemePreference[] = ['light', 'dark', 'auto'];
 const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
 const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
 const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
-const VALID_CONSTRAINT_LEVELS: ConstraintThresholdKey[] = [
-  'wcagThreeToOne',
-  'wcagAA',
-  'wcagAAA',
-  'apcaLarge',
-  'apcaFluent',
-  'apcaBody'
-];
-const VALID_COLOR_DIFFERENCE_METRICS: ColorDifferenceMetric[] = ['ok', '2000'];
-
 function isValidSwatchContrastIndicators(value: unknown): value is SwatchContrastIndicators {
   if (typeof value !== 'object' || value === null) return false;
 
@@ -77,35 +64,6 @@ function isValidContrastReference(value: unknown): value is ContrastReference {
     return typeof candidate.paletteIndex === 'number' && Number.isInteger(candidate.paletteIndex);
   }
   return candidate.paletteIndex === undefined;
-}
-
-function isValidConstraint(value: unknown): value is Constraint {
-  if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as Record<string, unknown>;
-  if (typeof candidate.id !== 'string' || typeof candidate.enabled !== 'boolean') return false;
-
-  if (candidate.type === 'target-color') {
-    return (
-      typeof candidate.targetHex === 'string' &&
-      isValidHexColor(candidate.targetHex) &&
-      (candidate.mustPass === undefined || typeof candidate.mustPass === 'boolean') &&
-      (candidate.metric === undefined ||
-        VALID_COLOR_DIFFERENCE_METRICS.includes(candidate.metric as ColorDifferenceMetric))
-    );
-  }
-
-  if (candidate.type === 'contrast-rule') {
-    return (
-      (candidate.scope === 'neutral' || candidate.scope === 'all-palettes') &&
-      typeof candidate.stepIndex === 'number' &&
-      Number.isInteger(candidate.stepIndex) &&
-      (candidate.reference === 'low' || candidate.reference === 'high') &&
-      (candidate.algorithm === 'WCAG' || candidate.algorithm === 'APCA') &&
-      VALID_CONSTRAINT_LEVELS.includes(candidate.level as ConstraintThresholdKey)
-    );
-  }
-
-  return false;
 }
 
 /**

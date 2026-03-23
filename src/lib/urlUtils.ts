@@ -11,10 +11,10 @@ import type {
   ContrastAlgorithm,
   OklchDisplaySignificantDigits,
   SwatchContrastIndicators,
-  ContrastReference,
-  Constraint
+  ContrastReference
 } from './types';
-import { isValidHexColor } from './colorUtils';
+import type { Constraint } from './types';
+import { isValidConstraint } from './constraintValidation';
 import { getChromaMultiplierBounds } from './chromaMultiplier';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
 
@@ -50,17 +50,7 @@ function sanitizeConstraints(
     return undefined;
   }
 
-  const sanitized = constraints.filter((constraint) => {
-    if (!constraint || typeof constraint !== 'object') {
-      return false;
-    }
-
-    if (constraint.type === 'target-color') {
-      return typeof constraint.id === 'string' && isValidHexColor(constraint.targetHex);
-    }
-
-    return typeof constraint.id === 'string';
-  });
+  const sanitized = constraints.filter((constraint) => isValidConstraint(constraint));
 
   return sanitized.length > 0 ? sanitized : undefined;
 }
