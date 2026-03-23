@@ -1404,7 +1404,7 @@
   }
 
   .field-error {
-    color: var(--danger-text, var(--text-primary));
+    color: var(--badge-fail-text);
     font-size: var(--font-size-xs);
   }
 

@@ -97,7 +97,7 @@ const PROFILE_CONFIG: Record<ConstraintSolveProfile, SolveProfileConfig> = {
     maxHueCoordinates: 4,
     bezierDeltas: [0.08, 0.04, 0.02],
     lightnessDeltas: [-0.04, -0.02, -0.01, 0.01, 0.02, 0.04],
-    hueDeltas: [-8, -4, -2, 2, 4, 8]
+    hueDeltas: [-24, -16, -8, -4, -2, 2, 4, 8, 16, 24]
   },
   deep: {
     maxIterations: 220,
@@ -961,7 +961,8 @@ function refineBezierControls(
 function getImpactedCoordinateIndexes(
   request: ConstraintSolveRequest,
   results: ConstraintResult[],
-  profile: SolveProfileConfig
+  profile: SolveProfileConfig,
+  current: SolverAdjustmentSnapshot
 ): { lightnessIndexes: number[]; hueIndexes: number[]; paletteIndexes: number[] } {
   const lightnessIndexes = new Set<number>();
   const hueIndexes = new Set<number>();
@@ -1000,6 +1001,41 @@ function getImpactedCoordinateIndexes(
     }
   }
 
+  const generated = generatePalettes(toColorGenParams(request, current));
+  const lastStepIndex = generated.neutrals.length - 1;
+
+  for (let stepIndex = 0; stepIndex < generated.neutrals.length - 1; stepIndex += 1) {
+    const nextStepIndex = stepIndex + 1;
+
+    const neutralDelta = generated.neutrals[stepIndex]?.deltaEOK(generated.neutrals[nextStepIndex]);
+    if ((neutralDelta ?? 0) < MIN_ADJACENT_STEP_DELTA_E_OK) {
+      lightnessIndexes.add(stepIndex);
+      lightnessIndexes.add(nextStepIndex);
+    }
+
+    for (const palette of generated.palettes) {
+      const paletteDelta = palette[stepIndex]?.deltaEOK(palette[nextStepIndex]);
+      if ((paletteDelta ?? 0) < MIN_ADJACENT_STEP_DELTA_E_OK) {
+        lightnessIndexes.add(stepIndex);
+        lightnessIndexes.add(nextStepIndex);
+      }
+    }
+  }
+
+  for (let stepIndex = 1; stepIndex < lastStepIndex; stepIndex += 1) {
+    for (let paletteIndex = 0; paletteIndex < generated.palettes.length - 1; paletteIndex += 1) {
+      const currentColor = generated.palettes[paletteIndex]?.[stepIndex];
+      const nextColor = generated.palettes[paletteIndex + 1]?.[stepIndex];
+      const delta = currentColor?.deltaEOK(nextColor) ?? 0;
+      if (delta < MIN_ADJACENT_PALETTE_DELTA_E_OK) {
+        hueIndexes.add(paletteIndex);
+        hueIndexes.add(paletteIndex + 1);
+        paletteIndexes.add(paletteIndex);
+        paletteIndexes.add(paletteIndex + 1);
+      }
+    }
+  }
+
   return {
     lightnessIndexes: [...lightnessIndexes].slice(0, profile.maxLightnessCoordinates),
     hueIndexes: [...hueIndexes].slice(0, profile.maxHueCoordinates),
@@ -1022,7 +1058,8 @@ function refineDiscreteNudgers(
     const { lightnessIndexes, hueIndexes, paletteIndexes } = getImpactedCoordinateIndexes(
       request,
       runtimeState.best.results,
-      profile
+      profile,
+      runtimeState.best.settings
     );
 
     for (const index of lightnessIndexes) {

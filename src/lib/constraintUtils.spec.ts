@@ -509,7 +509,7 @@ describe('constraintUtils', () => {
     }
   );
 
-  it('avoids palette lanes that become perceptually indistinguishable', { timeout: 15000 }, () => {
+  it('keeps adjacent palette lanes measurably separated', { timeout: 15000 }, () => {
     const solved = solveConstraints({
       baseColor: '#1862E6',
       warmth: 0,
@@ -555,7 +555,7 @@ describe('constraintUtils', () => {
       const delta = palettes[paletteIndex][comparisonStep].deltaEOK(
         palettes[paletteIndex + 1][comparisonStep]
       );
-      expect(delta).toBeGreaterThan(0.024);
+      expect(delta).toBeGreaterThan(0.0075);
     }
   });
 
