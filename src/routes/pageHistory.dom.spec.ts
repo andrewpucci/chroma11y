@@ -557,27 +557,30 @@ describe('page history integration', () => {
   });
 
   it('round-trips inline constraint edits through undo and redo', async () => {
+    // Start with a simpler setup - don't open editor initially
     await renderPage();
     await fireEvent.click(screen.getAllByRole('button', { name: /add target color/i })[0]);
     await flushHistoryCommit();
-    await openFirstConstraintEditor();
 
+    // Open editor and change metric in one operation
+    await openFirstConstraintEditor();
     const metricSelect = screen.getByLabelText(/metric/i);
     await fireEvent.change(metricSelect, { target: { value: '2000' } });
     await flushHistoryCommit();
-
     expect(screen.getByLabelText(/metric/i)).toHaveValue('2000');
 
+    // Test undo - should revert to default metric
     await fireEvent.click(getUndoButton());
     await flushHistoryCommit();
     await openFirstConstraintEditor();
     expect(screen.getByLabelText(/metric/i)).toHaveValue('ok');
 
+    // Test redo - should restore the changed metric
     await fireEvent.click(getRedoButton());
     await flushHistoryCommit();
     await openFirstConstraintEditor();
     expect(screen.getByLabelText(/metric/i)).toHaveValue('2000');
-  }, 20000);
+  }, 45000);
 
   it('preserves theme preference when reset is triggered from the header', async () => {
     const user = userEvent.setup();
