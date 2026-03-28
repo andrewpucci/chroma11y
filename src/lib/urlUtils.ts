@@ -175,6 +175,7 @@ export function encodeStateToUrl(state: UrlColorState): string {
     params.set('c', state.baseColor.replace('#', ''));
   }
   if (state.warmth !== undefined) params.set('w', state.warmth.toString());
+  if (state.warmthHue !== undefined) params.set('wh', state.warmthHue.toString());
   if (state.chromaMultiplier !== undefined) params.set('cm', state.chromaMultiplier.toString());
   if (state.numColors !== undefined) params.set('nc', state.numColors.toString());
   if (state.numPalettes !== undefined) params.set('np', state.numPalettes.toString());
@@ -223,6 +224,14 @@ export function encodeStateToUrl(state: UrlColorState): string {
       .filter(Boolean)
       .join(',');
     if (nudgerStr) params.set('psn', nudgerStr);
+  }
+
+  if (state.paletteChromaNudgers?.some((v) => Math.abs(v - 1.0) > 1e-9)) {
+    const nudgerStr = state.paletteChromaNudgers
+      .map((v, i) => (Math.abs(v - 1.0) > 1e-9 ? `${i}:${v}` : null))
+      .filter(Boolean)
+      .join(',');
+    if (nudgerStr) params.set('pcn', nudgerStr);
   }
 
   const customNeutralName = normalizeCustomPaletteName(state.customNeutralName);
@@ -316,6 +325,14 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
     // Tighter bounds: warmth typically ranges from -20 to +20
     if (!isNaN(parsed) && isFinite(parsed) && parsed >= -20 && parsed <= 20) {
       state.warmth = parsed;
+    }
+  }
+
+  const warmthHue = searchParams.get('wh');
+  if (warmthHue) {
+    const parsed = parseFloat(warmthHue);
+    if (!isNaN(parsed) && isFinite(parsed) && parsed >= 0 && parsed <= 359) {
+      state.warmthHue = Math.round(parsed);
     }
   }
 
@@ -426,6 +443,11 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
     state.paletteSaturationNudgers = parseNudgers(paletteSaturationNudgers, 11, -0.03, 0.03);
   }
 
+  const paletteChromaNudgers = searchParams.get('pcn');
+  if (paletteChromaNudgers) {
+    state.paletteChromaNudgers = parseChromaNudgers(paletteChromaNudgers, 11);
+  }
+
   const neutralName = searchParams.get('nn');
   if (neutralName) {
     state.customNeutralName = normalizeCustomPaletteName(neutralName);
@@ -521,6 +543,27 @@ function parseNudgers(
       index < length &&
       value >= minBound &&
       value <= maxBound
+    ) {
+      result[index] = value;
+    }
+  });
+  return result;
+}
+
+function parseChromaNudgers(nudgerStr: string, length: number): number[] {
+  const result = new Array(length).fill(1.0);
+  nudgerStr.split(',').forEach((pair) => {
+    const [indexStr, valueStr] = pair.split(':');
+    const index = parseInt(indexStr);
+    const value = parseFloat(valueStr);
+    if (
+      !isNaN(index) &&
+      !isNaN(value) &&
+      isFinite(value) &&
+      index >= 0 &&
+      index < length &&
+      value >= 0.8 &&
+      value <= 1.2
     ) {
       result[index] = value;
     }

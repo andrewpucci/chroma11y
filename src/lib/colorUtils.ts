@@ -121,6 +121,12 @@ export const PALETTE_SATURATION_NUDGER_BOUNDS = {
   MAX: 0.03
 } as const;
 
+/** Per-palette chroma ratio nudger bounds (multiplier centered at 1.0) */
+export const PALETTE_CHROMA_NUDGER_BOUNDS = {
+  MIN: 0.8,
+  MAX: 1.2
+} as const;
+
 /** Default significant digits for OKLCH values shown on swatches */
 export const DEFAULT_OKLCH_DISPLAY_SIGNIFICANT_DIGITS: OklchDisplaySignificantDigits = 4;
 
@@ -226,6 +232,7 @@ export interface ColorGenParams {
   numPalettes: number;
   baseColor: string;
   warmth: number;
+  warmthHue?: number;
   x1: number;
   y1: number;
   x2: number;
@@ -236,6 +243,7 @@ export interface ColorGenParams {
   hueNudgers?: number[];
   stepSaturationNudgers?: number[];
   paletteSaturationNudgers?: number[];
+  paletteChromaNudgers?: number[];
   gamutSpace?: GamutSpace;
 }
 
@@ -402,7 +410,12 @@ export function generateBaseNeutrals(params: ColorGenParams): Color[] {
     const baseWarmthChroma = Math.abs(params.warmth) * WARMTH_CONFIG.CHROMA_SCALE;
     const scaledChroma = baseWarmthChroma * params.chromaMultiplier;
     const clampedChroma = Math.min(scaledChroma, WARMTH_CONFIG.MAX_CHROMA);
-    const warmthHue = params.warmth >= 0 ? WARMTH_CONFIG.WARM_HUE : WARMTH_CONFIG.COOL_HUE;
+    const warmthHue =
+      params.warmthHue != null
+        ? params.warmthHue
+        : params.warmth >= 0
+          ? WARMTH_CONFIG.WARM_HUE
+          : WARMTH_CONFIG.COOL_HUE;
 
     return oklchColor(l, clampedChroma, warmthHue);
   });
@@ -860,12 +873,17 @@ export function generatePalettes(params: ColorGenParams): {
   const clampedBaseChromaRatio =
     isFinite(baseChromaRatio) && baseChromaRatio > 0 ? Math.min(baseChromaRatio, 1) : 0;
 
+  const paletteChromaNudgers = params.paletteChromaNudgers;
+  const hasChromaNudgers =
+    paletteChromaNudgers != null && paletteChromaNudgers.some((b) => Math.abs(b - 1.0) > 1e-6);
+
   const stepSaturationModel = nudgedNeutrals.map((neutralColor) => {
     const l = neutralColor.oklch.l ?? 0;
     if (l >= 0.9999 || l <= 0.0001 || clampedBaseChromaRatio <= 0) {
       return {
         stepBaseSaturation: 0,
         referenceTargetSaturation: 0,
+        perPaletteSaturations: null as number[] | null,
         caps: paletteHues.map(() => 0)
       };
     }
@@ -884,9 +902,24 @@ export function generatePalettes(params: ColorGenParams): {
       0.25
     );
     const relaxedCap = robustCap * (1 + PERCEPTUAL_SATURATION_RELAXATION * 0.2285714286);
+
+    const perPaletteSaturations = hasChromaNudgers
+      ? paletteHues.map((hue, pi) => {
+          const nudger = Math.max(
+            PALETTE_CHROMA_NUDGER_BOUNDS.MIN,
+            Math.min(PALETTE_CHROMA_NUDGER_BOUNDS.MAX, paletteChromaNudgers![pi] ?? 1.0)
+          );
+          const effectiveRatio = Math.min(clampedBaseChromaRatio * nudger, 1.0);
+          const maxAtStep = maxChromaInGamut(l, hue, gamut);
+          const nudgedChroma = effectiveRatio * maxAtStep;
+          return getPerceptualSaturation(oklchColor(l, nudgedChroma, hue));
+        })
+      : null;
+
     return {
       stepBaseSaturation: Math.min(referenceTargetSaturation, relaxedCap),
       referenceTargetSaturation,
+      perPaletteSaturations,
       caps
     };
   });
@@ -898,10 +931,13 @@ export function generatePalettes(params: ColorGenParams): {
 
       const stepModel = stepSaturationModel[stepIndex];
       const stepBaseSaturation = stepModel?.stepBaseSaturation ?? 0;
-      const referenceTargetSaturation = stepModel?.referenceTargetSaturation ?? 0;
+      const effectiveTargetSaturation =
+        stepModel?.perPaletteSaturations?.[paletteIndex] ??
+        stepModel?.referenceTargetSaturation ??
+        0;
       const requestedExtra = Math.max(
         0,
-        referenceTargetSaturation -
+        effectiveTargetSaturation -
           stepBaseSaturation +
           (stepSaturationNudgers[stepIndex] ?? 0) +
           (paletteSaturationNudgers[paletteIndex] ?? 0)

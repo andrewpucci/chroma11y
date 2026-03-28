@@ -13,6 +13,7 @@
     numPalettes,
     baseColor,
     warmth,
+    warmthHue,
     chromaMultiplier,
     x1,
     y1,
@@ -29,6 +30,7 @@
     highReference,
     displayColorSpace,
     gamutSpace,
+    paletteChromaNudgers,
     paletteSaturationNudgers,
     themePreference,
     stepSaturationNudgers,
@@ -115,6 +117,7 @@
   let hueNudgerValues = $derived($hueNudgers);
   let stepSaturationNudgerValues = $derived($stepSaturationNudgers);
   let paletteSaturationNudgerValues = $derived($paletteSaturationNudgers);
+  let paletteChromaNudgerValues = $derived($paletteChromaNudgers);
   let currentThemeLocal = $derived($currentTheme);
   let contrastColorsLocal = $derived($contrastColors);
   let contrastModeLocal = $derived($contrastMode);
@@ -165,6 +168,7 @@
   // Bindable state for controls
   let baseColorLocal = $state('#1862E6');
   let warmthLocal = $state(-7);
+  let warmthHueLocal = $state<number | undefined>(undefined);
   let chromaMultiplierLocal = $state(1);
   let numColorsLocal = $state(11);
   let numPalettesLocal = $state(11);
@@ -199,6 +203,7 @@
     HistorySnapshot,
     | 'baseColor'
     | 'warmth'
+    | 'warmthHue'
     | 'chromaMultiplier'
     | 'numColors'
     | 'numPalettes'
@@ -324,6 +329,7 @@
       return {
         baseColor: storeState.baseColor,
         warmth: storeState.warmth,
+        warmthHue: storeState.warmthHue,
         chromaMultiplier: storeState.chromaMultiplier,
         numColors: storeState.numColors,
         numPalettes: storeState.numPalettes,
@@ -344,6 +350,7 @@
         hueNudgers: [...storeState.hueNudgers],
         stepSaturationNudgers: [...storeState.stepSaturationNudgers],
         paletteSaturationNudgers: [...storeState.paletteSaturationNudgers],
+        paletteChromaNudgers: [...storeState.paletteChromaNudgers],
         currentTheme: storeState.currentTheme,
         displayColorSpace: storeState.displayColorSpace,
         gamutSpace: storeState.gamutSpace,
@@ -365,6 +372,7 @@
     return {
       baseColor: baseColorLocal,
       warmth: warmthLocal,
+      warmthHue: warmthHueLocal,
       chromaMultiplier: chromaMultiplierLocal,
       numColors: numColorsLocal,
       numPalettes: numPalettesLocal,
@@ -385,6 +393,7 @@
       hueNudgers: [...hueNudgerValues],
       stepSaturationNudgers: [...stepSaturationNudgerValues],
       paletteSaturationNudgers: [...paletteSaturationNudgerValues],
+      paletteChromaNudgers: [...paletteChromaNudgerValues],
       currentTheme: currentThemeLocal,
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
@@ -409,6 +418,7 @@
     pendingHistoryGeneratorSnapshot = {
       baseColor: snapshot.baseColor,
       warmth: snapshot.warmth,
+      warmthHue: snapshot.warmthHue,
       chromaMultiplier: snapshot.chromaMultiplier,
       numColors: snapshot.numColors,
       numPalettes: snapshot.numPalettes,
@@ -420,6 +430,7 @@
     historyRestoreRevision += 1;
     baseColorLocal = snapshot.baseColor;
     warmthLocal = snapshot.warmth;
+    warmthHueLocal = snapshot.warmthHue;
     chromaMultiplierLocal = snapshot.chromaMultiplier;
     numColorsLocal = snapshot.numColors;
     numPalettesLocal = snapshot.numPalettes;
@@ -431,6 +442,7 @@
     updateColorState({
       baseColor: snapshot.baseColor,
       warmth: snapshot.warmth,
+      warmthHue: snapshot.warmthHue,
       chromaMultiplier: snapshot.chromaMultiplier,
       numColors: snapshot.numColors,
       numPalettes: snapshot.numPalettes,
@@ -448,6 +460,7 @@
       hueNudgers: snapshot.hueNudgers,
       stepSaturationNudgers: snapshot.stepSaturationNudgers,
       paletteSaturationNudgers: snapshot.paletteSaturationNudgers,
+      paletteChromaNudgers: snapshot.paletteChromaNudgers,
       currentTheme: snapshot.currentTheme,
       displayColorSpace: snapshot.displayColorSpace,
       gamutSpace: snapshot.gamutSpace,
@@ -922,6 +935,7 @@
       const storeMatchesPendingSnapshot =
         $baseColor === pendingHistoryGeneratorSnapshot.baseColor &&
         $warmth === pendingHistoryGeneratorSnapshot.warmth &&
+        $warmthHue === pendingHistoryGeneratorSnapshot.warmthHue &&
         $chromaMultiplier === pendingHistoryGeneratorSnapshot.chromaMultiplier &&
         $numColors === pendingHistoryGeneratorSnapshot.numColors &&
         $numPalettes === pendingHistoryGeneratorSnapshot.numPalettes &&
@@ -939,6 +953,7 @@
 
     const storeBaseColor = $baseColor;
     const storeWarmth = $warmth;
+    const storeWarmthHue = $warmthHue;
     const storeChroma = $chromaMultiplier;
     const storeNumColors = $numColors;
     const storeNumPalettes = $numPalettes;
@@ -949,6 +964,7 @@
 
     baseColorLocal = storeBaseColor;
     warmthLocal = storeWarmth;
+    warmthHueLocal = storeWarmthHue;
     chromaMultiplierLocal = storeChroma;
     numColorsLocal = storeNumColors;
     numPalettesLocal = storeNumPalettes;
@@ -972,6 +988,7 @@
     const generatorStateChanged =
       baseColorLocal !== $baseColor ||
       warmthLocal !== $warmth ||
+      warmthHueLocal !== $warmthHue ||
       chromaMultiplierLocal !== $chromaMultiplier ||
       numColorsLocal !== $numColors ||
       numPalettesLocal !== $numPalettes ||
@@ -987,6 +1004,7 @@
     updateColorState({
       baseColor: baseColorLocal,
       warmth: warmthLocal,
+      warmthHue: warmthHueLocal,
       chromaMultiplier: chromaMultiplierLocal,
       numColors: numColorsLocal,
       numPalettes: numPalettesLocal,
@@ -1012,6 +1030,7 @@
     const _numPalettes = numPalettesLocal;
     const _baseColor = baseColorLocal;
     const _warmth = warmthLocal;
+    const _warmthHue = warmthHueLocal;
     const _chroma = chromaMultiplierLocal;
     const _x1 = x1Local;
     const _y1 = y1Local;
@@ -1022,12 +1041,14 @@
     const _hueNudgers = hueNudgerValues;
     const _stepSaturationNudgers = stepSaturationNudgerValues;
     const _paletteSaturationNudgers = paletteSaturationNudgerValues;
+    const _paletteChromaNudgers = paletteChromaNudgerValues;
     const _gamutSpace = gamutSpaceLocal;
     const _isDragging = isDraggingSlider;
     void _numColors;
     void _numPalettes;
     void _baseColor;
     void _warmth;
+    void _warmthHue;
     void _chroma;
     void _x1;
     void _y1;
@@ -1038,6 +1059,7 @@
     void _hueNudgers;
     void _stepSaturationNudgers;
     void _paletteSaturationNudgers;
+    void _paletteChromaNudgers;
     void _gamutSpace;
 
     // Skip generation while dragging to prevent layout reflow
@@ -1056,6 +1078,7 @@
     const state: UrlColorState = {
       baseColor: baseColorLocal,
       warmth: warmthLocal,
+      warmthHue: warmthHueLocal,
       chromaMultiplier: chromaMultiplierLocal,
       numColors: numColorsLocal,
       numPalettes: numPalettesLocal,
@@ -1072,6 +1095,7 @@
       hueNudgers: hueNudgerValues,
       stepSaturationNudgers: stepSaturationNudgerValues,
       paletteSaturationNudgers: paletteSaturationNudgerValues,
+      paletteChromaNudgers: paletteChromaNudgerValues,
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
       swatchLabels: swatchLabelsLocal,
@@ -1121,6 +1145,7 @@
       stateUpdate.baseColor = urlState.baseColor;
     }
     if (urlState.warmth !== undefined) stateUpdate.warmth = urlState.warmth;
+    if (urlState.warmthHue !== undefined) stateUpdate.warmthHue = urlState.warmthHue;
     if (urlState.chromaMultiplier !== undefined)
       stateUpdate.chromaMultiplier = urlState.chromaMultiplier;
     if (urlState.numColors !== undefined) stateUpdate.numColors = urlState.numColors;
@@ -1141,6 +1166,9 @@
     }
     if (urlState.paletteSaturationNudgers) {
       stateUpdate.paletteSaturationNudgers = urlState.paletteSaturationNudgers;
+    }
+    if (urlState.paletteChromaNudgers) {
+      stateUpdate.paletteChromaNudgers = urlState.paletteChromaNudgers;
     }
     if (urlState.displayColorSpace) stateUpdate.displayColorSpace = urlState.displayColorSpace;
     if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
@@ -1206,6 +1234,7 @@
       hueNudgers: hueNudgerValues,
       stepSaturationNudgers: stepSaturationNudgerValues,
       paletteSaturationNudgers: paletteSaturationNudgerValues,
+      paletteChromaNudgers: paletteChromaNudgerValues,
       gamutSpace: gamutSpaceLocal
     };
 
@@ -1268,6 +1297,7 @@
               <ColorControls
                 bind:baseColor={baseColorLocal}
                 bind:warmth={warmthLocal}
+                bind:warmthHue={warmthHueLocal}
                 bind:chromaMultiplier={chromaMultiplierLocal}
                 gamutSpace={gamutSpaceLocal}
                 bind:numColors={numColorsLocal}
@@ -1282,6 +1312,7 @@
                 onRangeDragEnd={unfreezeLayout}
                 onBaseColorCommit={() => scheduleHistoryCommit('Base color changed')}
                 onWarmthCommit={() => scheduleHistoryCommit('Warmth changed')}
+                onWarmthHueCommit={() => scheduleHistoryCommit('Warmth hue changed')}
                 onSaturationCommit={() => scheduleHistoryCommit('Saturation changed')}
                 onNumColorsCommit={() => scheduleHistoryCommit('Number of colors changed')}
                 onNumPalettesCommit={() => scheduleHistoryCommit('Number of palettes changed')}
@@ -1368,6 +1399,7 @@
               <ColorControls
                 bind:baseColor={baseColorLocal}
                 bind:warmth={warmthLocal}
+                bind:warmthHue={warmthHueLocal}
                 bind:chromaMultiplier={chromaMultiplierLocal}
                 gamutSpace={gamutSpaceLocal}
                 bind:numColors={numColorsLocal}
@@ -1382,6 +1414,7 @@
                 onRangeDragEnd={unfreezeLayout}
                 onBaseColorCommit={() => scheduleHistoryCommit('Base color changed')}
                 onWarmthCommit={() => scheduleHistoryCommit('Warmth changed')}
+                onWarmthHueCommit={() => scheduleHistoryCommit('Warmth hue changed')}
                 onSaturationCommit={() => scheduleHistoryCommit('Saturation changed')}
                 onNumColorsCommit={() => scheduleHistoryCommit('Number of colors changed')}
                 onNumPalettesCommit={() => scheduleHistoryCommit('Number of palettes changed')}

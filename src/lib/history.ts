@@ -24,6 +24,7 @@ const MAX_HISTORY = 100;
 export interface HistorySnapshot {
   baseColor: string;
   warmth: number;
+  warmthHue?: number;
   chromaMultiplier: number;
   numColors: number;
   numPalettes: number;
@@ -44,6 +45,7 @@ export interface HistorySnapshot {
   hueNudgers: number[];
   stepSaturationNudgers?: number[];
   paletteSaturationNudgers?: number[];
+  paletteChromaNudgers?: number[];
   currentTheme: 'light' | 'dark';
   displayColorSpace: DisplayColorSpace;
   gamutSpace: GamutSpace;

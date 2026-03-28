@@ -25,6 +25,7 @@ interface ColorState {
   numPalettes: number;
   baseColor: string;
   warmth: number;
+  warmthHue?: number;
   x1: number;
   y1: number;
   x2: number;
@@ -45,6 +46,7 @@ interface ColorState {
   hueNudgers: number[];
   stepSaturationNudgers: number[];
   paletteSaturationNudgers: number[];
+  paletteChromaNudgers: number[];
   currentTheme: 'light' | 'dark';
   displayColorSpace: DisplayColorSpace;
   gamutSpace: GamutSpace;
@@ -132,6 +134,7 @@ const DEFAULT_STATE = {
   hueNudgers: [] as number[],
   stepSaturationNudgers: [] as number[],
   paletteSaturationNudgers: [] as number[],
+  paletteChromaNudgers: [] as number[],
   currentTheme: 'light',
   themePreference: 'auto' as ThemePreference,
   displayColorSpace: 'hex' as DisplayColorSpace,
@@ -227,6 +230,7 @@ export const baseColor = derived(colorStore, ($colorStore) => $colorStore.baseCo
 
 // Derived store for warmth
 export const warmth = derived(colorStore, ($colorStore) => $colorStore.warmth);
+export const warmthHue = derived(colorStore, ($colorStore) => $colorStore.warmthHue);
 
 // Derived store for chromaMultiplier
 export const chromaMultiplier = derived(colorStore, ($colorStore) => $colorStore.chromaMultiplier);
@@ -259,6 +263,12 @@ export const stepSaturationNudgers = derived(
 export const paletteSaturationNudgers = derived(
   colorStore,
   ($colorStore) => $colorStore.paletteSaturationNudgers
+);
+
+// Derived store for palette chroma nudgers
+export const paletteChromaNudgers = derived(
+  colorStore,
+  ($colorStore) => $colorStore.paletteChromaNudgers
 );
 
 // Derived store for display color space
@@ -609,6 +619,7 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
       hueNudgers: [],
       stepSaturationNudgers: [],
       paletteSaturationNudgers: [],
+      paletteChromaNudgers: [],
       customNeutralName: undefined,
       customPaletteNames: undefined,
       solverAdjustmentSnapshot: null,

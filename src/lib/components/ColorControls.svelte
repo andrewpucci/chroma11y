@@ -9,6 +9,7 @@
   interface Props {
     baseColor?: string;
     warmth?: number;
+    warmthHue?: number;
     chromaMultiplier?: number;
     gamutSpace?: GamutSpace;
     numColors?: number;
@@ -21,6 +22,7 @@
     onRangeDragEnd?: () => void;
     onBaseColorCommit?: () => void;
     onWarmthCommit?: () => void;
+    onWarmthHueCommit?: () => void;
     onSaturationCommit?: () => void;
     onNumColorsCommit?: () => void;
     onNumPalettesCommit?: () => void;
@@ -33,6 +35,7 @@
   let {
     baseColor = $bindable('#1862E6'),
     warmth = $bindable(0),
+    warmthHue = $bindable<number | undefined>(undefined),
     chromaMultiplier = $bindable(1),
     gamutSpace = 'srgb',
     numColors = $bindable(5),
@@ -45,6 +48,7 @@
     onRangeDragEnd,
     onBaseColorCommit,
     onWarmthCommit,
+    onWarmthHueCommit,
     onSaturationCommit,
     onNumColorsCommit,
     onNumPalettesCommit,
@@ -62,6 +66,7 @@
   }
 
   const WARMTH_RANGE: RangeConfig = { min: -50, max: 50, step: 1 };
+  const WARMTH_HUE_RANGE: RangeConfig = { min: 0, max: 359, step: 1 };
   const NUM_COLORS_RANGE: RangeConfig = { min: 2, max: 20, step: 1 };
   const NUM_PALETTES_RANGE: RangeConfig = { min: 1, max: 11, step: 1 };
   const SATURATION_STEP = 0.01;
@@ -101,6 +106,35 @@
 
   function clampWarmthFromInput() {
     warmth = clampWithRange(warmth, WARMTH_RANGE);
+  }
+
+  let warmthHueEnabled = $derived(warmthHue !== undefined);
+  let warmthHueValue = $state(0);
+
+  $effect(() => {
+    if (warmthHue !== undefined) {
+      warmthHueValue = warmthHue;
+    }
+  });
+
+  function handleWarmthHueToggle() {
+    if (warmthHueEnabled) {
+      warmthHue = undefined;
+    } else {
+      warmthHue = warmthHueValue;
+    }
+    // Fires on both enable and disable so undo restores the previous toggle state.
+    onWarmthHueCommit?.();
+  }
+
+  function clampWarmthHueFromInput() {
+    warmthHueValue = clampWithRange(warmthHueValue, WARMTH_HUE_RANGE);
+    warmthHue = warmthHueValue;
+  }
+
+  function handleWarmthHueRangeChange() {
+    warmthHue = warmthHueValue;
+    onWarmthHueCommit?.();
   }
 
   function clampSaturationFromInput() {
@@ -210,6 +244,31 @@
         onNumberChange={onWarmthCommit}
         onNumberBlur={clampWarmthFromInput}
       />
+
+      {#if warmth !== 0}
+        <div class="warmth-hue-override">
+          <label class="warmth-hue-toggle">
+            <input type="checkbox" checked={warmthHueEnabled} onchange={handleWarmthHueToggle} />
+            Custom warmth hue
+          </label>
+          {#if warmthHueEnabled}
+            <SliderNumberField
+              id="warmth-hue"
+              label="Warmth hue"
+              valueInputLabel="Warmth hue value input"
+              min={WARMTH_HUE_RANGE.min}
+              max={WARMTH_HUE_RANGE.max}
+              step={WARMTH_HUE_RANGE.step}
+              bind:value={warmthHueValue}
+              groupHelpText="Hue angle 0 to 359 degrees. Overrides the default warm/cool hue direction."
+              onRangeChange={handleWarmthHueRangeChange}
+              onNumberInput={clampWarmthHueFromInput}
+              onNumberChange={onWarmthHueCommit}
+              onNumberBlur={clampWarmthHueFromInput}
+            />
+          {/if}
+        </div>
+      {/if}
 
       <SliderNumberField
         id="saturation"
@@ -515,5 +574,20 @@
         transition: transform var(--advanced-expand-duration) var(--advanced-expand-ease);
       }
     }
+  }
+
+  .warmth-hue-override {
+    display: grid;
+    gap: var(--space-xs);
+    padding-inline-start: var(--space-sm);
+  }
+
+  .warmth-hue-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
   }
 </style>

@@ -740,5 +740,38 @@ describe('urlUtils', () => {
       expect(decoded.contrastAlgorithm).toBe(original.contrastAlgorithm);
       expect(decoded.oklchDisplaySignificantDigits).toBe(original.oklchDisplaySignificantDigits);
     });
+
+    it('round-trips warmthHue', () => {
+      const state: UrlColorState = { warmthHue: 180 };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('wh=180');
+      const decoded = decodeStateFromUrl(new URLSearchParams(encoded));
+      expect(decoded.warmthHue).toBe(180);
+    });
+
+    it('does not encode warmthHue when undefined', () => {
+      const state: UrlColorState = { warmth: 10 };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('wh=');
+    });
+
+    it('round-trips paletteChromaNudgers', () => {
+      const state: UrlColorState = {
+        paletteChromaNudgers: [0.9, 1.0, 1.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('pcn=');
+      const decoded = decodeStateFromUrl(new URLSearchParams(encoded));
+      expect(decoded.paletteChromaNudgers?.[0]).toBeCloseTo(0.9, 6);
+      expect(decoded.paletteChromaNudgers?.[2]).toBeCloseTo(1.1, 6);
+    });
+
+    it('does not encode paletteChromaNudgers when all identity', () => {
+      const state: UrlColorState = {
+        paletteChromaNudgers: [1.0, 1.0, 1.0]
+      };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('pcn=');
+    });
   });
 });

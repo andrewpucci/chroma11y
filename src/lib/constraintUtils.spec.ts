@@ -8,6 +8,7 @@ import {
   validateConstraintSolveRequest
 } from './constraintSolve';
 import {
+  computeAdjacentStopContrast,
   DELTA_E_2000_PASS_MAX,
   DELTA_E_2000_WARNING_MAX,
   DELTA_E_OK_PASS_MAX,
@@ -758,4 +759,53 @@ describe('constraintUtils', () => {
       expect(solvedMustPassFails).toBeLessThanOrEqual(baselineMustPassFails);
     }
   );
+
+  describe('computeAdjacentStopContrast', () => {
+    it('returns entries for each adjacent pair in neutrals and palettes', () => {
+      const neutrals = [
+        new Color('oklch', [1, 0, 0]),
+        new Color('oklch', [0.7, 0, 0]),
+        new Color('oklch', [0, 0, 0])
+      ];
+      const palettes = [
+        [
+          new Color('oklch', [1, 0.1, 264]),
+          new Color('oklch', [0.5, 0.1, 264]),
+          new Color('oklch', [0, 0.1, 264])
+        ]
+      ];
+      const entries = computeAdjacentStopContrast(neutrals, palettes, 'Neutral', ['Blue'], 'WCAG');
+      // 2 adjacent pairs per ramp, 2 ramps
+      expect(entries).toHaveLength(4);
+      expect(entries[0].paletteLabel).toBe('Neutral');
+      expect(entries[0].isNeutral).toBe(true);
+      expect(entries[2].paletteLabel).toBe('Blue');
+      expect(entries[2].isNeutral).toBe(false);
+    });
+
+    it('flags low-contrast pairs for WCAG', () => {
+      // Two very similar lightness values should produce low contrast
+      const neutrals = [new Color('oklch', [0.5, 0, 0]), new Color('oklch', [0.51, 0, 0])];
+      const entries = computeAdjacentStopContrast(neutrals, [], 'Neutral', [], 'WCAG');
+      expect(entries).toHaveLength(1);
+      expect(entries[0].isLow).toBe(true);
+      expect(entries[0].contrastValue).toBeLessThan(1.2);
+    });
+
+    it('flags low-contrast pairs for APCA', () => {
+      const neutrals = [new Color('oklch', [0.5, 0, 0]), new Color('oklch', [0.51, 0, 0])];
+      const entries = computeAdjacentStopContrast(neutrals, [], 'Neutral', [], 'APCA');
+      expect(entries).toHaveLength(1);
+      expect(entries[0].isLow).toBe(true);
+      expect(entries[0].contrastAlgorithm).toBe('APCA');
+    });
+
+    it('marks high-contrast pairs as not low', () => {
+      const neutrals = [new Color('oklch', [1, 0, 0]), new Color('oklch', [0, 0, 0])];
+      const entries = computeAdjacentStopContrast(neutrals, [], 'Neutral', [], 'WCAG');
+      expect(entries).toHaveLength(1);
+      expect(entries[0].isLow).toBe(false);
+      expect(entries[0].contrastValue).toBeGreaterThan(1.2);
+    });
+  });
 });

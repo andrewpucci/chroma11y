@@ -18,6 +18,7 @@
     highReference,
     hueNudgers,
     lightnessNudgers,
+    paletteChromaNudgers,
     paletteSaturationNudgers,
     lowReference,
     neutrals,
@@ -35,6 +36,7 @@
     updateConstraint,
     stepSaturationNudgers,
     warmth,
+    warmthHue,
     x1,
     x2,
     y1,
@@ -43,6 +45,7 @@
   import { announce } from '$lib/announce';
   import { colorToCssHex, isValidHexColor } from '$lib/colorUtils';
   import {
+    computeAdjacentStopContrast,
     createDefaultContrastRuleConstraint,
     createDefaultTargetColorConstraint,
     evaluateConstraints,
@@ -117,6 +120,7 @@
   let gamutSpaceLocal = $derived($gamutSpace);
   let baseColorLocal = $derived($baseColor);
   let warmthLocal = $derived($warmth);
+  let warmthHueLocal = $derived($warmthHue);
   let chromaMultiplierLocal = $derived($chromaMultiplier);
   let x1Local = $derived($x1);
   let y1Local = $derived($y1);
@@ -126,6 +130,7 @@
   let hueNudgersLocal = $derived($hueNudgers);
   let stepSaturationNudgersLocal = $derived($stepSaturationNudgers);
   let paletteSaturationNudgersLocal = $derived($paletteSaturationNudgers);
+  let paletteChromaNudgersLocal = $derived($paletteChromaNudgers);
   let numColorsLocal = $derived($numColors);
   let numPalettesLocal = $derived($numPalettes);
   let customNeutralNameLocal = $derived($customNeutralName);
@@ -192,6 +197,20 @@
     )
   );
   let isSolveLocked = $derived(constraintSolveRunStateLocal.status !== 'idle');
+
+  let adjacentStopContrast = $derived(
+    constraintsLocal.length > 0
+      ? computeAdjacentStopContrast(
+          neutralsLocal,
+          palettesLocal,
+          neutralLabel,
+          paletteLabels,
+          contrastAlgorithmLocal
+        )
+      : []
+  );
+  let adjacentStopLowEntries = $derived(adjacentStopContrast.filter((entry) => entry.isLow));
+  let showAllAdjacentStops = $state(false);
 
   $effect(() => {
     if (!expandedConstraintId) {
@@ -600,6 +619,7 @@
     return {
       baseColor: baseColorLocal,
       warmth: warmthLocal,
+      warmthHue: warmthHueLocal,
       chromaMultiplier: chromaMultiplierLocal,
       x1: x1Local,
       y1: y1Local,
@@ -609,6 +629,7 @@
       hueNudgers: [...hueNudgersLocal],
       stepSaturationNudgers: [...stepSaturationNudgersLocal],
       paletteSaturationNudgers: [...paletteSaturationNudgersLocal],
+      paletteChromaNudgers: [...paletteChromaNudgersLocal],
       numColors: numColorsLocal,
       numPalettes: numPalettesLocal,
       currentTheme: currentThemeLocal,
@@ -641,7 +662,8 @@
       lightnessNudgers: [...lightnessNudgersLocal],
       hueNudgers: [...hueNudgersLocal],
       stepSaturationNudgers: [...stepSaturationNudgersLocal],
-      paletteSaturationNudgers: [...paletteSaturationNudgersLocal]
+      paletteSaturationNudgers: [...paletteSaturationNudgersLocal],
+      paletteChromaNudgers: [...paletteChromaNudgersLocal]
     };
 
     const request = buildSolveRequest();
@@ -1233,6 +1255,40 @@
     </div>
   {/if}
 
+  {#if adjacentStopLowEntries.length > 0}
+    <details class="adjacent-stop-contrast" open>
+      <summary class="adjacent-stop-summary">
+        Adjacent stop contrast
+        <Badge variant="warning">{adjacentStopLowEntries.length} low</Badge>
+      </summary>
+      <div class="adjacent-stop-list">
+        {#each showAllAdjacentStops ? adjacentStopContrast : adjacentStopLowEntries as entry (`${entry.paletteLabel}-${entry.stopIndexA}`)}
+          <div class="adjacent-stop-entry" class:adjacent-stop-entry--low={entry.isLow}>
+            <span class="adjacent-stop-label">
+              {entry.paletteLabel}
+              {entry.stopIndexA * 10}&ndash;{entry.stopIndexB * 10}
+            </span>
+            <span class="adjacent-stop-value">
+              {entry.contrastValue.toFixed(
+                entry.contrastValue >= 10 ? 1 : 2
+              )}{contrastAlgorithmLocal === 'APCA' ? ' Lc' : ':1'}
+            </span>
+          </div>
+        {/each}
+        {#if adjacentStopContrast.length > adjacentStopLowEntries.length}
+          <CheckboxRow
+            id="show-all-adjacent-stops"
+            checked={showAllAdjacentStops}
+            onChange={() => {
+              showAllAdjacentStops = !showAllAdjacentStops;
+            }}
+            label="Show all adjacent pairs"
+          />
+        {/if}
+      </div>
+    </details>
+  {/if}
+
   {#if activeSwatchPickerLocal?.kind === 'constraint-target'}
     <div class="picker-banner" role="status">
       <span>Select a swatch to use as the target color.</span>
@@ -1511,5 +1567,47 @@
     to {
       transform: rotate(360deg);
     }
+  }
+
+  .adjacent-stop-contrast {
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 60%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in oklab, var(--bg-secondary) 92%, transparent);
+  }
+
+  .adjacent-stop-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .adjacent-stop-list {
+    display: grid;
+    gap: var(--space-xs);
+    padding: 0 var(--space-md) var(--space-md);
+  }
+
+  .adjacent-stop-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+
+  .adjacent-stop-entry--low {
+    color: var(--badge-warning-bg);
+    font-weight: 500;
+  }
+
+  .adjacent-stop-value {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 </style>

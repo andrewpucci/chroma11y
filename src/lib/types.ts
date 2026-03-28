@@ -88,6 +88,7 @@ export type Constraint = TargetColorConstraint | ContrastRuleConstraint;
 export interface SolverAdjustmentSnapshot {
   baseColor: string;
   warmth: number;
+  warmthHue?: number;
   chromaMultiplier: number;
   x1: number;
   y1: number;
@@ -97,6 +98,7 @@ export interface SolverAdjustmentSnapshot {
   hueNudgers: number[];
   stepSaturationNudgers?: number[];
   paletteSaturationNudgers?: number[];
+  paletteChromaNudgers?: number[];
 }
 
 /** Last solve summary persisted with the state */
@@ -186,6 +188,18 @@ export interface ContrastRuleConstraintResult {
 /** Constraint evaluation result union */
 export type ConstraintResult = TargetColorConstraintResult | ContrastRuleConstraintResult;
 
+/** Adjacent-stop contrast entry for reporting low-contrast adjacent pairs */
+export interface AdjacentStopContrastEntry {
+  paletteLabel: string;
+  paletteIndex?: number;
+  isNeutral: boolean;
+  stopIndexA: number;
+  stopIndexB: number;
+  contrastValue: number;
+  contrastAlgorithm: ContrastAlgorithm;
+  isLow: boolean;
+}
+
 /**
  * Serializable color state for URL and localStorage persistence.
  * All fields are optional to support partial state updates.
@@ -193,6 +207,7 @@ export type ConstraintResult = TargetColorConstraintResult | ContrastRuleConstra
 export interface SerializableColorState {
   baseColor?: string;
   warmth?: number;
+  warmthHue?: number;
   chromaMultiplier?: number;
   numColors?: number;
   numPalettes?: number;
@@ -210,6 +225,7 @@ export interface SerializableColorState {
   hueNudgers?: number[];
   stepSaturationNudgers?: number[];
   paletteSaturationNudgers?: number[];
+  paletteChromaNudgers?: number[];
   displayColorSpace?: DisplayColorSpace;
   gamutSpace?: GamutSpace;
   themePreference?: ThemePreference;

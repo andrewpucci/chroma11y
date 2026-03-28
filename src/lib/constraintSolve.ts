@@ -11,6 +11,7 @@ import {
   HUE_NUDGER_BOUNDS,
   isValidHexColor,
   LIGHTNESS_NUDGER_BOUNDS,
+  PALETTE_CHROMA_NUDGER_BOUNDS,
   PALETTE_SATURATION_NUDGER_BOUNDS,
   STEP_SATURATION_NUDGER_BOUNDS,
   type ColorGenParams
@@ -29,6 +30,7 @@ import type {
   ConstraintSolveSource,
   ConstraintSolverSummary,
   ContrastReference,
+  ContrastRuleConstraint,
   SolverAdjustmentSnapshot,
   TargetColorConstraint
 } from '$lib/types';
@@ -145,6 +147,10 @@ function clampPaletteSaturationNudger(value: number): number {
   );
 }
 
+function clampPaletteChromaNudger(value: number): number {
+  return clampRange(value, PALETTE_CHROMA_NUDGER_BOUNDS.MIN, PALETTE_CHROMA_NUDGER_BOUNDS.MAX);
+}
+
 function normalizeHueDelta(delta: number): number {
   let normalized = ((delta % 360) + 360) % 360;
   if (normalized > 180) {
@@ -169,6 +175,21 @@ function createZeroFilledArray(length: number, source: number[] = []): number[] 
   return Array.from({ length }, (_, index) => source[index] ?? 0);
 }
 
+function createOneFilledArray(length: number, source: number[] = []): number[] {
+  return Array.from({ length }, (_, index) => source[index] ?? 1.0);
+}
+
+function trimTrailingIdentity(values: number[], identity: number): number[] {
+  let lastNonIdentityIndex = -1;
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    if (Math.abs((values[index] ?? identity) - identity) > 1e-9) {
+      lastNonIdentityIndex = index;
+      break;
+    }
+  }
+  return lastNonIdentityIndex === -1 ? [] : values.slice(0, lastNonIdentityIndex + 1);
+}
+
 function normalizeAdjustments(
   request: ConstraintSolveRequest,
   adjustments: SolverAdjustmentSnapshot
@@ -184,6 +205,10 @@ function normalizeAdjustments(
     paletteSaturationNudgers: createZeroFilledArray(
       request.numPalettes,
       adjustments.paletteSaturationNudgers
+    ),
+    paletteChromaNudgers: createOneFilledArray(
+      request.numPalettes,
+      adjustments.paletteChromaNudgers
     )
   };
 }
@@ -194,7 +219,8 @@ function compressAdjustments(adjustments: SolverAdjustmentSnapshot): SolverAdjus
     lightnessNudgers: trimTrailingZeroes(adjustments.lightnessNudgers),
     hueNudgers: trimTrailingZeroes(adjustments.hueNudgers),
     stepSaturationNudgers: trimTrailingZeroes(adjustments.stepSaturationNudgers ?? []),
-    paletteSaturationNudgers: trimTrailingZeroes(adjustments.paletteSaturationNudgers ?? [])
+    paletteSaturationNudgers: trimTrailingZeroes(adjustments.paletteSaturationNudgers ?? []),
+    paletteChromaNudgers: trimTrailingIdentity(adjustments.paletteChromaNudgers ?? [], 1.0)
   };
 }
 
@@ -210,6 +236,7 @@ function hasMeaningfulAdjustmentChange(
   return (
     baseline.baseColor.toLowerCase() !== candidate.baseColor.toLowerCase() ||
     Math.abs(baseline.warmth - candidate.warmth) > 1e-9 ||
+    (baseline.warmthHue ?? -1) !== (candidate.warmthHue ?? -1) ||
     Math.abs(baseline.chromaMultiplier - candidate.chromaMultiplier) > 1e-6 ||
     Math.abs(baseline.x1 - candidate.x1) > 1e-6 ||
     Math.abs(baseline.y1 - candidate.y1) > 1e-6 ||
@@ -226,6 +253,11 @@ function hasMeaningfulAdjustmentChange(
       baseline.paletteSaturationNudgers ?? [],
       candidate.paletteSaturationNudgers ?? [],
       1e-6
+    ) ||
+    !arraysEqualWithinTolerance(
+      baseline.paletteChromaNudgers ?? [],
+      candidate.paletteChromaNudgers ?? [],
+      1e-6
     )
   );
 }
@@ -239,6 +271,7 @@ function toColorGenParams(
     numPalettes: request.numPalettes,
     baseColor: adjustments.baseColor,
     warmth: adjustments.warmth,
+    warmthHue: adjustments.warmthHue,
     x1: adjustments.x1,
     y1: adjustments.y1,
     x2: adjustments.x2,
@@ -249,6 +282,7 @@ function toColorGenParams(
     hueNudgers: adjustments.hueNudgers,
     stepSaturationNudgers: adjustments.stepSaturationNudgers,
     paletteSaturationNudgers: adjustments.paletteSaturationNudgers,
+    paletteChromaNudgers: adjustments.paletteChromaNudgers,
     gamutSpace: request.gamutSpace
   };
 }
@@ -288,6 +322,11 @@ function getAdjustmentDistancePenalty(
       sum + Math.abs(value - ((baseline.paletteSaturationNudgers ?? [])[index] ?? 0)) * 10,
     0
   );
+  const chromaNudgerPenalty = (next.paletteChromaNudgers ?? []).reduce(
+    (sum, value, index) =>
+      sum + Math.abs(value - ((baseline.paletteChromaNudgers ?? [])[index] ?? 1.0)) * 15,
+    0
+  );
 
   return (
     Math.abs(next.warmth - baseline.warmth) * 0.002 +
@@ -299,7 +338,8 @@ function getAdjustmentDistancePenalty(
     huePenalty +
     lightnessPenalty +
     stepSaturationPenalty +
-    paletteSaturationPenalty
+    paletteSaturationPenalty +
+    chromaNudgerPenalty
   );
 }
 
@@ -867,6 +907,134 @@ function optimizeContinuousSeed(
   );
 }
 
+/**
+ * Checks if the constraint set is "simple" enough for single-variable optimization:
+ * all contrast-rule constraints are on distinct steps and total enabled constraint
+ * count is <= 6.
+ */
+function isSimpleConstraintSet(constraints: Constraint[]): boolean {
+  const enabled = constraints.filter((c) => c.enabled);
+  if (enabled.length === 0 || enabled.length > 6) return false;
+
+  const contrastSteps = new Set<number>();
+  for (const c of enabled) {
+    if (c.type === 'contrast-rule') {
+      if (contrastSteps.has(c.stepIndex)) return false;
+      contrastSteps.add(c.stepIndex);
+    }
+  }
+  return true;
+}
+
+/**
+ * Single-variable warm-start phase using ternary search for target-color constraints
+ * and binary search for contrast constraints. Runs before Nelder-Mead in fast profile
+ * to provide a better starting point. Only activates when the constraint set is "simple".
+ */
+function singleVariableWarmStart(
+  request: ConstraintSolveRequest,
+  baseline: SolverAdjustmentSnapshot,
+  runtimeState: SolveRuntimeState,
+  profile: SolveProfileConfig
+): void {
+  if (!isSimpleConstraintSet(request.constraints)) return;
+
+  const enabledConstraints = request.constraints.filter((c) => c.enabled);
+
+  // Greedy sequential refinement: evaluateSnapshot may update runtimeState.best as a
+  // side effect, so each constraint's search starts from the improved settings left by
+  // earlier constraints rather than the original baseline.
+
+  // For contrast-rule constraints: binary search for the lightest nudger meeting the floor.
+  // Direction depends on reference side: 'low' ref means positive nudger = more contrast,
+  // 'high' ref means positive nudger = less contrast.
+  for (const constraint of enabledConstraints) {
+    if (!canContinue(runtimeState, profile)) break;
+    if (constraint.type !== 'contrast-rule') continue;
+
+    const stepIndex = constraint.stepIndex;
+    const currentNudger = runtimeState.best.settings.lightnessNudgers[stepIndex] ?? 0;
+    const lowRef = constraint.reference === 'low';
+
+    let lo = currentNudger - 0.2;
+    let hi = currentNudger + 0.2;
+
+    for (let iter = 0; iter < 40 && hi - lo > 1e-6; iter++) {
+      if (!canContinue(runtimeState, profile)) break;
+      const mid = (lo + hi) / 2;
+      const nextNudgers = [...runtimeState.best.settings.lightnessNudgers];
+      nextNudgers[stepIndex] = clampLightnessNudger(mid);
+      const candidate = evaluateSnapshot(request, baseline, runtimeState, profile, {
+        ...runtimeState.best.settings,
+        lightnessNudgers: nextNudgers
+      });
+
+      const result = candidate?.results.find((r) => r.id === constraint.id);
+      const passes = result && result.type === 'contrast-rule' && result.passes;
+      if (lowRef) {
+        // Low ref: positive nudger = lighter swatch = more contrast with dark ref
+        if (passes) {
+          lo = mid;
+        } else {
+          hi = mid;
+        }
+      } else {
+        // High ref: positive nudger = lighter swatch = less contrast with light ref
+        if (passes) {
+          hi = mid;
+        } else {
+          lo = mid;
+        }
+      }
+    }
+  }
+
+  // For target-color constraints: ternary search to minimize delta-E via lightness nudgers
+  // We identify impacted step indexes from the current best results
+  for (const constraint of enabledConstraints) {
+    if (!canContinue(runtimeState, profile)) break;
+    if (constraint.type !== 'target-color') continue;
+
+    // Find which step the closest match landed on
+    const result = runtimeState.best.results.find((r) => r.id === constraint.id);
+    if (!result || result.type !== 'target-color' || result.stepIndex == null) continue;
+    const stepIndex = result.stepIndex;
+
+    const currentNudger = runtimeState.best.settings.lightnessNudgers[stepIndex] ?? 0;
+    let lo = currentNudger - 0.2;
+    let hi = currentNudger + 0.2;
+
+    for (let iter = 0; iter < 60 && hi - lo > 1e-6; iter++) {
+      if (!canContinue(runtimeState, profile)) break;
+      const m1 = lo + (hi - lo) / 3;
+      const m2 = hi - (hi - lo) / 3;
+
+      const nudgers1 = [...runtimeState.best.settings.lightnessNudgers];
+      nudgers1[stepIndex] = clampLightnessNudger(m1);
+      const c1 = evaluateSnapshot(request, baseline, runtimeState, profile, {
+        ...runtimeState.best.settings,
+        lightnessNudgers: nudgers1
+      });
+
+      const nudgers2 = [...runtimeState.best.settings.lightnessNudgers];
+      nudgers2[stepIndex] = clampLightnessNudger(m2);
+      const c2 = evaluateSnapshot(request, baseline, runtimeState, profile, {
+        ...runtimeState.best.settings,
+        lightnessNudgers: nudgers2
+      });
+
+      // Compare objectives: lower is better
+      const obj1 = c1?.objective ?? Number.POSITIVE_INFINITY;
+      const obj2 = c2?.objective ?? Number.POSITIVE_INFINITY;
+      if (obj1 < obj2) {
+        hi = m2;
+      } else {
+        lo = m1;
+      }
+    }
+  }
+}
+
 function refineBezierControls(
   request: ConstraintSolveRequest,
   baseline: SolverAdjustmentSnapshot,
@@ -1093,6 +1261,17 @@ function refineDiscreteNudgers(
           paletteSaturationNudgers: nextNudgers
         });
       }
+      for (const delta of [-0.05, -0.025, -0.01, 0.01, 0.025, 0.05]) {
+        const current = runtimeState.best.settings;
+        const nextChromaNudgers = [...(current.paletteChromaNudgers ?? [])];
+        nextChromaNudgers[index] = clampPaletteChromaNudger(
+          (nextChromaNudgers[index] ?? 1.0) + delta
+        );
+        evaluateSnapshot(request, baseline, runtimeState, profile, {
+          ...current,
+          paletteChromaNudgers: nextChromaNudgers
+        });
+      }
     }
 
     for (const index of hueIndexes) {
@@ -1176,6 +1355,68 @@ function refineFitToThreshold(
     }
 
     improved = runtimeState.best !== previousBest;
+  }
+
+  // Binary search polish: for each fit-to-threshold step, find the lightest nudger that
+  // still meets the contrast floor. This maximizes lightness subject to contrast minimum.
+  // Direction depends on reference side: 'low' ref means positive nudger = more contrast,
+  // 'high' ref means positive nudger = less contrast.
+  if (canContinue(runtimeState, profile)) {
+    const fitConstraints = request.constraints.filter(
+      (c): c is ContrastRuleConstraint =>
+        c.enabled && c.type === 'contrast-rule' && c.fitToThreshold === true
+    );
+    for (const constraint of fitConstraints) {
+      if (!canContinue(runtimeState, profile)) break;
+      const stepIndex = constraint.stepIndex;
+      const current = runtimeState.best.settings;
+      const currentNudger = current.lightnessNudgers[stepIndex] ?? 0;
+      const lowRef = constraint.reference === 'low';
+
+      let lo = currentNudger - 0.15;
+      let hi = currentNudger + 0.15;
+
+      const currentResult = runtimeState.best.results.find((r) => r.id === constraint.id);
+      if (!currentResult || currentResult.type !== 'contrast-rule' || !currentResult.passes) {
+        continue; // Only polish passing constraints
+      }
+
+      for (let iter = 0; iter < 30 && hi - lo > 1e-6; iter++) {
+        if (!canContinue(runtimeState, profile)) break;
+        const mid = (lo + hi) / 2;
+        const nextNudgers = [...runtimeState.best.settings.lightnessNudgers];
+        nextNudgers[stepIndex] = clampLightnessNudger(mid);
+        const candidate = evaluateSnapshot(
+          request,
+          baseline,
+          runtimeState,
+          profile,
+          {
+            ...runtimeState.best.settings,
+            lightnessNudgers: nextNudgers
+          },
+          isBetterFitPhaseCandidate
+        );
+
+        const fitResult = candidate?.results.find((r) => r.id === constraint.id);
+        const passes = fitResult && fitResult.type === 'contrast-rule' && fitResult.passes;
+        if (lowRef) {
+          // Low ref: positive nudger = lighter swatch = more contrast with dark ref
+          if (passes) {
+            lo = mid;
+          } else {
+            hi = mid;
+          }
+        } else {
+          // High ref: positive nudger = lighter swatch = less contrast with light ref
+          if (passes) {
+            hi = mid;
+          } else {
+            lo = mid;
+          }
+        }
+      }
+    }
   }
 }
 
@@ -1271,6 +1512,7 @@ function createSummary(
       normalizeAdjustments(request, {
         baseColor: request.baseColor,
         warmth: request.warmth,
+        warmthHue: request.warmthHue,
         chromaMultiplier: request.chromaMultiplier,
         x1: request.x1,
         y1: request.y1,
@@ -1279,7 +1521,8 @@ function createSummary(
         lightnessNudgers: [...request.lightnessNudgers],
         hueNudgers: [...request.hueNudgers],
         stepSaturationNudgers: [...(request.stepSaturationNudgers ?? [])],
-        paletteSaturationNudgers: [...(request.paletteSaturationNudgers ?? [])]
+        paletteSaturationNudgers: [...(request.paletteSaturationNudgers ?? [])],
+        paletteChromaNudgers: [...(request.paletteChromaNudgers ?? [])]
       }),
       best.settings
     ),
@@ -1340,6 +1583,7 @@ export function solveConstraintsWithProfile(
   const baselineAdjustments = normalizeAdjustments(request, {
     baseColor: request.baseColor,
     warmth: request.warmth,
+    warmthHue: request.warmthHue,
     chromaMultiplier: request.chromaMultiplier,
     x1: request.x1,
     y1: request.y1,
@@ -1348,7 +1592,8 @@ export function solveConstraintsWithProfile(
     lightnessNudgers: [...request.lightnessNudgers],
     hueNudgers: [...request.hueNudgers],
     stepSaturationNudgers: [...(request.stepSaturationNudgers ?? [])],
-    paletteSaturationNudgers: [...(request.paletteSaturationNudgers ?? [])]
+    paletteSaturationNudgers: [...(request.paletteSaturationNudgers ?? [])],
+    paletteChromaNudgers: [...(request.paletteChromaNudgers ?? [])]
   });
 
   const baseline = evaluateSolverCandidate(request, baselineAdjustments, baselineAdjustments);
@@ -1375,6 +1620,11 @@ export function solveConstraintsWithProfile(
     };
   }
 
+  // Fast profile: single-variable warm-start for simple constraint sets
+  if (profileName === 'fast') {
+    singleVariableWarmStart(request, baselineAdjustments, runtimeState, profile);
+  }
+
   for (const seed of buildSeedSnapshots(request, baselineAdjustments)) {
     if (!canContinueContinuousPhase(runtimeState, profile)) {
       break;
@@ -1386,24 +1636,50 @@ export function solveConstraintsWithProfile(
   }
 
   refineBezierControls(request, baselineAdjustments, runtimeState, profile);
-  refineDiscreteNudgers(request, baselineAdjustments, runtimeState, profile);
-  for (let round = 0; round < 2 && canContinue(runtimeState, profile); round += 1) {
-    let improved = false;
-    for (const seed of buildTargetRescueSeeds(request, runtimeState.best)) {
-      const candidate = evaluateSnapshot(request, baselineAdjustments, runtimeState, profile, seed);
-      if (candidate && runtimeState.best === candidate) {
-        improved = true;
+
+  // Co-optimization loop: run discrete+rescue+discrete+bezier phases, then check if
+  // chroma nudgers were discovered. If so and profile is deep, run a second pass to let
+  // lightness nudgers re-settle against the new chroma nudger values.
+  const maxCoOptRounds = profileName === 'deep' ? 2 : 1;
+  for (
+    let coOptRound = 0;
+    coOptRound < maxCoOptRounds && canContinue(runtimeState, profile);
+    coOptRound += 1
+  ) {
+    refineDiscreteNudgers(request, baselineAdjustments, runtimeState, profile);
+    for (let round = 0; round < 2 && canContinue(runtimeState, profile); round += 1) {
+      let improved = false;
+      for (const seed of buildTargetRescueSeeds(request, runtimeState.best)) {
+        const candidate = evaluateSnapshot(
+          request,
+          baselineAdjustments,
+          runtimeState,
+          profile,
+          seed
+        );
+        if (candidate && runtimeState.best === candidate) {
+          improved = true;
+        }
+        if (!canContinue(runtimeState, profile)) {
+          break;
+        }
       }
-      if (!canContinue(runtimeState, profile)) {
+      if (!improved) {
         break;
       }
     }
-    if (!improved) {
-      break;
+    refineDiscreteNudgers(request, baselineAdjustments, runtimeState, profile);
+    refineBezierControls(request, baselineAdjustments, runtimeState, profile);
+
+    // Only run a second co-opt round if chroma nudgers were actually discovered
+    if (coOptRound === 0 && maxCoOptRounds > 1) {
+      const discoveredChromaNudgers =
+        runtimeState.best.settings.paletteChromaNudgers?.some((b) => Math.abs(b - 1.0) > 1e-6) ??
+        false;
+      if (!discoveredChromaNudgers) break;
     }
   }
-  refineDiscreteNudgers(request, baselineAdjustments, runtimeState, profile);
-  refineBezierControls(request, baselineAdjustments, runtimeState, profile);
+
   refineFitToThreshold(request, baselineAdjustments, runtimeState, profile);
 
   return {

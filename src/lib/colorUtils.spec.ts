@@ -396,6 +396,39 @@ describe('colorUtils', () => {
         expect(palette).toHaveLength(result.neutrals.length);
       }
     });
+
+    it('applies per-palette chroma nudgers independently', () => {
+      const params: ColorGenParams = {
+        ...baseParams,
+        numPalettes: 1,
+        paletteChromaNudgers: [0.8]
+      };
+      const result = generatePalettes(params);
+      const baseline = generatePalettes({ ...baseParams, numPalettes: 1 });
+
+      // Compare the same palette with and without a low nudger at a mid-tone step.
+      // Nudger < 1 should reduce chroma relative to the baseline for the same palette.
+      const step = 5;
+      const baseChroma = baseline.palettes[0][step].oklch.c ?? 0;
+      const lowChroma = result.palettes[0][step].oklch.c ?? 0;
+
+      expect(lowChroma).toBeLessThan(baseChroma + 1e-6);
+    });
+
+    it('chroma nudgers use per-palette hue gamut limits', () => {
+      const params: ColorGenParams = {
+        ...baseParams,
+        numPalettes: 2,
+        paletteChromaNudgers: [1.2, 1.2]
+      };
+      const result = generatePalettes(params);
+      // Both palettes should produce valid colors (no NaN)
+      for (const palette of result.palettes) {
+        for (const color of palette) {
+          expect(Number.isNaN(color.oklch.l ?? 0)).toBe(false);
+        }
+      }
+    });
   });
 
   describe('colorToCssHex', () => {
@@ -793,6 +826,28 @@ describe('colorUtils', () => {
       expect(neutrals[0].oklch.c ?? 0).toBeCloseTo(0, 6);
       expect(neutrals[4].oklch.l).toBeCloseTo(0, 4);
       expect(neutrals[4].oklch.c ?? 0).toBeCloseTo(0, 6);
+    });
+
+    it('uses warmthHue override instead of default warm hue', () => {
+      const params = { ...baseParams, warmth: 20, warmthHue: 120 };
+      const neutrals = generateBaseNeutrals(params);
+      const midNeutral = neutrals[2];
+      expect(midNeutral.oklch.h).toBeCloseTo(120, 0);
+    });
+
+    it('uses warmthHue override instead of default cool hue', () => {
+      const params = { ...baseParams, warmth: -20, warmthHue: 300 };
+      const neutrals = generateBaseNeutrals(params);
+      const midNeutral = neutrals[2];
+      expect(midNeutral.oklch.h).toBeCloseTo(300, 0);
+    });
+
+    it('falls back to default hue when warmthHue is undefined', () => {
+      const warmParams = { ...baseParams, warmth: 20, warmthHue: undefined };
+      const neutrals = generateBaseNeutrals(warmParams);
+      const midNeutral = neutrals[2];
+      // Default warm hue is 60
+      expect(midNeutral.oklch.h).toBeCloseTo(60, 0);
     });
   });
 

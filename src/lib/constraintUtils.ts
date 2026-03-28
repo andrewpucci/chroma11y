@@ -19,6 +19,7 @@ import {
   getGeneratedPaletteFallbackName
 } from '$lib/paletteNameUtils';
 import type {
+  AdjacentStopContrastEntry,
   ColorDifferenceMetric,
   Constraint,
   ConstraintResult,
@@ -487,6 +488,77 @@ export function evaluateConstraints({
   );
 
   return { results, summary };
+}
+
+const ADJACENT_STOP_LOW_THRESHOLD_WCAG = 1.2;
+const ADJACENT_STOP_LOW_THRESHOLD_APCA = 15;
+
+export function computeAdjacentStopContrast(
+  neutrals: Color[],
+  palettes: Color[][],
+  neutralLabel: string,
+  paletteLabels: string[],
+  algorithm: ContrastAlgorithm
+): AdjacentStopContrastEntry[] {
+  const threshold =
+    algorithm === 'APCA' ? ADJACENT_STOP_LOW_THRESHOLD_APCA : ADJACENT_STOP_LOW_THRESHOLD_WCAG;
+  const entries: AdjacentStopContrastEntry[] = [];
+
+  const processRamp = (
+    colors: Color[],
+    label: string,
+    isNeutral: boolean,
+    paletteIndex?: number
+  ): void => {
+    for (let i = 0; i < colors.length - 1; i++) {
+      const hexA = colorToCssHex(colors[i]);
+      const hexB = colorToCssHex(colors[i + 1]);
+      const contrastValue = getContrastForAlgorithm(hexA, hexB, algorithm);
+      entries.push({
+        paletteLabel: label,
+        paletteIndex,
+        isNeutral,
+        stopIndexA: i,
+        stopIndexB: i + 1,
+        contrastValue,
+        contrastAlgorithm: algorithm,
+        isLow: contrastValue < threshold
+      });
+    }
+  };
+
+  processRamp(neutrals, neutralLabel, true);
+  palettes.forEach((palette, index) => {
+    processRamp(
+      palette,
+      paletteLabels[index] ?? getGeneratedPaletteFallbackName(index),
+      false,
+      index
+    );
+  });
+
+  return entries;
+}
+
+export function getWorstContrastAtStep(
+  neutrals: Color[],
+  palettes: Color[][],
+  stepIndex: number,
+  referenceHex: string,
+  algorithm: ContrastAlgorithm
+): number {
+  let worst = Number.POSITIVE_INFINITY;
+  const neutralHex = neutrals[stepIndex] ? colorToCssHex(neutrals[stepIndex]) : null;
+  if (neutralHex) {
+    worst = Math.min(worst, getContrastForAlgorithm(neutralHex, referenceHex, algorithm));
+  }
+  for (const palette of palettes) {
+    const swatch = palette[stepIndex];
+    if (!swatch) continue;
+    const hex = colorToCssHex(swatch);
+    worst = Math.min(worst, getContrastForAlgorithm(hex, referenceHex, algorithm));
+  }
+  return worst === Number.POSITIVE_INFINITY ? 0 : worst;
 }
 
 function resolveReferenceColor(
