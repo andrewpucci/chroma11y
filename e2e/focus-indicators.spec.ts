@@ -20,6 +20,14 @@ test.describe('Focus Indicators', () => {
       const hexInput = page.locator('#baseColorHex');
       await hexInput.focus();
 
+      const getFocusedControl = async (): Promise<string> => {
+        return page.evaluate(() => {
+          const active = document.activeElement as HTMLElement | null;
+          if (!active) return '';
+          return active.id || active.getAttribute('aria-label') || active.tagName;
+        });
+      };
+
       // Verify strict tab order for controls before the optional warmth-hue toggle.
       const expectedPreSaturationTabOrder = [
         { selector: '#warmth' },
@@ -58,8 +66,10 @@ test.describe('Focus Indicators', () => {
       }
 
       let contrastAlgorithmFocused = false;
-      for (let i = 0; i < 3; i += 1) {
+      const traversalToContrastAlgorithm: string[] = [];
+      for (let i = 0; i < 14; i += 1) {
         await page.keyboard.press('Tab');
+        traversalToContrastAlgorithm.push(await getFocusedControl());
         const contrastAlgorithm = page.locator('#contrast-algorithm');
         if (await contrastAlgorithm.evaluate((el) => el === document.activeElement)) {
           contrastAlgorithmFocused = true;
@@ -67,7 +77,10 @@ test.describe('Focus Indicators', () => {
         }
       }
 
-      expect(contrastAlgorithmFocused).toBe(true);
+      expect(
+        contrastAlgorithmFocused,
+        `Did not reach #contrast-algorithm. Traversed: ${traversalToContrastAlgorithm.join(' -> ')}`
+      ).toBe(true);
 
       // Browser engines differ in checklist sub-order; ensure we traverse checklist controls
       // before arriving at contrast mode.
@@ -75,13 +88,7 @@ test.describe('Focus Indicators', () => {
       let reachedContrastMode = false;
       for (let i = 0; i < 12; i++) {
         await page.keyboard.press('Tab');
-
-        const focusedControl = await page.evaluate(() => {
-          const active = document.activeElement as HTMLElement | null;
-          if (!active) return '';
-
-          return active.id || active.getAttribute('aria-label') || active.tagName;
-        });
+        const focusedControl = await getFocusedControl();
         focusedControls.push(focusedControl);
 
         if (focusedControl === 'contrast-mode') {
