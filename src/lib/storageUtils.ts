@@ -128,6 +128,12 @@ export function loadStateFromStorage(): StoredColorState | null {
       delete state.showSwatchContrastIndicators;
     }
     if (
+      state.solveAdjacentStopLows !== undefined &&
+      typeof state.solveAdjacentStopLows !== 'boolean'
+    ) {
+      delete state.solveAdjacentStopLows;
+    }
+    if (
       state.swatchContrastIndicators !== undefined &&
       !isValidSwatchContrastIndicators(state.swatchContrastIndicators)
     ) {

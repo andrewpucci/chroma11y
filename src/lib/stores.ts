@@ -56,6 +56,7 @@ interface ColorState {
   showSwatchContrastIndicators: boolean;
   swatchContrastIndicators: SwatchContrastIndicators;
   contrastAlgorithm: ContrastAlgorithm;
+  solveAdjacentStopLows: boolean;
   oklchDisplaySignificantDigits: OklchDisplaySignificantDigits;
   customNeutralName?: string;
   customPaletteNames?: string[];
@@ -84,7 +85,7 @@ const THEME_PRESETS = {
   light: {
     numColors: 11,
     numPalettes: 11,
-    baseColor: '#1862E6',
+    baseColor: '#5EF784',
     warmth: -7,
     x1: 0.16,
     y1: 0.0,
@@ -104,7 +105,7 @@ const THEME_PRESETS = {
   dark: {
     numColors: 11,
     numPalettes: 11,
-    baseColor: '#1862E6',
+    baseColor: '#5EF784',
     warmth: -7,
     x1: 0.45,
     y1: 0.08,
@@ -151,6 +152,7 @@ const DEFAULT_STATE = {
     apcaBody: true
   } as SwatchContrastIndicators,
   contrastAlgorithm: 'WCAG' as ContrastAlgorithm,
+  solveAdjacentStopLows: true,
   oklchDisplaySignificantDigits: 4 as OklchDisplaySignificantDigits,
   constraints: [] as Constraint[],
   solverAdjustmentSnapshot: null as SolverAdjustmentSnapshot | null,
@@ -308,6 +310,10 @@ export const swatchContrastIndicators = derived(
 export const contrastAlgorithm = derived(
   colorStore,
   ($colorStore) => $colorStore.contrastAlgorithm
+);
+export const solveAdjacentStopLows = derived(
+  colorStore,
+  ($colorStore) => $colorStore.solveAdjacentStopLows
 );
 
 // Derived store for OKLCH display significant digits

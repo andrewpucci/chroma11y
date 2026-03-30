@@ -55,6 +55,7 @@ export interface HistorySnapshot {
   showSwatchContrastIndicators: boolean;
   swatchContrastIndicators: SwatchContrastIndicators;
   contrastAlgorithm: ContrastAlgorithm;
+  solveAdjacentStopLows: boolean;
   oklchDisplaySignificantDigits: OklchDisplaySignificantDigits;
   customNeutralName?: string;
   customPaletteNames?: string[];

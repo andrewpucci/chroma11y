@@ -20,11 +20,30 @@ test.describe('Focus Indicators', () => {
       const hexInput = page.locator('#baseColorHex');
       await hexInput.focus();
 
-      // Verify strict tab order from hex input through the collapsed Advanced disclosure.
-      const expectedTabOrder = [
+      // Verify strict tab order for controls before the optional warmth-hue toggle.
+      const expectedPreSaturationTabOrder = [
         { selector: '#warmth' },
-        { selector: '[aria-label="Warmth value input"]' },
-        { selector: '#saturation' },
+        { selector: '[aria-label="Warmth value input"]' }
+      ];
+
+      for (const item of expectedPreSaturationTabOrder) {
+        await page.keyboard.press('Tab');
+        await expect(page.locator(item.selector)).toBeFocused();
+      }
+
+      // Chromium/Firefox include the "Custom Warmth Hue" checkbox in tab order,
+      // while WebKit often skips it with Safari-style keyboard navigation defaults.
+      const customWarmthToggle = page.getByRole('checkbox', { name: 'Custom Warmth Hue' });
+      await page.keyboard.press('Tab');
+      if (
+        (await customWarmthToggle.count()) > 0 &&
+        (await customWarmthToggle.evaluate((el) => el === document.activeElement))
+      ) {
+        await page.keyboard.press('Tab');
+      }
+      await expect(page.locator('#saturation')).toBeFocused();
+
+      const expectedPostSaturationTabOrder = [
         { selector: '[aria-label="Saturation value input"]' },
         { selector: '#numColors' },
         { selector: '[aria-label="Number of colors value input"]' },
@@ -33,15 +52,9 @@ test.describe('Focus Indicators', () => {
         { selector: '[data-testid="generation-advanced-group"] summary' }
       ];
 
-      for (const item of expectedTabOrder) {
+      for (const item of expectedPostSaturationTabOrder) {
         await page.keyboard.press('Tab');
-
-        const locator =
-          item.index !== undefined
-            ? page.locator(item.selector).nth(item.index)
-            : page.locator(item.selector);
-
-        await expect(locator).toBeFocused();
+        await expect(page.locator(item.selector)).toBeFocused();
       }
 
       let contrastAlgorithmFocused = false;

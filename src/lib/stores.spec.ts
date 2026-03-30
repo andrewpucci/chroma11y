@@ -36,6 +36,7 @@ import {
   showSwatchContrastIndicators,
   swatchContrastIndicators,
   contrastAlgorithm,
+  solveAdjacentStopLows,
   oklchDisplaySignificantDigits,
   constraints,
   solverAdjustmentSnapshot,
@@ -119,7 +120,7 @@ describe('stores', () => {
 
     it('baseColor reflects colorStore.baseColor', () => {
       expect.assertions(1);
-      expect(get(baseColor)).toBe('#1862E6');
+      expect(get(baseColor)).toBe('#5EF784');
     });
 
     it('warmth reflects colorStore.warmth', () => {
@@ -195,6 +196,11 @@ describe('stores', () => {
     it('contrastAlgorithm reflects colorStore.contrastAlgorithm', () => {
       expect.assertions(1);
       expect(get(contrastAlgorithm)).toBe('WCAG');
+    });
+
+    it('solveAdjacentStopLows reflects colorStore.solveAdjacentStopLows', () => {
+      expect.assertions(1);
+      expect(get(solveAdjacentStopLows)).toBe(true);
     });
 
     it('oklchDisplaySignificantDigits reflects colorStore.oklchDisplaySignificantDigits', () => {
@@ -312,7 +318,7 @@ describe('stores', () => {
       updateColorState({ warmth: 5 });
 
       expect(get(warmth)).toBe(5);
-      expect(get(baseColor)).toBe('#1862E6');
+      expect(get(baseColor)).toBe('#5EF784');
     });
 
     it('updates multiple properties at once', () => {
@@ -358,6 +364,13 @@ describe('stores', () => {
         apcaFluent: true,
         apcaBody: false
       });
+    });
+
+    it('updates solveAdjacentStopLows', () => {
+      expect.assertions(1);
+      updateColorState({ solveAdjacentStopLows: false });
+
+      expect(get(solveAdjacentStopLows)).toBe(false);
     });
 
     it('forces gamutSpace to sRGB when displayColorSpace is hex', () => {
@@ -598,7 +611,7 @@ describe('stores', () => {
     it('stores solver snapshot and summary values', () => {
       expect.assertions(2);
       setSolverAdjustmentSnapshot({
-        baseColor: '#1862E6',
+        baseColor: '#5EF784',
         warmth: -7,
         chromaMultiplier: 1,
         x1: 0.16,
@@ -619,7 +632,7 @@ describe('stores', () => {
         scoreAfter: 0.5
       });
 
-      expect(get(solverAdjustmentSnapshot)?.baseColor).toBe('#1862E6');
+      expect(get(solverAdjustmentSnapshot)?.baseColor).toBe('#5EF784');
       expect(get(constraintSolverSummary)?.warningCount).toBe(1);
     });
   });

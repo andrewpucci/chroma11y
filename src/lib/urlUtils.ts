@@ -284,6 +284,9 @@ export function encodeStateToUrl(state: UrlColorState): string {
   }
   if (state.contrastAlgorithm && state.contrastAlgorithm !== 'WCAG')
     params.set('ca', state.contrastAlgorithm);
+  if (state.solveAdjacentStopLows !== undefined && !state.solveAdjacentStopLows) {
+    params.set('asl', '0');
+  }
   if (
     state.oklchDisplaySignificantDigits !== undefined &&
     state.oklchDisplaySignificantDigits !== 4
@@ -487,6 +490,9 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   const ca = searchParams.get('ca');
   if (ca && VALID_CONTRAST_ALGOS.includes(ca as ContrastAlgorithm))
     state.contrastAlgorithm = ca as ContrastAlgorithm;
+  const asl = searchParams.get('asl');
+  if (asl === '0') state.solveAdjacentStopLows = false;
+  if (asl === '1') state.solveAdjacentStopLows = true;
 
   const os = searchParams.get('os');
   if (os) {

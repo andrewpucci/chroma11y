@@ -39,6 +39,7 @@
     showSwatchContrastIndicators,
     swatchContrastIndicators,
     contrastAlgorithm,
+    solveAdjacentStopLows,
     oklchDisplaySignificantDigits,
     customNeutralName,
     customPaletteNames,
@@ -133,6 +134,7 @@
   let showSwatchContrastIndicatorsLocal = $derived($showSwatchContrastIndicators);
   let swatchContrastIndicatorsLocal = $derived($swatchContrastIndicators);
   let contrastAlgorithmLocal = $derived($contrastAlgorithm);
+  let solveAdjacentStopLowsLocal = $derived($solveAdjacentStopLows);
   let oklchDisplaySignificantDigitsLocal = $derived($oklchDisplaySignificantDigits);
   let customNeutralNameLocal = $derived($customNeutralName);
   let customPaletteNamesLocal = $derived($customPaletteNames);
@@ -166,7 +168,7 @@
   );
 
   // Bindable state for controls
-  let baseColorLocal = $state('#1862E6');
+  let baseColorLocal = $state('#5EF784');
   let warmthLocal = $state(-7);
   let warmthHueLocal = $state<number | undefined>(undefined);
   let chromaMultiplierLocal = $state(1);
@@ -360,6 +362,7 @@
         showSwatchContrastIndicators: storeState.showSwatchContrastIndicators,
         swatchContrastIndicators: structuredClone(storeState.swatchContrastIndicators),
         contrastAlgorithm: storeState.contrastAlgorithm,
+        solveAdjacentStopLows: storeState.solveAdjacentStopLows,
         oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits,
         customNeutralName: storeState.customNeutralName,
         customPaletteNames: storeState.customPaletteNames,
@@ -403,6 +406,7 @@
       showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
       swatchContrastIndicators: structuredClone(swatchContrastIndicatorsLocal),
       contrastAlgorithm: contrastAlgorithmLocal,
+      solveAdjacentStopLows: solveAdjacentStopLowsLocal,
       oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
       customNeutralName: customNeutralNameLocal,
       customPaletteNames: customPaletteNamesLocal,
@@ -470,6 +474,7 @@
       showSwatchContrastIndicators: snapshot.showSwatchContrastIndicators,
       swatchContrastIndicators: snapshot.swatchContrastIndicators,
       contrastAlgorithm: snapshot.contrastAlgorithm,
+      solveAdjacentStopLows: snapshot.solveAdjacentStopLows,
       oklchDisplaySignificantDigits: snapshot.oklchDisplaySignificantDigits,
       customNeutralName: snapshot.customNeutralName,
       customPaletteNames: snapshot.customPaletteNames,
@@ -1103,6 +1108,7 @@
       showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
       swatchContrastIndicators: swatchContrastIndicatorsLocal,
       contrastAlgorithm: contrastAlgorithmLocal,
+      solveAdjacentStopLows: solveAdjacentStopLowsLocal,
       oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
       themePreference: themePreferenceLocal,
       customNeutralName: customNeutralNameLocal,
@@ -1193,6 +1199,9 @@
       };
     }
     if (urlState.contrastAlgorithm) stateUpdate.contrastAlgorithm = urlState.contrastAlgorithm;
+    if (urlState.solveAdjacentStopLows !== undefined) {
+      stateUpdate.solveAdjacentStopLows = urlState.solveAdjacentStopLows;
+    }
     if (urlState.oklchDisplaySignificantDigits !== undefined) {
       stateUpdate.oklchDisplaySignificantDigits = urlState.oklchDisplaySignificantDigits;
     }
@@ -1224,6 +1233,7 @@
       numPalettes: numPalettesLocal,
       baseColor: baseColorLocal,
       warmth: warmthLocal,
+      warmthHue: warmthHueLocal,
       x1: x1Local,
       y1: y1Local,
       x2: x2Local,

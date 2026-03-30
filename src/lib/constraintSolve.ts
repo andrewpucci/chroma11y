@@ -8,6 +8,7 @@ import {
 import {
   colorToCssHex,
   generatePalettes,
+  getContrastForAlgorithm,
   HUE_NUDGER_BOUNDS,
   isValidHexColor,
   LIGHTNESS_NUDGER_BOUNDS,
@@ -18,6 +19,7 @@ import {
 } from '$lib/colorUtils';
 import {
   evaluateConstraints,
+  getAdjacentStopLowPairThreshold,
   getConstraintThresholdValue,
   getTargetColorThresholds
 } from '$lib/constraintUtils';
@@ -60,6 +62,8 @@ interface SolverCandidate {
   guardrailOverflow: number;
   failCount: number;
   warningCount: number;
+  adjacentStopLowCount: number;
+  adjacentStopLowOverflow: number;
   hardOverflow: number;
   fitDistance: number;
   overflow: number;
@@ -399,6 +403,8 @@ function getObjectiveValue(candidate: SolverCandidate): number {
     candidate.guardrailOverflow * 1e6 +
     candidate.failCount * 1e5 +
     candidate.warningCount * 1e3 +
+    candidate.adjacentStopLowCount * 5e2 +
+    candidate.adjacentStopLowOverflow * 2e2 +
     candidate.overflow * 1e2 +
     candidate.score
   );
@@ -486,6 +492,44 @@ function getSolverGuardrailPenalty(generated: ReturnType<typeof generatePalettes
   return { violationCount, overflow };
 }
 
+function getAdjacentStopLowPenalty(
+  generated: ReturnType<typeof generatePalettes>,
+  algorithm: 'WCAG' | 'APCA'
+): {
+  lowCount: number;
+  overflow: number;
+} {
+  let lowCount = 0;
+  let overflow = 0;
+
+  const processRamp = (colors: Color[]): void => {
+    for (let index = 0; index < colors.length - 1; index += 1) {
+      const currentHex = colorToCssHex(colors[index]);
+      const nextHex = colorToCssHex(colors[index + 1]);
+      const contrast = getContrastForAlgorithm(currentHex, nextHex, algorithm);
+      const threshold = getAdjacentStopLowPairThreshold(
+        algorithm,
+        index,
+        index + 1,
+        colors.length,
+        currentHex,
+        nextHex
+      );
+      if (contrast < threshold) {
+        lowCount += 1;
+        overflow += threshold - contrast;
+      }
+    }
+  };
+
+  processRamp(generated.neutrals);
+  for (const palette of generated.palettes) {
+    processRamp(palette);
+  }
+
+  return { lowCount, overflow };
+}
+
 function evaluateSolverCandidate(
   request: ConstraintSolveRequest,
   baseline: SolverAdjustmentSnapshot,
@@ -493,6 +537,10 @@ function evaluateSolverCandidate(
 ): SolverCandidate {
   const generated = generatePalettes(toColorGenParams(request, candidateAdjustments));
   const guardrailPenalty = getSolverGuardrailPenalty(generated);
+  const solveAdjacentStopLows = request.solveAdjacentStopLows !== false;
+  const adjacentStopLowPenalty = solveAdjacentStopLows
+    ? getAdjacentStopLowPenalty(generated, request.contrastAlgorithm ?? 'WCAG')
+    : { lowCount: 0, overflow: 0 };
   const lowContrastColor =
     request.contrastMode === 'manual'
       ? request.manualContrast.low
@@ -556,6 +604,8 @@ function evaluateSolverCandidate(
     ) +
     guardrailPenalty.violationCount * 2 +
     guardrailPenalty.overflow * 50 +
+    adjacentStopLowPenalty.lowCount * 20 +
+    adjacentStopLowPenalty.overflow * 50 +
     getAdjustmentDistancePenalty(baseline, candidateAdjustments);
 
   const candidate: SolverCandidate = {
@@ -570,6 +620,8 @@ function evaluateSolverCandidate(
     guardrailOverflow: guardrailPenalty.overflow,
     failCount,
     warningCount,
+    adjacentStopLowCount: adjacentStopLowPenalty.lowCount,
+    adjacentStopLowOverflow: adjacentStopLowPenalty.overflow,
     hardOverflow,
     fitDistance,
     overflow
@@ -597,6 +649,12 @@ function isBetterCandidate(candidate: SolverCandidate, best: SolverCandidate): b
   if (candidate.warningCount !== best.warningCount) {
     return candidate.warningCount < best.warningCount;
   }
+  if (candidate.adjacentStopLowCount !== best.adjacentStopLowCount) {
+    return candidate.adjacentStopLowCount < best.adjacentStopLowCount;
+  }
+  if (Math.abs(candidate.adjacentStopLowOverflow - best.adjacentStopLowOverflow) > 1e-9) {
+    return candidate.adjacentStopLowOverflow < best.adjacentStopLowOverflow;
+  }
   if (Math.abs(candidate.overflow - best.overflow) > 1e-9) {
     return candidate.overflow < best.overflow;
   }
@@ -611,6 +669,8 @@ function hasEquivalentFeasibility(candidate: SolverCandidate, best: SolverCandid
     Math.abs(candidate.guardrailOverflow - best.guardrailOverflow) <= 1e-9 &&
     candidate.failCount === best.failCount &&
     candidate.warningCount === best.warningCount &&
+    candidate.adjacentStopLowCount === best.adjacentStopLowCount &&
+    Math.abs(candidate.adjacentStopLowOverflow - best.adjacentStopLowOverflow) <= 1e-9 &&
     Math.abs(candidate.hardOverflow - best.hardOverflow) <= 1e-9
   );
 }
@@ -1611,6 +1671,8 @@ export function solveConstraintsWithProfile(
     baseline.guardrailOverflow <= 1e-9 &&
     baseline.failCount === 0 &&
     baseline.warningCount === 0 &&
+    baseline.adjacentStopLowCount === 0 &&
+    baseline.adjacentStopLowOverflow <= 1e-9 &&
     baseline.overflow <= 1e-9
   ) {
     return {

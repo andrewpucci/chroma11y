@@ -533,6 +533,18 @@ describe('urlUtils', () => {
       expect(encoded).not.toContain('ca=');
     });
 
+    it('encodes solveAdjacentStopLows when disabled', () => {
+      const state: UrlColorState = { solveAdjacentStopLows: false };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('asl=0');
+    });
+
+    it('omits solveAdjacentStopLows when enabled (default)', () => {
+      const state: UrlColorState = { solveAdjacentStopLows: true };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('asl=');
+    });
+
     it('encodes OKLCH significant digits when not default', () => {
       const state: UrlColorState = { oklchDisplaySignificantDigits: 5 };
       const encoded = encodeStateToUrl(state);
@@ -595,6 +607,14 @@ describe('urlUtils', () => {
         apcaBody: false
       });
       expect(state.showSwatchContrastIndicators).toBe(true);
+    });
+
+    it('decodes solveAdjacentStopLows visibility', () => {
+      const disabled = decodeStateFromUrl(new URLSearchParams('asl=0'));
+      const enabled = decodeStateFromUrl(new URLSearchParams('asl=1'));
+
+      expect(disabled.solveAdjacentStopLows).toBe(false);
+      expect(enabled.solveAdjacentStopLows).toBe(true);
     });
 
     it('infers WCAG 3:1 for legacy masks that only include AA/AAA codes', () => {

@@ -492,6 +492,39 @@ export function evaluateConstraints({
 
 const ADJACENT_STOP_LOW_THRESHOLD_WCAG = 1.2;
 const ADJACENT_STOP_LOW_THRESHOLD_APCA = 15;
+const ADJACENT_STOP_LOW_ENDPOINT_THRESHOLD_WCAG = 1.05;
+const ADJACENT_STOP_LOW_ENDPOINT_THRESHOLD_APCA = 10;
+
+function isRenderedEndpointHex(hex: string): boolean {
+  const normalized = hex.toLowerCase();
+  return normalized === '#000000' || normalized === '#ffffff';
+}
+
+export function getAdjacentStopLowThreshold(algorithm: ContrastAlgorithm): number {
+  return algorithm === 'APCA' ? ADJACENT_STOP_LOW_THRESHOLD_APCA : ADJACENT_STOP_LOW_THRESHOLD_WCAG;
+}
+
+export function getAdjacentStopLowPairThreshold(
+  algorithm: ContrastAlgorithm,
+  stopIndexA: number,
+  stopIndexB: number,
+  rampLength: number,
+  hexA: string,
+  hexB: string
+): number {
+  const threshold = getAdjacentStopLowThreshold(algorithm);
+  const isTerminalPair = stopIndexA === 0 || stopIndexB === rampLength - 1;
+  if (!isTerminalPair) {
+    return threshold;
+  }
+  if (!isRenderedEndpointHex(hexA) && !isRenderedEndpointHex(hexB)) {
+    return threshold;
+  }
+
+  return algorithm === 'APCA'
+    ? ADJACENT_STOP_LOW_ENDPOINT_THRESHOLD_APCA
+    : ADJACENT_STOP_LOW_ENDPOINT_THRESHOLD_WCAG;
+}
 
 export function computeAdjacentStopContrast(
   neutrals: Color[],
@@ -500,8 +533,6 @@ export function computeAdjacentStopContrast(
   paletteLabels: string[],
   algorithm: ContrastAlgorithm
 ): AdjacentStopContrastEntry[] {
-  const threshold =
-    algorithm === 'APCA' ? ADJACENT_STOP_LOW_THRESHOLD_APCA : ADJACENT_STOP_LOW_THRESHOLD_WCAG;
   const entries: AdjacentStopContrastEntry[] = [];
 
   const processRamp = (
@@ -514,6 +545,14 @@ export function computeAdjacentStopContrast(
       const hexA = colorToCssHex(colors[i]);
       const hexB = colorToCssHex(colors[i + 1]);
       const contrastValue = getContrastForAlgorithm(hexA, hexB, algorithm);
+      const threshold = getAdjacentStopLowPairThreshold(
+        algorithm,
+        i,
+        i + 1,
+        colors.length,
+        hexA,
+        hexB
+      );
       entries.push({
         paletteLabel: label,
         paletteIndex,

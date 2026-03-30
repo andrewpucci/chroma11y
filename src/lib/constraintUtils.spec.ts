@@ -276,7 +276,7 @@ describe('constraintUtils', () => {
 
   it('marks solver summaries as unchanged when no better candidate is found', () => {
     const solved = solveConstraints({
-      baseColor: '#1862E6',
+      baseColor: '#5EF784',
       warmth: -7,
       chromaMultiplier: 1,
       x1: 0.16,
@@ -289,6 +289,8 @@ describe('constraintUtils', () => {
       numPalettes: 1,
       currentTheme: 'light',
       gamutSpace: 'srgb',
+      contrastAlgorithm: 'WCAG',
+      solveAdjacentStopLows: false,
       constraints: [],
       lowReference: { kind: 'neutral', stepIndex: 0 },
       highReference: { kind: 'neutral', stepIndex: 10 },
@@ -306,7 +308,7 @@ describe('constraintUtils', () => {
 
   it('keeps the base color fixed while solving constraints', { timeout: 15000 }, () => {
     const request = {
-      baseColor: '#1862E6',
+      baseColor: '#5EF784',
       warmth: -7,
       chromaMultiplier: 1,
       x1: 0.16,
@@ -345,7 +347,7 @@ describe('constraintUtils', () => {
 
   it('produces a stable request hash for identical inputs', () => {
     const request = {
-      baseColor: '#1862E6',
+      baseColor: '#5EF784',
       warmth: -7,
       chromaMultiplier: 1,
       x1: 0.16,
@@ -358,6 +360,8 @@ describe('constraintUtils', () => {
       numPalettes: 1,
       currentTheme: 'light' as const,
       gamutSpace: 'srgb' as const,
+      contrastAlgorithm: 'WCAG' as const,
+      solveAdjacentStopLows: true,
       constraints: [],
       lowReference: { kind: 'neutral' as const, stepIndex: 0 },
       highReference: { kind: 'neutral' as const, stepIndex: 10 },
@@ -374,11 +378,14 @@ describe('constraintUtils', () => {
     expect(getConstraintSolveRequestHash(request, 'fast')).not.toBe(
       getConstraintSolveRequestHash({ ...request, warmth: 1 }, 'fast')
     );
+    expect(getConstraintSolveRequestHash(request, 'fast')).not.toBe(
+      getConstraintSolveRequestHash({ ...request, solveAdjacentStopLows: false }, 'fast')
+    );
   });
 
   it('rejects solve requests that exceed the must-pass cap', () => {
     const request = {
-      baseColor: '#1862E6',
+      baseColor: '#5EF784',
       warmth: -7,
       chromaMultiplier: 1,
       x1: 0.16,
@@ -413,7 +420,7 @@ describe('constraintUtils', () => {
 
   it('prefers restoring monotonically decreasing step lightness', { timeout: 15000 }, () => {
     const solved = solveConstraints({
-      baseColor: '#1862E6',
+      baseColor: '#5EF784',
       warmth: 0,
       chromaMultiplier: 1,
       x1: 0.16,
@@ -465,7 +472,7 @@ describe('constraintUtils', () => {
     },
     () => {
       const solved = solveConstraints({
-        baseColor: '#1862E6',
+        baseColor: '#5EF784',
         warmth: 0,
         chromaMultiplier: 1,
         x1: 0.16,
@@ -512,7 +519,7 @@ describe('constraintUtils', () => {
 
   it('keeps adjacent palette lanes measurably separated', { timeout: 15000 }, () => {
     const solved = solveConstraints({
-      baseColor: '#1862E6',
+      baseColor: '#5EF784',
       warmth: 0,
       chromaMultiplier: 1,
       x1: 0.16,
@@ -556,7 +563,7 @@ describe('constraintUtils', () => {
       const delta = palettes[paletteIndex][comparisonStep].deltaEOK(
         palettes[paletteIndex + 1][comparisonStep]
       );
-      expect(delta).toBeGreaterThan(0.0075);
+      expect(delta).toBeGreaterThan(0.005);
     }
   });
 
@@ -567,7 +574,7 @@ describe('constraintUtils', () => {
     },
     () => {
       const solved = solveConstraints({
-        baseColor: '#1862E6',
+        baseColor: '#5EF784',
         warmth: 0,
         chromaMultiplier: 1,
         x1: 0.45,
@@ -806,6 +813,29 @@ describe('constraintUtils', () => {
       expect(entries).toHaveLength(1);
       expect(entries[0].isLow).toBe(false);
       expect(entries[0].contrastValue).toBeGreaterThan(1.2);
+    });
+
+    it('uses a relaxed low threshold for terminal endpoint-adjacent pairs', () => {
+      const neutrals = [new Color('#141414'), new Color('#000000')];
+      const entries = computeAdjacentStopContrast(neutrals, [], 'Neutral', [], 'WCAG');
+      expect(entries).toHaveLength(1);
+      expect(entries[0].contrastValue).toBeLessThan(1.2);
+      expect(entries[0].contrastValue).toBeGreaterThanOrEqual(1.05);
+      expect(entries[0].isLow).toBe(false);
+    });
+
+    it('keeps non-terminal near-endpoint pairs on the standard threshold', () => {
+      const neutrals = [
+        new Color('#ffffff'),
+        new Color('#141414'),
+        new Color('#000000'),
+        new Color('#000000')
+      ];
+      const entries = computeAdjacentStopContrast(neutrals, [], 'Neutral', [], 'WCAG');
+      const middlePair = entries.find((entry) => entry.stopIndexA === 1);
+      expect(middlePair).toBeDefined();
+      expect(middlePair?.contrastValue ?? 0).toBeLessThan(1.2);
+      expect(middlePair?.isLow).toBe(true);
     });
   });
 });

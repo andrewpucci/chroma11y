@@ -131,6 +131,8 @@ export interface ConstraintSolveRequest extends SolverAdjustmentSnapshot {
   numPalettes: number;
   currentTheme: 'light' | 'dark';
   gamutSpace: GamutSpace;
+  contrastAlgorithm?: ContrastAlgorithm;
+  solveAdjacentStopLows?: boolean;
   constraints: Constraint[];
   lowReference: ContrastReference;
   highReference: ContrastReference;
@@ -234,6 +236,7 @@ export interface SerializableColorState {
   showSwatchContrastIndicators?: boolean;
   swatchContrastIndicators?: SwatchContrastIndicators;
   contrastAlgorithm?: ContrastAlgorithm;
+  solveAdjacentStopLows?: boolean;
   oklchDisplaySignificantDigits?: OklchDisplaySignificantDigits;
   customNeutralName?: string;
   customPaletteNames?: string[];

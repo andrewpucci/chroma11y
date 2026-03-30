@@ -35,6 +35,7 @@
     updateColorState,
     updateConstraint,
     stepSaturationNudgers,
+    solveAdjacentStopLows,
     warmth,
     warmthHue,
     x1,
@@ -104,6 +105,7 @@
 
   let constraintsLocal = $derived($constraints);
   let contrastAlgorithmLocal = $derived($contrastAlgorithm);
+  let solveAdjacentStopLowsLocal = $derived($solveAdjacentStopLows);
   let contrastColorsLocal = $derived($contrastColors);
   let contrastModeLocal = $derived($contrastMode);
   let lowReferenceLocal = $derived($lowReference);
@@ -634,6 +636,8 @@
       numPalettes: numPalettesLocal,
       currentTheme: currentThemeLocal,
       gamutSpace: gamutSpaceLocal,
+      contrastAlgorithm: contrastAlgorithmLocal,
+      solveAdjacentStopLows: solveAdjacentStopLowsLocal,
       constraints: constraintsLocal,
       lowReference: lowReferenceLocal,
       highReference: highReferenceLocal,
@@ -730,6 +734,16 @@
     void runSolve('deep');
   }
 
+  function handleSolveAdjacentStopLowsChange(checked: boolean): void {
+    updateColorState({ solveAdjacentStopLows: checked });
+    announce(
+      checked
+        ? 'Solve now optimizes adjacent stop low contrast warnings.'
+        : 'Solve no longer optimizes adjacent stop low contrast warnings.'
+    );
+    onHistoryCommit?.('Solve adjacent-stop optimization changed');
+  }
+
   function handleClearSolvedAdjustments(): void {
     if (!solverAdjustmentSnapshotLocal) {
       return;
@@ -824,6 +838,24 @@
       </div>
     </div>
   </div>
+
+  <details class="solver-advanced-options">
+    <summary class="solver-advanced-summary">Advanced solver options</summary>
+    <div class="solver-advanced-body">
+      <CheckboxRow
+        id="solve-adjacent-stop-lows"
+        label="Optimize adjacent stop lows"
+        checked={solveAdjacentStopLowsLocal}
+        disabled={isSolveLocked}
+        ariaLabel="Optimize adjacent stop lows"
+        onChange={handleSolveAdjacentStopLowsChange}
+      />
+      <p class="field-hint">
+        Includes adjacent-step low contrast warnings in solve scoring. Turn off for faster, looser
+        solves.
+      </p>
+    </div>
+  </details>
 
   {#if isSolveLocked}
     <div class="solve-status" aria-live="polite">
@@ -1495,6 +1527,26 @@
     height: var(--constraint-preview-swatch-size);
     border-radius: var(--radius-sm);
     border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+
+  .solver-advanced-options {
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 60%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in oklab, var(--bg-secondary) 92%, transparent);
+  }
+
+  .solver-advanced-summary {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .solver-advanced-body {
+    display: grid;
+    gap: var(--space-xs);
+    padding: 0 var(--space-md) var(--space-md);
   }
 
   .solve-status {

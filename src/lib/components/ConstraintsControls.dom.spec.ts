@@ -9,6 +9,7 @@ import {
   activeConstraintSolveRunState,
   constraints,
   resetColorState,
+  solveAdjacentStopLows,
   setConstraintSolverSummary,
   updateColorState
 } from '$lib/stores';
@@ -41,7 +42,8 @@ describe('ConstraintsControls', () => {
     resetColorState('light');
     updateColorState({
       neutrals: [new Color('#ffffff')],
-      palettes: [[new Color('#5ef784')]]
+      palettes: [[new Color('#5ef784')]],
+      solveAdjacentStopLows: true
     });
     startSolveConstraintsInWorker.mockReset();
     vi.mocked(announce).mockClear();
@@ -294,6 +296,14 @@ describe('ConstraintsControls', () => {
     expect(get(constraints)[0]).toMatchObject({ fitToThreshold: true });
   });
 
+  it('updates the advanced adjacent-stop solver toggle', async () => {
+    render(ConstraintsControls);
+
+    await fireEvent.click(screen.getByRole('checkbox', { name: /optimize adjacent stop lows/i }));
+
+    expect(get(solveAdjacentStopLows)).toBe(false);
+  });
+
   it('supports disabling constraints and excluding them from health counts', async () => {
     updateColorState({
       constraints: [
@@ -427,7 +437,7 @@ describe('ConstraintsControls', () => {
         resolveSolve = () =>
           resolve({
             snapshot: {
-              baseColor: '#1862E6',
+              baseColor: '#5EF784',
               warmth: -7,
               chromaMultiplier: 1,
               x1: 0.16,
@@ -520,7 +530,7 @@ describe('ConstraintsControls', () => {
         resolveSolve = () =>
           resolve({
             snapshot: {
-              baseColor: '#1862E6',
+              baseColor: '#5EF784',
               warmth: -7,
               chromaMultiplier: 1,
               x1: 0.16,
@@ -567,7 +577,10 @@ describe('ConstraintsControls', () => {
 
     await fireEvent.click(screen.getAllByRole('button', { name: /deep solve/i })[0]);
 
-    expect(startSolveConstraintsInWorker).toHaveBeenCalledWith(expect.any(Object), 'deep');
+    expect(startSolveConstraintsInWorker).toHaveBeenCalledWith(
+      expect.objectContaining({ solveAdjacentStopLows: true }),
+      'deep'
+    );
     expect(screen.getByText(/running deep solve/i)).toBeInTheDocument();
     expect(get(activeConstraintSolveRunState).status).toBe('running-deep');
 
@@ -579,6 +592,60 @@ describe('ConstraintsControls', () => {
     await Promise.resolve();
 
     expect(get(activeConstraintSolveRunState).status).toBe('idle');
+  });
+
+  it('passes solveAdjacentStopLows=false when the advanced toggle is disabled', async () => {
+    startSolveConstraintsInWorker.mockImplementation(() => ({
+      cancel: vi.fn(),
+      promise: Promise.resolve({
+        snapshot: {
+          baseColor: '#5EF784',
+          warmth: -7,
+          chromaMultiplier: 1,
+          x1: 0.16,
+          y1: 0,
+          x2: 0.28,
+          y2: 0.38,
+          lightnessNudgers: [],
+          hueNudgers: []
+        },
+        summary: {
+          solvedAt: Date.now(),
+          passCount: 1,
+          warningCount: 0,
+          failCount: 0,
+          applied: true,
+          changed: false,
+          scoreBefore: 0,
+          scoreAfter: 0,
+          source: 'client'
+        },
+        results: []
+      })
+    }));
+
+    updateColorState({
+      constraints: [
+        {
+          id: 'constraint-1',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784',
+          mustPass: false,
+          metric: 'ok'
+        }
+      ]
+    });
+
+    render(ConstraintsControls);
+
+    await fireEvent.click(screen.getByRole('checkbox', { name: /optimize adjacent stop lows/i }));
+    await fireEvent.click(screen.getAllByRole('button', { name: /solve constraints/i })[0]);
+
+    expect(startSolveConstraintsInWorker).toHaveBeenCalledWith(
+      expect.objectContaining({ solveAdjacentStopLows: false }),
+      'fast'
+    );
   });
 
   it('cancels an in-progress solve and unlocks the panel', async () => {

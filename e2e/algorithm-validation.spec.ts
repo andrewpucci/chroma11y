@@ -68,4 +68,22 @@ test.describe('Algorithm Validation', () => {
 
     expect(await paletteHexes.nth(5).textContent()).not.toBe(paletteBefore);
   });
+
+  test('custom warmth hue changes neutral colors', async ({ page }) => {
+    const neutralSection = page.getByTestId('neutral-palette');
+    const neutralHexes = neutralSection.locator('.hex');
+    const midNeutralBefore = ((await neutralHexes.nth(5).textContent()) ?? '').trim();
+
+    await page.getByRole('spinbutton', { name: 'Warmth value input' }).fill('28');
+    await page.getByRole('spinbutton', { name: 'Warmth value input' }).press('Tab');
+    await page.getByRole('checkbox', { name: 'Custom Warmth Hue' }).check();
+    await page.getByRole('spinbutton', { name: 'Warmth hue value input' }).fill('60');
+    await page.getByRole('spinbutton', { name: 'Warmth hue value input' }).press('Tab');
+
+    await expect
+      .poll(async () => ((await neutralHexes.nth(5).textContent()) ?? '').trim(), {
+        timeout: 15000
+      })
+      .not.toBe(midNeutralBefore);
+  });
 });

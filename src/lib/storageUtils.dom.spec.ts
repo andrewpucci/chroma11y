@@ -9,7 +9,7 @@ describe('storageUtils', () => {
   const mockState: SerializableColorState = {
     numColors: 11,
     numPalettes: 11,
-    baseColor: '#1862E6',
+    baseColor: '#5EF784',
     warmth: -7,
     x1: 0.16,
     y1: 0.0,
@@ -37,6 +37,7 @@ describe('storageUtils', () => {
       apcaBody: true
     },
     contrastAlgorithm: 'WCAG',
+    solveAdjacentStopLows: true,
     oklchDisplaySignificantDigits: 4,
     customNeutralName: 'Canvas',
     customPaletteNames: ['Ocean', '', 'Bloom']
@@ -216,6 +217,18 @@ describe('storageUtils', () => {
       expect(result?.showSwatchGamutWarnings).toBeUndefined();
     });
 
+    it('strips invalid solveAdjacentStopLows', () => {
+      expect.assertions(2);
+
+      const invalidState = { ...mockState, solveAdjacentStopLows: 'invalid' };
+      localStorage.setItem('chroma11y-state', JSON.stringify(invalidState));
+
+      const result = loadStateFromStorage();
+
+      expect(result).not.toBeNull();
+      expect(result?.solveAdjacentStopLows).toBeUndefined();
+    });
+
     it('strips invalid swatchContrastIndicators object', () => {
       expect.assertions(2);
 
@@ -322,7 +335,7 @@ describe('storageUtils', () => {
     });
 
     it('preserves valid display settings', () => {
-      expect.assertions(11);
+      expect.assertions(12);
 
       localStorage.setItem('chroma11y-state', JSON.stringify(mockState));
 
@@ -336,6 +349,7 @@ describe('storageUtils', () => {
       expect(result?.showSwatchContrastIndicators).toBe(true);
       expect(result?.swatchContrastIndicators).toEqual(mockState.swatchContrastIndicators);
       expect(result?.contrastAlgorithm).toBe('WCAG');
+      expect(result?.solveAdjacentStopLows).toBe(true);
       expect(result?.oklchDisplaySignificantDigits).toBe(4);
       expect(result?.customNeutralName).toBe('Canvas');
       expect(result?.customPaletteNames).toEqual(['Ocean', '', 'Bloom']);
