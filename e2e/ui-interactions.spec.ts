@@ -138,6 +138,27 @@ test.describe('UI Interactions', () => {
         .fill('6');
       await expect(page.locator('#oklch-significant-digits')).toHaveValue('6');
     });
+
+    test('custom warmth hue changes the generated neutral palette', async ({ page }) => {
+      const neutralHexes = page.getByTestId('neutral-palette').locator('.hex');
+
+      await page.getByRole('spinbutton', { name: 'Warmth value input' }).fill('50');
+      await expect(page.locator('#warmth')).toHaveValue('50');
+
+      const customWarmthHue = page.getByRole('checkbox', { name: 'Custom warmth hue' });
+      await customWarmthHue.check();
+
+      const neutralBefore = (await neutralHexes.nth(5).textContent())?.trim() ?? '';
+
+      await page.getByRole('spinbutton', { name: 'Warmth hue value input' }).fill('180');
+      await expect(page.locator('#warmth-hue')).toHaveValue('180');
+
+      await expect
+        .poll(async () => ((await neutralHexes.nth(5).textContent()) ?? '').trim(), {
+          timeout: 15000
+        })
+        .not.toBe(neutralBefore);
+    });
   });
 
   test.describe('Constraints Panel', () => {

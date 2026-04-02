@@ -7,6 +7,42 @@ import { test, expect } from '@playwright/test';
 
 import { waitForAppReady } from './test-utils';
 
+async function readCardMetrics(
+  page: import('@playwright/test').Page
+): Promise<{ paddingTop: number; radius: number }> {
+  return await page.evaluate(() => {
+    const card = document.querySelector('.card');
+    const cardHeader = document.querySelector('.card-header');
+
+    if (!(card instanceof HTMLElement) || !(cardHeader instanceof HTMLElement)) {
+      throw new Error('Expected card and card header to be present');
+    }
+
+    const parseFirstNumeric = (...values: string[]): number => {
+      for (const value of values) {
+        const parsed = Number.parseFloat(value);
+        if (Number.isFinite(parsed)) {
+          return parsed;
+        }
+      }
+
+      return Number.NaN;
+    };
+
+    const cardStyle = getComputedStyle(card);
+    const cardHeaderStyle = getComputedStyle(cardHeader);
+
+    return {
+      paddingTop: parseFirstNumeric(
+        cardHeaderStyle.paddingTop,
+        cardHeaderStyle.paddingBlockStart,
+        cardHeaderStyle.padding
+      ),
+      radius: parseFirstNumeric(cardStyle.borderTopLeftRadius, cardStyle.borderRadius)
+    };
+  });
+}
+
 test.describe('Design Tokens', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -39,21 +75,10 @@ test.describe('Design Tokens', () => {
 
   test('scales spacing and border radius with viewport size', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 568 });
-
-    const card = page.locator('.card').first();
-    const cardBody = page.locator('.card-body').first();
-
-    const smallViewportMetrics = {
-      paddingTop: await cardBody.evaluate((el) => parseFloat(getComputedStyle(el).paddingTop)),
-      radius: await card.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius))
-    };
+    const smallViewportMetrics = await readCardMetrics(page);
 
     await page.setViewportSize({ width: 1440, height: 900 });
-
-    const largeViewportMetrics = {
-      paddingTop: await cardBody.evaluate((el) => parseFloat(getComputedStyle(el).paddingTop)),
-      radius: await card.evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius))
-    };
+    const largeViewportMetrics = await readCardMetrics(page);
 
     expect(smallViewportMetrics.paddingTop).toBeGreaterThan(0);
     expect(largeViewportMetrics.paddingTop).toBeGreaterThanOrEqual(smallViewportMetrics.paddingTop);
