@@ -198,12 +198,24 @@ function createControllablePageScheduler(): ControllablePageScheduler {
   };
 }
 
-async function renderPage(
-  scheduler: PageScheduler = createImmediatePageScheduler()
-): Promise<void> {
+interface RenderPageOptions {
+  scheduler?: PageScheduler;
+  openOutputAdvanced?: boolean;
+}
+
+async function renderPage(options: RenderPageOptions = {}): Promise<void> {
+  const {
+    scheduler = createImmediatePageScheduler(),
+    openOutputAdvanced: shouldOpenOutputAdvanced = true
+  } = options;
+
   render(PageContent, { props: { scheduler } });
   await flushAppState();
-  await openOutputAdvanced();
+
+  if (shouldOpenOutputAdvanced) {
+    await openOutputAdvanced();
+  }
+
   expect(getUndoButton()).toBeDisabled();
   expect(getRedoButton()).toBeDisabled();
 }
@@ -432,7 +444,7 @@ describe('page history integration', () => {
   it('cancels history-input resync once a replacement edit starts', async () => {
     const scheduler = createControllablePageScheduler();
 
-    await renderPage(scheduler);
+    await renderPage({ scheduler });
     const initialBaseColor = getBaseColorHexInput().value;
     const baseColorInput = getBaseColorHexInput();
     baseColorInput.value = '#00ff00';
@@ -543,7 +555,7 @@ describe('page history integration', () => {
       }
     };
 
-    await renderPage(scheduler);
+    await renderPage({ scheduler });
 
     const initialColor = get(palettesHex)[0]?.[5];
 
@@ -558,7 +570,7 @@ describe('page history integration', () => {
 
   it('round-trips inline constraint edits through undo and redo', async () => {
     // Start with a simpler setup - don't open editor initially
-    await renderPage();
+    await renderPage({ openOutputAdvanced: false });
     await fireEvent.click(screen.getAllByRole('button', { name: /add target color/i })[0]);
     await flushHistoryCommit();
 
