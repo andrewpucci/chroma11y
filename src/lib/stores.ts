@@ -9,7 +9,12 @@ import type {
   SwatchLabels,
   ContrastAlgorithm,
   OklchDisplaySignificantDigits,
-  SwatchContrastIndicators
+  SwatchContrastIndicators,
+  ContrastReference,
+  Constraint,
+  SolverAdjustmentSnapshot,
+  ConstraintSolverSummary,
+  ConstraintSolveRunState
 } from '$lib/types';
 
 /**
@@ -20,6 +25,7 @@ interface ColorState {
   numPalettes: number;
   baseColor: string;
   warmth: number;
+  warmthHue?: number;
   x1: number;
   y1: number;
   x2: number;
@@ -28,6 +34,8 @@ interface ColorState {
   contrastMode: 'auto' | 'manual';
   lowStep: number;
   highStep: number;
+  lowReference: ContrastReference;
+  highReference: ContrastReference;
   contrast: {
     low: string;
     high: string;
@@ -36,6 +44,9 @@ interface ColorState {
   palettes: Color[][];
   lightnessNudgers: number[];
   hueNudgers: number[];
+  stepSaturationNudgers: number[];
+  paletteSaturationNudgers: number[];
+  paletteChromaNudgers: number[];
   currentTheme: 'light' | 'dark';
   displayColorSpace: DisplayColorSpace;
   gamutSpace: GamutSpace;
@@ -45,10 +56,26 @@ interface ColorState {
   showSwatchContrastIndicators: boolean;
   swatchContrastIndicators: SwatchContrastIndicators;
   contrastAlgorithm: ContrastAlgorithm;
+  solveAdjacentStopLows: boolean;
   oklchDisplaySignificantDigits: OklchDisplaySignificantDigits;
   customNeutralName?: string;
   customPaletteNames?: string[];
+  constraints: Constraint[];
+  solverAdjustmentSnapshot: SolverAdjustmentSnapshot | null;
+  constraintSolverSummary: ConstraintSolverSummary | null;
   _lastUpdated?: number;
+}
+
+export interface ActiveSwatchPicker {
+  kind: 'contrast-reference' | 'constraint-target';
+  target: 'low' | 'high' | string;
+}
+
+function createNeutralContrastReference(stepIndex: number): ContrastReference {
+  return {
+    kind: 'neutral',
+    stepIndex
+  };
 }
 
 /**
@@ -58,7 +85,7 @@ const THEME_PRESETS = {
   light: {
     numColors: 11,
     numPalettes: 11,
-    baseColor: '#1862E6',
+    baseColor: '#5EF784',
     warmth: -7,
     x1: 0.16,
     y1: 0.0,
@@ -68,6 +95,8 @@ const THEME_PRESETS = {
     contrastMode: 'auto' as const,
     lowStep: 0,
     highStep: 10,
+    lowReference: createNeutralContrastReference(0),
+    highReference: createNeutralContrastReference(10),
     contrast: {
       low: '#ffffff',
       high: '#000000'
@@ -76,7 +105,7 @@ const THEME_PRESETS = {
   dark: {
     numColors: 11,
     numPalettes: 11,
-    baseColor: '#1862E6',
+    baseColor: '#5EF784',
     warmth: -7,
     x1: 0.45,
     y1: 0.08,
@@ -86,6 +115,8 @@ const THEME_PRESETS = {
     contrastMode: 'auto' as const,
     lowStep: 2,
     highStep: 10,
+    lowReference: createNeutralContrastReference(2),
+    highReference: createNeutralContrastReference(10),
     contrast: {
       low: '#071531',
       high: '#ffffff'
@@ -102,6 +133,9 @@ const DEFAULT_STATE = {
   palettes: [] as Color[][],
   lightnessNudgers: [] as number[],
   hueNudgers: [] as number[],
+  stepSaturationNudgers: [] as number[],
+  paletteSaturationNudgers: [] as number[],
+  paletteChromaNudgers: [] as number[],
   currentTheme: 'light',
   themePreference: 'auto' as ThemePreference,
   displayColorSpace: 'hex' as DisplayColorSpace,
@@ -118,15 +152,24 @@ const DEFAULT_STATE = {
     apcaBody: true
   } as SwatchContrastIndicators,
   contrastAlgorithm: 'WCAG' as ContrastAlgorithm,
-  oklchDisplaySignificantDigits: 4 as OklchDisplaySignificantDigits
+  solveAdjacentStopLows: true,
+  oklchDisplaySignificantDigits: 4 as OklchDisplaySignificantDigits,
+  constraints: [] as Constraint[],
+  solverAdjustmentSnapshot: null as SolverAdjustmentSnapshot | null,
+  constraintSolverSummary: null as ConstraintSolverSummary | null
 };
 
 function normalizeDisplayState(state: ColorState): ColorState {
   const normalizedState: ColorState = {
     ...state,
+    lowReference: state.lowReference ?? createNeutralContrastReference(state.lowStep),
+    highReference: state.highReference ?? createNeutralContrastReference(state.highStep),
     customNeutralName: normalizeCustomPaletteName(state.customNeutralName),
     customPaletteNames: normalizeCustomPaletteNames(state.customPaletteNames, state.numPalettes)
   };
+
+  normalizedState.lowStep = normalizedState.lowReference.stepIndex;
+  normalizedState.highStep = normalizedState.highReference.stepIndex;
 
   if (normalizedState.displayColorSpace === 'hex' && normalizedState.gamutSpace !== 'srgb') {
     return {
@@ -140,6 +183,10 @@ function normalizeDisplayState(state: ColorState): ColorState {
 
 // Create the main color store
 export const colorStore = writable<ColorState>({ ...DEFAULT_STATE } as ColorState);
+export const activeSwatchPicker = writable<ActiveSwatchPicker | null>(null);
+export const constraintSolveRunState = writable<ConstraintSolveRunState>({
+  status: 'idle'
+});
 
 // Derived store for current theme
 export const currentTheme = derived(colorStore, ($colorStore) => $colorStore.currentTheme);
@@ -155,6 +202,8 @@ export const lowStep = derived(colorStore, ($colorStore) => $colorStore.lowStep)
 
 // Derived store for high step
 export const highStep = derived(colorStore, ($colorStore) => $colorStore.highStep);
+export const lowReference = derived(colorStore, ($colorStore) => $colorStore.lowReference);
+export const highReference = derived(colorStore, ($colorStore) => $colorStore.highReference);
 
 // Derived store for neutrals (Color objects)
 export const neutrals = derived(colorStore, ($colorStore) => $colorStore.neutrals);
@@ -183,6 +232,7 @@ export const baseColor = derived(colorStore, ($colorStore) => $colorStore.baseCo
 
 // Derived store for warmth
 export const warmth = derived(colorStore, ($colorStore) => $colorStore.warmth);
+export const warmthHue = derived(colorStore, ($colorStore) => $colorStore.warmthHue);
 
 // Derived store for chromaMultiplier
 export const chromaMultiplier = derived(colorStore, ($colorStore) => $colorStore.chromaMultiplier);
@@ -204,6 +254,24 @@ export const lightnessNudgers = derived(colorStore, ($colorStore) => $colorStore
 
 // Derived store for hue nudgers
 export const hueNudgers = derived(colorStore, ($colorStore) => $colorStore.hueNudgers);
+
+// Derived store for step saturation nudgers
+export const stepSaturationNudgers = derived(
+  colorStore,
+  ($colorStore) => $colorStore.stepSaturationNudgers
+);
+
+// Derived store for palette saturation nudgers
+export const paletteSaturationNudgers = derived(
+  colorStore,
+  ($colorStore) => $colorStore.paletteSaturationNudgers
+);
+
+// Derived store for palette chroma nudgers
+export const paletteChromaNudgers = derived(
+  colorStore,
+  ($colorStore) => $colorStore.paletteChromaNudgers
+);
 
 // Derived store for display color space
 export const displayColorSpace = derived(
@@ -243,6 +311,10 @@ export const contrastAlgorithm = derived(
   colorStore,
   ($colorStore) => $colorStore.contrastAlgorithm
 );
+export const solveAdjacentStopLows = derived(
+  colorStore,
+  ($colorStore) => $colorStore.solveAdjacentStopLows
+);
 
 // Derived store for OKLCH display significant digits
 export const oklchDisplaySignificantDigits = derived(
@@ -260,6 +332,19 @@ export const customNeutralName = derived(
 export const customPaletteNames = derived(
   colorStore,
   ($colorStore) => $colorStore.customPaletteNames
+);
+export const constraints = derived(colorStore, ($colorStore) => $colorStore.constraints);
+export const solverAdjustmentSnapshot = derived(
+  colorStore,
+  ($colorStore) => $colorStore.solverAdjustmentSnapshot
+);
+export const constraintSolverSummary = derived(
+  colorStore,
+  ($colorStore) => $colorStore.constraintSolverSummary
+);
+export const activeConstraintSolveRunState = derived(
+  constraintSolveRunState,
+  ($constraintSolveRunState) => $constraintSolveRunState
 );
 
 // Derived store for neutrals formatted in the selected display color space
@@ -310,6 +395,23 @@ export const updateColorState = (newState: Partial<ColorState>) => {
     return normalizeDisplayState({ ...currentState, ...newState } as ColorState);
   });
 };
+
+function resolveContrastReferenceHex(
+  state: ColorState,
+  reference: ContrastReference,
+  fallbackKey: 'low' | 'high'
+): string | null {
+  const source =
+    reference.kind === 'palette'
+      ? state.palettes[reference.paletteIndex ?? -1]?.[reference.stepIndex]
+      : state.neutrals[reference.stepIndex];
+
+  if (!source) {
+    return state.contrast[fallbackKey] ?? null;
+  }
+
+  return colorToCssHex(source);
+}
 
 /**
  * Applies a resolved theme (light or dark) to the store, loading the theme preset.
@@ -376,6 +478,28 @@ export const updateHueNudger = (paletteIndex: number, value: number) => {
 };
 
 /**
+ * Updates individual step saturation nudger value
+ */
+export const updateStepSaturationNudger = (index: number, value: number) => {
+  colorStore.update((currentState) => {
+    const newNudgers = [...currentState.stepSaturationNudgers];
+    newNudgers[index] = value;
+    return { ...currentState, stepSaturationNudgers: newNudgers };
+  });
+};
+
+/**
+ * Updates individual palette saturation nudger value
+ */
+export const updatePaletteSaturationNudger = (paletteIndex: number, value: number) => {
+  colorStore.update((currentState) => {
+    const newNudgers = [...currentState.paletteSaturationNudgers];
+    newNudgers[paletteIndex] = value;
+    return { ...currentState, paletteSaturationNudgers: newNudgers };
+  });
+};
+
+/**
  * Updates contrast colors from neutrals based on lowStep and highStep (auto mode)
  */
 export const updateContrastFromNeutrals = () => {
@@ -383,25 +507,14 @@ export const updateContrastFromNeutrals = () => {
     if (currentState.contrastMode !== 'auto' || currentState.neutrals.length === 0) {
       return currentState;
     }
-
-    // Clamp step indices to valid bounds
-    const maxIndex = currentState.neutrals.length - 1;
-    const clampedLowStep = Math.max(0, Math.min(currentState.lowStep, maxIndex));
-    const clampedHighStep = Math.max(0, Math.min(currentState.highStep, maxIndex));
-
-    const lowColor = colorToCssHex(
-      currentState.neutrals[clampedLowStep] || currentState.neutrals[0]
-    );
-    const highColor = colorToCssHex(
-      currentState.neutrals[clampedHighStep] ||
-        currentState.neutrals[currentState.neutrals.length - 1]
-    );
+    const lowColor = resolveContrastReferenceHex(currentState, currentState.lowReference, 'low');
+    const highColor = resolveContrastReferenceHex(currentState, currentState.highReference, 'high');
 
     return {
       ...currentState,
       contrast: {
-        low: lowColor,
-        high: highColor
+        low: lowColor ?? currentState.contrast.low,
+        high: highColor ?? currentState.contrast.high
       }
     };
   });
@@ -415,22 +528,19 @@ export const updateContrastStep = (stepType: 'low' | 'high', step: number) => {
     // Validate step is within valid bounds
     const maxIndex = Math.max(0, currentState.neutrals.length - 1);
     const clampedStep = Math.max(0, Math.min(step, maxIndex));
+    const referenceKey = stepType === 'low' ? 'lowReference' : 'highReference';
 
     const newState = {
       ...currentState,
       contrastMode: 'auto' as const,
-      [stepType === 'low' ? 'lowStep' : 'highStep']: clampedStep
+      [stepType === 'low' ? 'lowStep' : 'highStep']: clampedStep,
+      [referenceKey]: createNeutralContrastReference(clampedStep)
     };
 
     // Immediately derive contrast colors from neutrals
     if (newState.neutrals.length > 0) {
-      const clampedLowStep = Math.max(0, Math.min(newState.lowStep, maxIndex));
-      const clampedHighStep = Math.max(0, Math.min(newState.highStep, maxIndex));
-
-      const lowColor = colorToCssHex(newState.neutrals[clampedLowStep] || newState.neutrals[0]);
-      const highColor = colorToCssHex(
-        newState.neutrals[clampedHighStep] || newState.neutrals[newState.neutrals.length - 1]
-      );
+      const lowColor = resolveContrastReferenceHex(newState, newState.lowReference, 'low');
+      const highColor = resolveContrastReferenceHex(newState, newState.highReference, 'high');
       if (lowColor && highColor) {
         newState.contrast = { low: lowColor, high: highColor };
       }
@@ -440,10 +550,67 @@ export const updateContrastStep = (stepType: 'low' | 'high', step: number) => {
   });
 };
 
+export const updateContrastReference = (target: 'low' | 'high', reference: ContrastReference) => {
+  colorStore.update((currentState) => {
+    const nextState = {
+      ...currentState,
+      contrastMode: 'auto' as const,
+      [target === 'low' ? 'lowReference' : 'highReference']: reference,
+      [target === 'low' ? 'lowStep' : 'highStep']: reference.stepIndex
+    };
+    const lowColor = resolveContrastReferenceHex(nextState, nextState.lowReference, 'low');
+    const highColor = resolveContrastReferenceHex(nextState, nextState.highReference, 'high');
+    if (lowColor && highColor) {
+      nextState.contrast = { low: lowColor, high: highColor };
+    }
+    return nextState;
+  });
+};
+
+export const setConstraints = (nextConstraints: Constraint[]) => {
+  updateColorState({ constraints: nextConstraints });
+};
+
+export const updateConstraint = (id: string, updater: (constraint: Constraint) => Constraint) => {
+  colorStore.update((currentState) => ({
+    ...currentState,
+    constraints: currentState.constraints.map((constraint) =>
+      constraint.id === id ? updater(constraint) : constraint
+    )
+  }));
+};
+
+export const addConstraint = (constraint: Constraint) => {
+  colorStore.update((currentState) => ({
+    ...currentState,
+    constraints: [constraint, ...currentState.constraints]
+  }));
+};
+
+export const removeConstraint = (id: string) => {
+  colorStore.update((currentState) => ({
+    ...currentState,
+    constraints: currentState.constraints.filter((constraint) => constraint.id !== id)
+  }));
+};
+
+export const setSolverAdjustmentSnapshot = (snapshot: SolverAdjustmentSnapshot | null) => {
+  updateColorState({ solverAdjustmentSnapshot: snapshot });
+};
+
+export const setConstraintSolverSummary = (summary: ConstraintSolverSummary | null) => {
+  updateColorState({ constraintSolverSummary: summary });
+};
+
+export const setConstraintSolveRunState = (runState: ConstraintSolveRunState) => {
+  constraintSolveRunState.set(runState);
+};
+
 /**
  * Resets the color state to default values
  */
 export const resetColorState = (theme?: 'light' | 'dark') => {
+  constraintSolveRunState.set({ status: 'idle' });
   colorStore.update((currentState) => {
     const targetTheme =
       theme && THEME_PRESETS[theme] ? theme : (currentState.currentTheme as 'light' | 'dark');
@@ -454,8 +621,15 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
       ...themePreset,
       currentTheme: targetTheme,
       themePreference: currentState.themePreference,
+      lightnessNudgers: [],
+      hueNudgers: [],
+      stepSaturationNudgers: [],
+      paletteSaturationNudgers: [],
+      paletteChromaNudgers: [],
       customNeutralName: undefined,
       customPaletteNames: undefined,
+      solverAdjustmentSnapshot: null,
+      constraintSolverSummary: null,
       _lastUpdated: Date.now()
     } as ColorState);
   });

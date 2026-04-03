@@ -5,13 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Color from 'colorjs.io';
 import ContrastControls from '$lib/components/ContrastControls.svelte';
 import {
+  activeSwatchPicker,
   contrastColors,
   contrastMode,
-  highStep,
-  lowStep,
   contrastAlgorithm,
   swatchContrastIndicators,
   showSwatchContrastIndicators,
+  highReference,
+  lowReference,
   resetColorState,
   updateColorState
 } from '$lib/stores';
@@ -20,24 +21,6 @@ import { announce } from '$lib/announce';
 vi.mock('$lib/announce', () => ({
   announce: vi.fn()
 }));
-
-function hexToRgb(hex: string): string {
-  let normalized = hex.trim();
-  if (normalized.startsWith('#')) normalized = normalized.slice(1);
-
-  if (normalized.length === 3) {
-    normalized = normalized
-      .split('')
-      .map((c) => `${c}${c}`)
-      .join('');
-  }
-
-  const r = Number.parseInt(normalized.slice(0, 2), 16);
-  const g = Number.parseInt(normalized.slice(2, 4), 16);
-  const b = Number.parseInt(normalized.slice(4, 6), 16);
-
-  return `rgb(${r}, ${g}, ${b})`;
-}
 
 describe('ContrastControls', () => {
   beforeEach(() => {
@@ -136,21 +119,15 @@ describe('ContrastControls', () => {
     });
   });
 
-  it('renders auto-mode preview with current low/high values and swatches', () => {
-    const { container } = render(ContrastControls);
+  it('renders auto-mode reference controls', () => {
+    render(ContrastControls);
 
     expect(screen.getByLabelText(/contrast mode/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /pick low reference/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /pick high reference/i })).toBeInTheDocument();
     expect(
-      screen.getByRole('group', { name: /current contrast color preview/i })
-    ).toBeInTheDocument();
-
-    expect(screen.getByText('Low: #ffffff')).toBeInTheDocument();
-    expect(screen.getByText('High: #000000')).toBeInTheDocument();
-
-    const swatches = container.querySelectorAll('.contrast-preview .swatch');
-    expect(swatches).toHaveLength(2);
-    expect(getComputedStyle(swatches[0] as Element).backgroundColor).toBe(hexToRgb('#ffffff'));
-    expect(getComputedStyle(swatches[1] as Element).backgroundColor).toBe(hexToRgb('#000000'));
+      screen.queryByRole('group', { name: /current contrast color preview/i })
+    ).not.toBeInTheDocument();
   });
 
   it('switches to manual mode and shows manual color inputs', async () => {
@@ -160,9 +137,6 @@ describe('ContrastControls', () => {
     await fireEvent.change(modeSelect, { target: { value: 'manual' } });
 
     expect(get(contrastMode)).toBe('manual');
-    expect(
-      screen.queryByRole('group', { name: /current contrast color preview/i })
-    ).not.toBeInTheDocument();
     expect(screen.getByLabelText(/low contrast color hex value/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/high contrast color hex value/i)).toBeInTheDocument();
   });
@@ -182,35 +156,47 @@ describe('ContrastControls', () => {
     expect(get(contrastColors).low).toBe(before);
   });
 
-  it('updates low step selection in auto mode', async () => {
-    const { container } = render(ContrastControls);
+  it('arms the low reference picker and shows the picker banner', async () => {
+    render(ContrastControls);
 
-    const lowStepSelect = screen.getByLabelText(/low step/i);
+    await fireEvent.click(screen.getByRole('button', { name: /pick low reference/i }));
 
-    await fireEvent.change(lowStepSelect, { target: { value: '2' } });
-
-    expect(get(lowStep)).toBe(2);
-    const lowColor = get(contrastColors).low;
-    expect(hexToRgb(lowColor)).toBe(hexToRgb('#dddddd'));
-
-    expect(screen.getByText(`Low: ${lowColor}`)).toBeInTheDocument();
-    const swatches = container.querySelectorAll('.contrast-preview .swatch');
-    expect(getComputedStyle(swatches[0] as Element).backgroundColor).toBe(hexToRgb('#dddddd'));
+    expect(get(activeSwatchPicker)).toEqual({ kind: 'contrast-reference', target: 'low' });
+    expect(screen.getByText(/select a swatch to set the low reference/i)).toBeInTheDocument();
   });
 
-  it('updates high step selection in auto mode and updates preview', async () => {
-    const { container } = render(ContrastControls);
+  it('cancels the reference picker from the banner', async () => {
+    render(ContrastControls);
 
-    const highStepSelect = screen.getByLabelText(/high step/i);
+    await fireEvent.click(screen.getByRole('button', { name: /pick high reference/i }));
+    await fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
 
-    await fireEvent.change(highStepSelect, { target: { value: '9' } });
+    expect(get(activeSwatchPicker)).toBeNull();
+    expect(
+      screen.queryByText(/select a swatch to set the high reference/i)
+    ).not.toBeInTheDocument();
+  });
 
-    expect(get(highStep)).toBe(9);
-    const highColor = get(contrastColors).high;
-    expect(hexToRgb(highColor)).toBe(hexToRgb('#666666'));
+  it('cancels the reference picker on Escape', async () => {
+    render(ContrastControls);
 
-    expect(screen.getByText(`High: ${highColor}`)).toBeInTheDocument();
-    const swatches = container.querySelectorAll('.contrast-preview .swatch');
-    expect(getComputedStyle(swatches[1] as Element).backgroundColor).toBe(hexToRgb('#666666'));
+    await fireEvent.click(screen.getByRole('button', { name: /pick low reference/i }));
+    await fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(get(activeSwatchPicker)).toBeNull();
+  });
+
+  it('renders the current low and high reference summaries', () => {
+    updateColorState({
+      lowReference: { kind: 'neutral', stepIndex: 0 },
+      highReference: { kind: 'neutral', stepIndex: 10 }
+    });
+
+    render(ContrastControls);
+
+    expect(get(lowReference)).toEqual({ kind: 'neutral', stepIndex: 0 });
+    expect(get(highReference)).toEqual({ kind: 'neutral', stepIndex: 10 });
+    expect(screen.getByText(/step 0/i)).toBeInTheDocument();
+    expect(screen.getByText(/step 100/i)).toBeInTheDocument();
   });
 });

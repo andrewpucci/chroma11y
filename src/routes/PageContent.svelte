@@ -13,6 +13,7 @@
     numPalettes,
     baseColor,
     warmth,
+    warmthHue,
     chromaMultiplier,
     x1,
     y1,
@@ -25,17 +26,26 @@
     contrastMode,
     lowStep,
     highStep,
+    lowReference,
+    highReference,
     displayColorSpace,
     gamutSpace,
+    paletteChromaNudgers,
+    paletteSaturationNudgers,
     themePreference,
+    stepSaturationNudgers,
     swatchLabels,
     showSwatchGamutWarnings,
     showSwatchContrastIndicators,
     swatchContrastIndicators,
     contrastAlgorithm,
+    solveAdjacentStopLows,
     oklchDisplaySignificantDigits,
     customNeutralName,
     customPaletteNames,
+    constraints,
+    solverAdjustmentSnapshot,
+    constraintSolverSummary,
     updateColorState,
     updateContrastFromNeutrals,
     resetColorState,
@@ -54,13 +64,20 @@
   import { generatePalettes } from '$lib/colorUtils';
   import type { ColorGenParams } from '$lib/colorUtils';
   import { clampChromaMultiplier } from '$lib/chromaMultiplier';
+  import { evaluateConstraints } from '$lib/constraintUtils';
   import { createHistoryManager, type HistorySnapshot, type HistoryViewModel } from '$lib/history';
   import { createPageScheduler, type PageScheduler } from '$lib/pageScheduler';
+  import {
+    DEFAULT_NEUTRAL_PALETTE_NAME,
+    resolveGeneratedPaletteNames,
+    resolveNeutralPaletteName
+  } from '$lib/paletteNameUtils';
   import ColorControls from '$lib/components/ColorControls.svelte';
   import ExportButtons from '$lib/components/ExportButtons.svelte';
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
   import PaletteGrid from '$lib/components/PaletteGrid.svelte';
   import ContrastControls from '$lib/components/ContrastControls.svelte';
+  import ConstraintsControls from '$lib/components/ConstraintsControls.svelte';
   import DisplaySettings from '$lib/components/DisplaySettings.svelte';
   import Card from '$lib/components/Card.svelte';
   import AppHeader from '$lib/components/AppHeader.svelte';
@@ -73,6 +90,7 @@
 
   interface CompactSectionState {
     generation: boolean;
+    constraints: boolean;
     contrast: boolean;
     output: boolean;
     export: boolean;
@@ -83,6 +101,7 @@
   const COMPACT_LAYOUT_MEDIA_QUERY = '(max-width: 980px)';
   const DEFAULT_COMPACT_SECTIONS: CompactSectionState = {
     generation: false,
+    constraints: false,
     contrast: false,
     output: false,
     export: false
@@ -97,11 +116,16 @@
   let palettesSwatchDisplayLocal = $derived($palettesSwatchDisplay);
   let lightnessNudgerValues = $derived($lightnessNudgers);
   let hueNudgerValues = $derived($hueNudgers);
+  let stepSaturationNudgerValues = $derived($stepSaturationNudgers);
+  let paletteSaturationNudgerValues = $derived($paletteSaturationNudgers);
+  let paletteChromaNudgerValues = $derived($paletteChromaNudgers);
   let currentThemeLocal = $derived($currentTheme);
   let contrastColorsLocal = $derived($contrastColors);
   let contrastModeLocal = $derived($contrastMode);
   let lowStepLocal = $derived($lowStep);
   let highStepLocal = $derived($highStep);
+  let lowReferenceLocal = $derived($lowReference);
+  let highReferenceLocal = $derived($highReference);
   let displayColorSpaceLocal = $derived($displayColorSpace);
   let gamutSpaceLocal = $derived($gamutSpace);
   let themePreferenceLocal = $derived($themePreference);
@@ -110,13 +134,43 @@
   let showSwatchContrastIndicatorsLocal = $derived($showSwatchContrastIndicators);
   let swatchContrastIndicatorsLocal = $derived($swatchContrastIndicators);
   let contrastAlgorithmLocal = $derived($contrastAlgorithm);
+  let solveAdjacentStopLowsLocal = $derived($solveAdjacentStopLows);
   let oklchDisplaySignificantDigitsLocal = $derived($oklchDisplaySignificantDigits);
   let customNeutralNameLocal = $derived($customNeutralName);
   let customPaletteNamesLocal = $derived($customPaletteNames);
+  let constraintsLocal = $derived($constraints);
+  let solverAdjustmentSnapshotLocal = $derived($solverAdjustmentSnapshot);
+  let constraintSolverSummaryLocal = $derived($constraintSolverSummary);
+  let constraintNeutralLabel = $derived(
+    neutralsHexLocal.length > 0
+      ? resolveNeutralPaletteName(neutralsHexLocal, contrastColorsLocal.low, customNeutralNameLocal)
+      : DEFAULT_NEUTRAL_PALETTE_NAME
+  );
+  let constraintPaletteLabels = $derived(
+    palettesHexLocal.length > 0
+      ? resolveGeneratedPaletteNames(
+          palettesHexLocal,
+          contrastColorsLocal.low,
+          customPaletteNamesLocal
+        )
+      : []
+  );
+  let constraintEvaluation = $derived(
+    evaluateConstraints({
+      constraints: constraintsLocal,
+      neutrals: neutralsLocal,
+      palettes: palettesLocal,
+      neutralLabel: constraintNeutralLabel,
+      paletteLabels: constraintPaletteLabels,
+      lowContrastColor: contrastColorsLocal.low,
+      highContrastColor: contrastColorsLocal.high
+    })
+  );
 
   // Bindable state for controls
-  let baseColorLocal = $state('#1862E6');
+  let baseColorLocal = $state('#5EF784');
   let warmthLocal = $state(-7);
+  let warmthHueLocal = $state<number | undefined>(undefined);
   let chromaMultiplierLocal = $state(1);
   let numColorsLocal = $state(11);
   let numPalettesLocal = $state(11);
@@ -151,6 +205,7 @@
     HistorySnapshot,
     | 'baseColor'
     | 'warmth'
+    | 'warmthHue'
     | 'chromaMultiplier'
     | 'numColors'
     | 'numPalettes'
@@ -238,6 +293,30 @@
           lowStepLocal
         )} / ${formatContrastStepLabel(highStepLocal)}`
   );
+  const constraintsCardSummary = $derived(
+    (() => {
+      if (constraintsLocal.length === 0) {
+        return 'No constraints';
+      }
+
+      const disabledCount = constraintsLocal.length - constraintEvaluation.results.length;
+      const parts = [
+        `${constraintEvaluation.summary.failCount} fail`,
+        `${constraintEvaluation.summary.warningCount} warning`,
+        `${constraintEvaluation.summary.passCount} pass`
+      ];
+
+      if ((constraintEvaluation.summary.requiredUnsatisfiedCount ?? 0) > 0) {
+        parts.push(`${constraintEvaluation.summary.requiredUnsatisfiedCount} required unsatisfied`);
+      }
+
+      if (disabledCount > 0) {
+        parts.push(`${disabledCount} disabled`);
+      }
+
+      return parts.join(' · ');
+    })()
+  );
   const outputCardSummary = $derived(
     `${formatDisplayColorSpace(displayColorSpaceLocal)}, ${formatThemePreference(
       themePreferenceLocal
@@ -252,6 +331,7 @@
       return {
         baseColor: storeState.baseColor,
         warmth: storeState.warmth,
+        warmthHue: storeState.warmthHue,
         chromaMultiplier: storeState.chromaMultiplier,
         numColors: storeState.numColors,
         numPalettes: storeState.numPalettes,
@@ -262,12 +342,17 @@
         contrastMode: storeState.contrastMode,
         lowStep: storeState.lowStep,
         highStep: storeState.highStep,
+        lowReference: structuredClone(storeState.lowReference),
+        highReference: structuredClone(storeState.highReference),
         contrast: {
           low: storeState.contrast.low,
           high: storeState.contrast.high
         },
         lightnessNudgers: [...storeState.lightnessNudgers],
         hueNudgers: [...storeState.hueNudgers],
+        stepSaturationNudgers: [...storeState.stepSaturationNudgers],
+        paletteSaturationNudgers: [...storeState.paletteSaturationNudgers],
+        paletteChromaNudgers: [...storeState.paletteChromaNudgers],
         currentTheme: storeState.currentTheme,
         displayColorSpace: storeState.displayColorSpace,
         gamutSpace: storeState.gamutSpace,
@@ -277,15 +362,20 @@
         showSwatchContrastIndicators: storeState.showSwatchContrastIndicators,
         swatchContrastIndicators: structuredClone(storeState.swatchContrastIndicators),
         contrastAlgorithm: storeState.contrastAlgorithm,
+        solveAdjacentStopLows: storeState.solveAdjacentStopLows,
         oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits,
         customNeutralName: storeState.customNeutralName,
-        customPaletteNames: storeState.customPaletteNames
+        customPaletteNames: storeState.customPaletteNames,
+        constraints: structuredClone(storeState.constraints),
+        solverAdjustmentSnapshot: structuredClone(storeState.solverAdjustmentSnapshot),
+        constraintSolverSummary: structuredClone(storeState.constraintSolverSummary)
       };
     }
 
     return {
       baseColor: baseColorLocal,
       warmth: warmthLocal,
+      warmthHue: warmthHueLocal,
       chromaMultiplier: chromaMultiplierLocal,
       numColors: numColorsLocal,
       numPalettes: numPalettesLocal,
@@ -296,12 +386,17 @@
       contrastMode: contrastModeLocal,
       lowStep: lowStepLocal,
       highStep: highStepLocal,
+      lowReference: structuredClone(lowReferenceLocal),
+      highReference: structuredClone(highReferenceLocal),
       contrast: {
         low: contrastColorsLocal.low,
         high: contrastColorsLocal.high
       },
       lightnessNudgers: [...lightnessNudgerValues],
       hueNudgers: [...hueNudgerValues],
+      stepSaturationNudgers: [...stepSaturationNudgerValues],
+      paletteSaturationNudgers: [...paletteSaturationNudgerValues],
+      paletteChromaNudgers: [...paletteChromaNudgerValues],
       currentTheme: currentThemeLocal,
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
@@ -311,9 +406,13 @@
       showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
       swatchContrastIndicators: structuredClone(swatchContrastIndicatorsLocal),
       contrastAlgorithm: contrastAlgorithmLocal,
+      solveAdjacentStopLows: solveAdjacentStopLowsLocal,
       oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
       customNeutralName: customNeutralNameLocal,
-      customPaletteNames: customPaletteNamesLocal
+      customPaletteNames: customPaletteNamesLocal,
+      constraints: structuredClone(constraintsLocal),
+      solverAdjustmentSnapshot: structuredClone(solverAdjustmentSnapshotLocal),
+      constraintSolverSummary: structuredClone(constraintSolverSummaryLocal)
     };
   }
 
@@ -323,6 +422,7 @@
     pendingHistoryGeneratorSnapshot = {
       baseColor: snapshot.baseColor,
       warmth: snapshot.warmth,
+      warmthHue: snapshot.warmthHue,
       chromaMultiplier: snapshot.chromaMultiplier,
       numColors: snapshot.numColors,
       numPalettes: snapshot.numPalettes,
@@ -334,6 +434,7 @@
     historyRestoreRevision += 1;
     baseColorLocal = snapshot.baseColor;
     warmthLocal = snapshot.warmth;
+    warmthHueLocal = snapshot.warmthHue;
     chromaMultiplierLocal = snapshot.chromaMultiplier;
     numColorsLocal = snapshot.numColors;
     numPalettesLocal = snapshot.numPalettes;
@@ -345,6 +446,7 @@
     updateColorState({
       baseColor: snapshot.baseColor,
       warmth: snapshot.warmth,
+      warmthHue: snapshot.warmthHue,
       chromaMultiplier: snapshot.chromaMultiplier,
       numColors: snapshot.numColors,
       numPalettes: snapshot.numPalettes,
@@ -355,9 +457,14 @@
       contrastMode: snapshot.contrastMode,
       lowStep: snapshot.lowStep,
       highStep: snapshot.highStep,
+      lowReference: snapshot.lowReference,
+      highReference: snapshot.highReference,
       contrast: snapshot.contrast,
       lightnessNudgers: snapshot.lightnessNudgers,
       hueNudgers: snapshot.hueNudgers,
+      stepSaturationNudgers: snapshot.stepSaturationNudgers,
+      paletteSaturationNudgers: snapshot.paletteSaturationNudgers,
+      paletteChromaNudgers: snapshot.paletteChromaNudgers,
       currentTheme: snapshot.currentTheme,
       displayColorSpace: snapshot.displayColorSpace,
       gamutSpace: snapshot.gamutSpace,
@@ -367,9 +474,13 @@
       showSwatchContrastIndicators: snapshot.showSwatchContrastIndicators,
       swatchContrastIndicators: snapshot.swatchContrastIndicators,
       contrastAlgorithm: snapshot.contrastAlgorithm,
+      solveAdjacentStopLows: snapshot.solveAdjacentStopLows,
       oklchDisplaySignificantDigits: snapshot.oklchDisplaySignificantDigits,
       customNeutralName: snapshot.customNeutralName,
-      customPaletteNames: snapshot.customPaletteNames
+      customPaletteNames: snapshot.customPaletteNames,
+      constraints: snapshot.constraints,
+      solverAdjustmentSnapshot: snapshot.solverAdjustmentSnapshot,
+      constraintSolverSummary: snapshot.constraintSolverSummary
     });
 
     void tick().then(() => {
@@ -829,6 +940,7 @@
       const storeMatchesPendingSnapshot =
         $baseColor === pendingHistoryGeneratorSnapshot.baseColor &&
         $warmth === pendingHistoryGeneratorSnapshot.warmth &&
+        $warmthHue === pendingHistoryGeneratorSnapshot.warmthHue &&
         $chromaMultiplier === pendingHistoryGeneratorSnapshot.chromaMultiplier &&
         $numColors === pendingHistoryGeneratorSnapshot.numColors &&
         $numPalettes === pendingHistoryGeneratorSnapshot.numPalettes &&
@@ -846,6 +958,7 @@
 
     const storeBaseColor = $baseColor;
     const storeWarmth = $warmth;
+    const storeWarmthHue = $warmthHue;
     const storeChroma = $chromaMultiplier;
     const storeNumColors = $numColors;
     const storeNumPalettes = $numPalettes;
@@ -856,6 +969,7 @@
 
     baseColorLocal = storeBaseColor;
     warmthLocal = storeWarmth;
+    warmthHueLocal = storeWarmthHue;
     chromaMultiplierLocal = storeChroma;
     numColorsLocal = storeNumColors;
     numPalettesLocal = storeNumPalettes;
@@ -879,6 +993,7 @@
     const generatorStateChanged =
       baseColorLocal !== $baseColor ||
       warmthLocal !== $warmth ||
+      warmthHueLocal !== $warmthHue ||
       chromaMultiplierLocal !== $chromaMultiplier ||
       numColorsLocal !== $numColors ||
       numPalettesLocal !== $numPalettes ||
@@ -894,6 +1009,7 @@
     updateColorState({
       baseColor: baseColorLocal,
       warmth: warmthLocal,
+      warmthHue: warmthHueLocal,
       chromaMultiplier: chromaMultiplierLocal,
       numColors: numColorsLocal,
       numPalettes: numPalettesLocal,
@@ -919,6 +1035,7 @@
     const _numPalettes = numPalettesLocal;
     const _baseColor = baseColorLocal;
     const _warmth = warmthLocal;
+    const _warmthHue = warmthHueLocal;
     const _chroma = chromaMultiplierLocal;
     const _x1 = x1Local;
     const _y1 = y1Local;
@@ -927,12 +1044,16 @@
     const _theme = currentThemeLocal;
     const _lightnessNudgers = lightnessNudgerValues;
     const _hueNudgers = hueNudgerValues;
+    const _stepSaturationNudgers = stepSaturationNudgerValues;
+    const _paletteSaturationNudgers = paletteSaturationNudgerValues;
+    const _paletteChromaNudgers = paletteChromaNudgerValues;
     const _gamutSpace = gamutSpaceLocal;
     const _isDragging = isDraggingSlider;
     void _numColors;
     void _numPalettes;
     void _baseColor;
     void _warmth;
+    void _warmthHue;
     void _chroma;
     void _x1;
     void _y1;
@@ -941,6 +1062,9 @@
     void _theme;
     void _lightnessNudgers;
     void _hueNudgers;
+    void _stepSaturationNudgers;
+    void _paletteSaturationNudgers;
+    void _paletteChromaNudgers;
     void _gamutSpace;
 
     // Skip generation while dragging to prevent layout reflow
@@ -959,6 +1083,7 @@
     const state: UrlColorState = {
       baseColor: baseColorLocal,
       warmth: warmthLocal,
+      warmthHue: warmthHueLocal,
       chromaMultiplier: chromaMultiplierLocal,
       numColors: numColorsLocal,
       numPalettes: numPalettesLocal,
@@ -969,8 +1094,13 @@
       contrastMode: contrastModeLocal,
       lowStep: lowStepLocal,
       highStep: highStepLocal,
+      lowReference: lowReferenceLocal,
+      highReference: highReferenceLocal,
       lightnessNudgers: lightnessNudgerValues,
       hueNudgers: hueNudgerValues,
+      stepSaturationNudgers: stepSaturationNudgerValues,
+      paletteSaturationNudgers: paletteSaturationNudgerValues,
+      paletteChromaNudgers: paletteChromaNudgerValues,
       displayColorSpace: displayColorSpaceLocal,
       gamutSpace: gamutSpaceLocal,
       swatchLabels: swatchLabelsLocal,
@@ -978,10 +1108,14 @@
       showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
       swatchContrastIndicators: swatchContrastIndicatorsLocal,
       contrastAlgorithm: contrastAlgorithmLocal,
+      solveAdjacentStopLows: solveAdjacentStopLowsLocal,
       oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
       themePreference: themePreferenceLocal,
       customNeutralName: customNeutralNameLocal,
-      customPaletteNames: customPaletteNamesLocal
+      customPaletteNames: customPaletteNamesLocal,
+      constraints: constraintsLocal,
+      solverAdjustmentSnapshot: solverAdjustmentSnapshotLocal,
+      constraintSolverSummary: constraintSolverSummaryLocal
     };
 
     // theme (resolved theme) is persisted to localStorage only, not the URL
@@ -1017,6 +1151,7 @@
       stateUpdate.baseColor = urlState.baseColor;
     }
     if (urlState.warmth !== undefined) stateUpdate.warmth = urlState.warmth;
+    if (urlState.warmthHue !== undefined) stateUpdate.warmthHue = urlState.warmthHue;
     if (urlState.chromaMultiplier !== undefined)
       stateUpdate.chromaMultiplier = urlState.chromaMultiplier;
     if (urlState.numColors !== undefined) stateUpdate.numColors = urlState.numColors;
@@ -1028,8 +1163,19 @@
     if (urlState.contrastMode) stateUpdate.contrastMode = urlState.contrastMode;
     if (urlState.lowStep !== undefined) stateUpdate.lowStep = urlState.lowStep;
     if (urlState.highStep !== undefined) stateUpdate.highStep = urlState.highStep;
+    if (urlState.lowReference !== undefined) stateUpdate.lowReference = urlState.lowReference;
+    if (urlState.highReference !== undefined) stateUpdate.highReference = urlState.highReference;
     if (urlState.lightnessNudgers) stateUpdate.lightnessNudgers = urlState.lightnessNudgers;
     if (urlState.hueNudgers) stateUpdate.hueNudgers = urlState.hueNudgers;
+    if (urlState.stepSaturationNudgers) {
+      stateUpdate.stepSaturationNudgers = urlState.stepSaturationNudgers;
+    }
+    if (urlState.paletteSaturationNudgers) {
+      stateUpdate.paletteSaturationNudgers = urlState.paletteSaturationNudgers;
+    }
+    if (urlState.paletteChromaNudgers) {
+      stateUpdate.paletteChromaNudgers = urlState.paletteChromaNudgers;
+    }
     if (urlState.displayColorSpace) stateUpdate.displayColorSpace = urlState.displayColorSpace;
     if (urlState.gamutSpace) stateUpdate.gamutSpace = urlState.gamutSpace;
     if (urlState.swatchLabels) stateUpdate.swatchLabels = urlState.swatchLabels;
@@ -1053,6 +1199,9 @@
       };
     }
     if (urlState.contrastAlgorithm) stateUpdate.contrastAlgorithm = urlState.contrastAlgorithm;
+    if (urlState.solveAdjacentStopLows !== undefined) {
+      stateUpdate.solveAdjacentStopLows = urlState.solveAdjacentStopLows;
+    }
     if (urlState.oklchDisplaySignificantDigits !== undefined) {
       stateUpdate.oklchDisplaySignificantDigits = urlState.oklchDisplaySignificantDigits;
     }
@@ -1061,6 +1210,15 @@
     }
     if (urlState.customPaletteNames !== undefined) {
       stateUpdate.customPaletteNames = urlState.customPaletteNames;
+    }
+    if (urlState.constraints !== undefined) {
+      stateUpdate.constraints = urlState.constraints;
+    }
+    if (urlState.solverAdjustmentSnapshot !== undefined) {
+      stateUpdate.solverAdjustmentSnapshot = urlState.solverAdjustmentSnapshot;
+    }
+    if (urlState.constraintSolverSummary !== undefined) {
+      stateUpdate.constraintSolverSummary = urlState.constraintSolverSummary;
     }
 
     // Apply stored values after theme preference to ensure they override any defaults
@@ -1075,6 +1233,7 @@
       numPalettes: numPalettesLocal,
       baseColor: baseColorLocal,
       warmth: warmthLocal,
+      warmthHue: warmthHueLocal,
       x1: x1Local,
       y1: y1Local,
       x2: x2Local,
@@ -1083,6 +1242,9 @@
       currentTheme: currentThemeLocal,
       lightnessNudgers: lightnessNudgerValues,
       hueNudgers: hueNudgerValues,
+      stepSaturationNudgers: stepSaturationNudgerValues,
+      paletteSaturationNudgers: paletteSaturationNudgerValues,
+      paletteChromaNudgers: paletteChromaNudgerValues,
       gamutSpace: gamutSpaceLocal
     };
 
@@ -1145,6 +1307,7 @@
               <ColorControls
                 bind:baseColor={baseColorLocal}
                 bind:warmth={warmthLocal}
+                bind:warmthHue={warmthHueLocal}
                 bind:chromaMultiplier={chromaMultiplierLocal}
                 gamutSpace={gamutSpaceLocal}
                 bind:numColors={numColorsLocal}
@@ -1159,6 +1322,7 @@
                 onRangeDragEnd={unfreezeLayout}
                 onBaseColorCommit={() => scheduleHistoryCommit('Base color changed')}
                 onWarmthCommit={() => scheduleHistoryCommit('Warmth changed')}
+                onWarmthHueCommit={() => scheduleHistoryCommit('Warmth hue changed')}
                 onSaturationCommit={() => scheduleHistoryCommit('Saturation changed')}
                 onNumColorsCommit={() => scheduleHistoryCommit('Number of colors changed')}
                 onNumPalettesCommit={() => scheduleHistoryCommit('Number of palettes changed')}
@@ -1166,6 +1330,22 @@
                 onBezierCommit={handleBezierCommit}
               />
             {/key}
+          </Card>
+
+          <Card
+            title="Constraints"
+            subtitle="Goals for the palette"
+            summary={constraintsCardSummary}
+            collapsible
+            open={compactSections.constraints}
+            onToggle={(open) => updateCompactSection('constraints', open)}
+            data-testid="constraints-controls-card"
+          >
+            {#if compactSections.constraints}
+              {#key `constraints-${historyRestoreRevision}`}
+                <ConstraintsControls onHistoryCommit={scheduleHistoryCommit} />
+              {/key}
+            {/if}
           </Card>
 
           <Card
@@ -1229,6 +1409,7 @@
               <ColorControls
                 bind:baseColor={baseColorLocal}
                 bind:warmth={warmthLocal}
+                bind:warmthHue={warmthHueLocal}
                 bind:chromaMultiplier={chromaMultiplierLocal}
                 gamutSpace={gamutSpaceLocal}
                 bind:numColors={numColorsLocal}
@@ -1243,12 +1424,23 @@
                 onRangeDragEnd={unfreezeLayout}
                 onBaseColorCommit={() => scheduleHistoryCommit('Base color changed')}
                 onWarmthCommit={() => scheduleHistoryCommit('Warmth changed')}
+                onWarmthHueCommit={() => scheduleHistoryCommit('Warmth hue changed')}
                 onSaturationCommit={() => scheduleHistoryCommit('Saturation changed')}
                 onNumColorsCommit={() => scheduleHistoryCommit('Number of colors changed')}
                 onNumPalettesCommit={() => scheduleHistoryCommit('Number of palettes changed')}
                 onBezierInteractionStart={beginBezierInteraction}
                 onBezierCommit={handleBezierCommit}
               />
+            {/key}
+          </Card>
+
+          <Card
+            title="Constraints"
+            subtitle="Goals for the palette"
+            data-testid="constraints-controls-card"
+          >
+            {#key `constraints-${historyRestoreRevision}`}
+              <ConstraintsControls onHistoryCommit={scheduleHistoryCommit} />
             {/key}
           </Card>
 

@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       argos_upload:
-        description: 'Temporarily ignored while Argos uploads are disabled'
+        description: 'Upload screenshots to Argos during manual runs'
         required: false
         default: false
         type: boolean
@@ -36,23 +36,26 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run E2E tests (pull request)
+      - name: Run E2E tests + Argos capture (pull request)
         if: github.event_name == 'pull_request'
         run: npx playwright test
         env:
-          ARGOS_UPLOAD: 'false'
+          ARGOS_UPLOAD: ${{ github.event.pull_request.head.repo.fork == false && 'true' || 'false' }}
+          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
 
-      - name: Run E2E tests (manual dispatch)
+      - name: Run E2E tests + optional Argos capture (manual dispatch)
         if: github.event_name == 'workflow_dispatch'
         run: npx playwright test
         env:
-          ARGOS_UPLOAD: 'false'
+          ARGOS_UPLOAD: ${{ github.event.inputs.argos_upload == 'true' && 'true' || 'false' }}
+          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
 
-      - name: Run E2E tests (main)
+      - name: Run E2E tests + Argos baseline refresh (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npx playwright test
         env:
-          ARGOS_UPLOAD: 'false'
+          ARGOS_UPLOAD: 'true'
+          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7

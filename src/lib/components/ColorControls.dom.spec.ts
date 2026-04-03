@@ -7,7 +7,7 @@ describe('ColorControls', () => {
   it('renders base color controls and keeps color input in sync with hex input', async () => {
     render(ColorControls, {
       props: {
-        baseColor: '#1862E6',
+        baseColor: '#5EF784',
         warmth: 0,
         chromaMultiplier: 1,
         numColors: 11,
@@ -22,7 +22,7 @@ describe('ColorControls', () => {
     const colorInput = screen.getByLabelText('Base Color') as HTMLInputElement;
     const hexInput = screen.getByLabelText(/base color hex value/i) as HTMLInputElement;
 
-    expect(colorInput.value.toLowerCase()).toBe('#1862e6');
+    expect(colorInput.value.toLowerCase()).toBe('#5ef784');
 
     await fireEvent.input(hexInput, { target: { value: '#00ff00' } });
 
@@ -66,6 +66,58 @@ describe('ColorControls', () => {
 
     expect(numColorsInput.value).toBe('20');
     expect(numColorsSlider.value).toBe('20');
+  });
+
+  it('uses amount-only warmth bounds while custom warmth hue is enabled and restores sign on disable', async () => {
+    render(ColorControls, {
+      props: {
+        warmth: -12,
+        warmthHue: undefined
+      }
+    });
+
+    const warmthSlider = screen.getByRole('slider', { name: 'Warmth' }) as HTMLInputElement;
+    const warmthInput = screen.getByRole('spinbutton', {
+      name: 'Warmth value input'
+    }) as HTMLInputElement;
+    const customWarmthToggle = screen.getByRole('checkbox', {
+      name: 'Custom Warmth Hue'
+    }) as HTMLInputElement;
+
+    expect(warmthSlider.min).toBe('-50');
+    expect(warmthInput.min).toBe('-50');
+    expect(warmthSlider.value).toBe('-12');
+
+    await fireEvent.click(customWarmthToggle);
+
+    expect(screen.getByRole('slider', { name: 'Warmth Amount' })).toHaveAttribute('min', '0');
+    expect(
+      screen.getByRole('spinbutton', {
+        name: 'Warmth amount value input'
+      })
+    ).toHaveAttribute('min', '0');
+    expect(warmthSlider.value).toBe('12');
+
+    await fireEvent.click(customWarmthToggle);
+
+    expect(screen.getByRole('slider', { name: 'Warmth' })).toHaveAttribute('min', '-50');
+    expect(screen.getByRole('spinbutton', { name: 'Warmth value input' })).toHaveAttribute(
+      'min',
+      '-50'
+    );
+    expect(warmthSlider.value).toBe('-12');
+  });
+
+  it('keeps custom warmth hue controls visible when warmth amount is zero', async () => {
+    render(ColorControls, {
+      props: {
+        warmth: 0,
+        warmthHue: 180
+      }
+    });
+
+    expect(screen.getByRole('checkbox', { name: 'Custom Warmth Hue' })).toBeVisible();
+    expect(screen.getByRole('slider', { name: 'Warmth Hue' })).toBeVisible();
   });
 
   it('calls onRangeDragStart on pointerdown and onRangeDragEnd on pointerup', async () => {

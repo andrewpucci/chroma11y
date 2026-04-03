@@ -4,7 +4,7 @@ import { createHistoryManager, type HistorySnapshot } from './history';
 
 function createSnapshot(overrides: Partial<HistorySnapshot> = {}): HistorySnapshot {
   return {
-    baseColor: '#1862E6',
+    baseColor: '#5EF784',
     warmth: -7,
     chromaMultiplier: 1,
     numColors: 11,
@@ -38,6 +38,7 @@ function createSnapshot(overrides: Partial<HistorySnapshot> = {}): HistorySnapsh
       apcaBody: true
     },
     contrastAlgorithm: 'WCAG',
+    solveAdjacentStopLows: true,
     oklchDisplaySignificantDigits: 4,
     customNeutralName: undefined,
     customPaletteNames: undefined,

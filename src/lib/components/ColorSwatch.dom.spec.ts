@@ -1,9 +1,17 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import Color from 'colorjs.io';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { get } from 'svelte/store';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ColorSwatch from '$lib/components/ColorSwatch.svelte';
-import { resetColorState, updateColorState } from '$lib/stores';
+import { drawerIsOpen } from '$lib/drawerStore';
+import {
+  activeSwatchPicker,
+  constraints,
+  lowReference,
+  resetColorState,
+  updateColorState
+} from '$lib/stores';
 
 describe('ColorSwatch', () => {
   beforeEach(() => {
@@ -289,5 +297,72 @@ describe('ColorSwatch', () => {
 
     expect(container.querySelector('.color-swatch--gamut-warning')).not.toBeInTheDocument();
     expect(screen.queryByText('Rec. 2020')).not.toBeInTheDocument();
+  });
+
+  it('assigns an armed contrast reference instead of opening the drawer', async () => {
+    activeSwatchPicker.set({
+      kind: 'contrast-reference',
+      target: 'low'
+    });
+    const onHistoryCommit = vi.fn();
+
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#0066ff',
+        label: '20',
+        paletteName: 'Blue Chip',
+        paletteIndex: 1,
+        stepIndex: 2,
+        onHistoryCommit
+      }
+    });
+
+    await fireEvent.click(container.querySelector('.color-swatch') as HTMLButtonElement);
+
+    expect(get(lowReference)).toEqual({ kind: 'palette', paletteIndex: 1, stepIndex: 2 });
+    expect(get(activeSwatchPicker)).toBeNull();
+    expect(get(drawerIsOpen)).toBe(false);
+    expect(onHistoryCommit).toHaveBeenCalledWith('Low contrast reference changed');
+  });
+
+  it('assigns an armed target-color constraint from the clicked swatch', async () => {
+    updateColorState({
+      constraints: [
+        {
+          id: 'constraint-1',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#ffffff'
+        }
+      ]
+    });
+    activeSwatchPicker.set({
+      kind: 'constraint-target',
+      target: 'constraint-1'
+    });
+    const onHistoryCommit = vi.fn();
+
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#ff00aa',
+        label: '80',
+        paletteName: 'Magentarama',
+        stepIndex: 8,
+        onHistoryCommit
+      }
+    });
+
+    await fireEvent.click(container.querySelector('.color-swatch') as HTMLButtonElement);
+
+    expect(get(constraints)).toEqual([
+      {
+        id: 'constraint-1',
+        type: 'target-color',
+        enabled: true,
+        targetHex: '#ff00aa'
+      }
+    ]);
+    expect(get(activeSwatchPicker)).toBeNull();
+    expect(onHistoryCommit).toHaveBeenCalledWith('Constraint target color changed');
   });
 });

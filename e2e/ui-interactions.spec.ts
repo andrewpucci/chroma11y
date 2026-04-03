@@ -12,24 +12,6 @@ test.describe('UI Interactions', () => {
     await waitForAppReady(page);
   });
 
-  test.describe('App Loading', () => {
-    test('loads the application successfully', async ({ page }) => {
-      await expect(page.locator('h1')).toContainText('Chroma11y');
-      await expect(page.locator('#baseColor')).toBeVisible();
-      await expect(page.locator('.color-swatch').first()).toBeVisible();
-    });
-
-    test('generates initial color palettes', async ({ page }) => {
-      // Should have neutral palette with 11 colors by default
-      const neutralSection = page.getByTestId('neutral-palette');
-      await expect(neutralSection).toBeVisible();
-      await expect(neutralSection.locator('.color-swatch')).toHaveCount(11);
-
-      // Should have palette section
-      await expect(page.getByTestId('generated-palettes')).toBeVisible();
-    });
-  });
-
   test.describe('Display Settings Tooltip', () => {
     test('OKLCH significant digits tooltip stays above overlapping swatches and works with keyboard focus', async ({
       page
@@ -94,49 +76,45 @@ test.describe('UI Interactions', () => {
     });
   });
 
-  test.describe('Base Color Controls', () => {
-    test('changing base color updates palettes', async ({ page }) => {
-      const paletteHexes = page
-        .getByTestId('generated-palettes')
-        .locator('.swatches')
-        .first()
-        .locator('.hex');
-      const initialHex = (await paletteHexes.nth(5).textContent())?.trim() ?? '';
+  test.describe('Constraints Panel', () => {
+    test('keeps closed constraints content out of the tab order until expanded and supports filter and enabled toggles', async ({
+      page
+    }) => {
+      await page.setViewportSize({ width: 375, height: 667 });
+      await page.goto('/');
+      await page.evaluate(() => localStorage.clear());
+      await page.goto(
+        '/?ct=W3siaWQiOiJjb25zdHJhaW50LTEiLCJ0eXBlIjoidGFyZ2V0LWNvbG9yIiwiZW5hYmxlZCI6dHJ1ZSwidGFyZ2V0SGV4IjoiIzVFRjc4NCIsIm11c3RQYXNzIjpmYWxzZSwibWV0cmljIjoib2sifSx7ImlkIjoiY29uc3RyYWludC0yIiwidHlwZSI6ImNvbnRyYXN0LXJ1bGUiLCJlbmFibGVkIjp0cnVlLCJzY29wZSI6ImFsbC1wYWxldHRlcyIsInN0ZXBJbmRleCI6NywicmVmZXJlbmNlIjoibG93IiwiYWxnb3JpdGhtIjoiV0NBRyIsImxldmVsIjoid2NhZ0FBIiwiZml0VG9UaHJlc2hvbGQiOnRydWV9XQ'
+      );
+      await waitForAppReady(page);
 
-      // Change base color to green
-      await page.locator('#baseColor').fill('#00ff00');
-      await page.locator('#baseColor').press('Tab');
-      await expect
-        .poll(async () => ((await paletteHexes.nth(5).textContent()) ?? '').trim(), {
-          timeout: 15000
-        })
-        .not.toBe(initialHex);
+      const constraintsCard = page.getByTestId('constraints-controls-card');
+      const constraintsSummary = constraintsCard.locator(':scope > summary.card-summary');
 
-      // Palette color should change
-      const newHex = await paletteHexes.nth(5).textContent();
-      expect(newHex).not.toBe(initialHex);
-    });
-  });
+      await constraintsSummary.focus();
+      await expect(constraintsSummary).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(
+        page.getByTestId('contrast-controls-card').locator(':scope > summary.card-summary')
+      ).toBeFocused();
+      await expect(page.locator('.constraint-editor')).toHaveCount(0);
 
-  test.describe('Slider Numeric Input', () => {
-    test('supports inline numeric editing with clamp behavior', async ({ page }) => {
-      await page.getByRole('spinbutton', { name: 'Warmth value input' }).fill('12');
-      await expect(page.locator('#warmth')).toHaveValue('12');
+      await constraintsSummary.focus();
+      await page.keyboard.press('Enter');
+      await expect(constraintsCard).toHaveJSProperty('open', true);
 
-      const numColorsInput = page.getByRole('spinbutton', { name: 'Number of colors value input' });
-      await numColorsInput.fill('99');
-      await expect(numColorsInput).toHaveValue('20');
-      await expect(page.locator('#numColors')).toHaveValue('20');
+      await page.getByRole('button', { name: 'Edit' }).first().click();
+      await expect(page.getByLabel('Target color enabled')).toBeChecked();
+      await page.getByLabel('Target color enabled').click();
+      await expect(page.getByLabel('Target color enabled')).not.toBeChecked();
+      await expect(constraintsSummary).toContainText('1 disabled');
 
-      await page.getByRole('spinbutton', { name: 'Number of palettes value input' }).fill('7');
-      await expect(page.locator('#numPalettes')).toHaveValue('7');
-
-      await page.locator('#display-color-space').selectOption('oklch');
-      await ensureOutputAdvancedExpanded(page);
-      await page
-        .getByRole('spinbutton', { name: 'OKLCH significant digits value input' })
-        .fill('6');
-      await expect(page.locator('#oklch-significant-digits')).toHaveValue('6');
+      await constraintsCard
+        .locator('select[aria-label="Constraint status filter"]:visible')
+        .selectOption('disabled');
+      await expect(constraintsCard.locator('.filter-results:visible')).toHaveText(
+        '1 of 2 constraints shown'
+      );
     });
   });
 });

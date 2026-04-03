@@ -2,6 +2,7 @@
  * URL Utilities Unit Tests
  */
 import { describe, it, expect } from 'vitest';
+import type { Constraint } from './types';
 import { encodeStateToUrl, decodeStateFromUrl, type UrlColorState } from './urlUtils';
 
 describe('urlUtils', () => {
@@ -63,12 +64,120 @@ describe('urlUtils', () => {
       expect(encoded).toContain('m=manual');
     });
 
+    it('encodes contrast references and constraints', () => {
+      const state: UrlColorState = {
+        lowReference: { kind: 'neutral', stepIndex: 0 },
+        highReference: { kind: 'palette', paletteIndex: 2, stepIndex: 8 },
+        constraints: [
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784'
+          }
+        ]
+      };
+      const encoded = encodeStateToUrl(state);
+
+      expect(encoded).toContain('lr=n%3A0');
+      expect(encoded).toContain('hr=p%3A2%3A8');
+      expect(encoded).toContain('ct=');
+    });
+
+    it('omits invalid target-color constraints from encoded URL state', () => {
+      const state: UrlColorState = {
+        constraints: [
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: 'not-a-color'
+          },
+          {
+            id: 'constraint-2',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784'
+          }
+        ]
+      };
+
+      const encoded = encodeStateToUrl(state);
+      const params = new URLSearchParams(encoded);
+      const decodedConstraints = JSON.parse(
+        Buffer.from(params.get('ct') ?? '', 'base64url').toString('utf8')
+      );
+
+      expect(decodedConstraints).toEqual([
+        {
+          id: 'constraint-2',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784'
+        }
+      ]);
+    });
+
+    it('omits invalid contrast-rule constraints from encoded URL state', () => {
+      const state: UrlColorState = {
+        constraints: [
+          {
+            id: 'constraint-1',
+            type: 'contrast-rule',
+            enabled: true,
+            scope: 'all-palettes',
+            stepIndex: 4,
+            reference: 'low',
+            algorithm: 'WCAG',
+            level: 'wcagAA'
+          },
+          {
+            id: 'constraint-2',
+            type: 'contrast-rule',
+            enabled: true,
+            scope: 'all-palettes',
+            stepIndex: 4,
+            reference: 'invalid'
+          } as unknown as Constraint
+        ]
+      };
+
+      const encoded = encodeStateToUrl(state);
+      const params = new URLSearchParams(encoded);
+      const decodedConstraints = JSON.parse(
+        Buffer.from(params.get('ct') ?? '', 'base64url').toString('utf8')
+      );
+
+      expect(decodedConstraints).toEqual([
+        {
+          id: 'constraint-1',
+          type: 'contrast-rule',
+          enabled: true,
+          scope: 'all-palettes',
+          stepIndex: 4,
+          reference: 'low',
+          algorithm: 'WCAG',
+          level: 'wcagAA'
+        }
+      ]);
+    });
+
     it('encodes lightness nudgers with index:value format', () => {
       const state: UrlColorState = {
         lightnessNudgers: [0, 0, 0.1, 0, 0, -0.05, 0, 0, 0, 0, 0]
       };
       const encoded = encodeStateToUrl(state);
       expect(encoded).toContain('ln=2%3A0.1%2C5%3A-0.05'); // URL encoded 2:0.1,5:-0.05
+    });
+
+    it('encodes hidden saturation nudgers with sparse params', () => {
+      const state: UrlColorState = {
+        stepSaturationNudgers: [0, 0.01, 0, 0, -0.01],
+        paletteSaturationNudgers: [0.015, 0, -0.0075]
+      };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('scn=1%3A0.01%2C4%3A-0.01');
+      expect(encoded).toContain('psn=0%3A0.015%2C2%3A-0.0075');
     });
 
     it('omits nudgers when all values are zero', () => {
@@ -150,6 +259,115 @@ describe('urlUtils', () => {
       expect(state.contrastMode).toBe('manual');
     });
 
+    it('decodes contrast references and constraints', () => {
+      const encodedConstraints = Buffer.from(
+        JSON.stringify([
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784'
+          }
+        ]),
+        'utf-8'
+      )
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+      const params = new URLSearchParams(
+        `lr=n:0&hr=p:2:8&ct=${encodeURIComponent(encodedConstraints)}`
+      );
+      const state = decodeStateFromUrl(params);
+
+      expect(state.lowReference).toEqual({ kind: 'neutral', stepIndex: 0 });
+      expect(state.highReference).toEqual({ kind: 'palette', paletteIndex: 2, stepIndex: 8 });
+      expect(state.constraints).toEqual([
+        {
+          id: 'constraint-1',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784'
+        }
+      ]);
+    });
+
+    it('drops invalid target-color constraints from decoded URL state', () => {
+      const encodedConstraints = Buffer.from(
+        JSON.stringify([
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: 'not-a-color'
+          },
+          {
+            id: 'constraint-2',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784'
+          }
+        ]),
+        'utf-8'
+      ).toString('base64url');
+      const params = new URLSearchParams(`ct=${encodeURIComponent(encodedConstraints)}`);
+
+      const state = decodeStateFromUrl(params);
+
+      expect(state.constraints).toEqual([
+        {
+          id: 'constraint-2',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784'
+        }
+      ]);
+    });
+
+    it('drops invalid contrast-rule constraints from decoded URL state', () => {
+      const encodedConstraints = Buffer.from(
+        JSON.stringify([
+          {
+            id: 'constraint-1',
+            type: 'contrast-rule',
+            enabled: true,
+            scope: 'all-palettes',
+            stepIndex: 4,
+            reference: 'low',
+            algorithm: 'WCAG',
+            level: 'wcagAA'
+          },
+          {
+            id: 'constraint-2',
+            type: 'contrast-rule',
+            enabled: true,
+            scope: 'all-palettes',
+            stepIndex: 4,
+            reference: 'low',
+            algorithm: 'WCAG',
+            level: 'not-a-level'
+          }
+        ]),
+        'utf-8'
+      ).toString('base64url');
+      const params = new URLSearchParams(`ct=${encodeURIComponent(encodedConstraints)}`);
+
+      const state = decodeStateFromUrl(params);
+
+      expect(state.constraints).toEqual([
+        {
+          id: 'constraint-1',
+          type: 'contrast-rule',
+          enabled: true,
+          scope: 'all-palettes',
+          stepIndex: 4,
+          reference: 'low',
+          algorithm: 'WCAG',
+          level: 'wcagAA'
+        }
+      ]);
+    });
+
     it('decodes theme preference parameter', () => {
       const params = new URLSearchParams('t=dark');
       const state = decodeStateFromUrl(params);
@@ -175,6 +393,13 @@ describe('urlUtils', () => {
       const params = new URLSearchParams('ln=2:0.1,5:-0.05');
       const state = decodeStateFromUrl(params);
       expect(state.lightnessNudgers).toEqual([0, 0, 0.1, 0, 0, -0.05, 0, 0, 0, 0, 0]);
+    });
+
+    it('decodes hidden saturation nudgers from index:value format', () => {
+      const params = new URLSearchParams('scn=1:0.01,4:-0.01&psn=0:0.015,2:-0.0075');
+      const state = decodeStateFromUrl(params);
+      expect(state.stepSaturationNudgers).toEqual([0, 0.01, 0, 0, -0.01, 0, 0, 0, 0, 0, 0]);
+      expect(state.paletteSaturationNudgers).toEqual([0.015, 0, -0.0075, 0, 0, 0, 0, 0, 0, 0, 0]);
     });
 
     it('returns empty state for empty params', () => {
@@ -308,6 +533,18 @@ describe('urlUtils', () => {
       expect(encoded).not.toContain('ca=');
     });
 
+    it('encodes solveAdjacentStopLows when disabled', () => {
+      const state: UrlColorState = { solveAdjacentStopLows: false };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('asl=0');
+    });
+
+    it('omits solveAdjacentStopLows when enabled (default)', () => {
+      const state: UrlColorState = { solveAdjacentStopLows: true };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('asl=');
+    });
+
     it('encodes OKLCH significant digits when not default', () => {
       const state: UrlColorState = { oklchDisplaySignificantDigits: 5 };
       const encoded = encodeStateToUrl(state);
@@ -370,6 +607,14 @@ describe('urlUtils', () => {
         apcaBody: false
       });
       expect(state.showSwatchContrastIndicators).toBe(true);
+    });
+
+    it('decodes solveAdjacentStopLows visibility', () => {
+      const disabled = decodeStateFromUrl(new URLSearchParams('asl=0'));
+      const enabled = decodeStateFromUrl(new URLSearchParams('asl=1'));
+
+      expect(disabled.solveAdjacentStopLows).toBe(false);
+      expect(enabled.solveAdjacentStopLows).toBe(true);
     });
 
     it('infers WCAG 3:1 for legacy masks that only include AA/AAA codes', () => {
@@ -514,6 +759,39 @@ describe('urlUtils', () => {
       expect(decoded.showSwatchContrastIndicators).toBe(true);
       expect(decoded.contrastAlgorithm).toBe(original.contrastAlgorithm);
       expect(decoded.oklchDisplaySignificantDigits).toBe(original.oklchDisplaySignificantDigits);
+    });
+
+    it('round-trips warmthHue', () => {
+      const state: UrlColorState = { warmthHue: 180 };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('wh=180');
+      const decoded = decodeStateFromUrl(new URLSearchParams(encoded));
+      expect(decoded.warmthHue).toBe(180);
+    });
+
+    it('does not encode warmthHue when undefined', () => {
+      const state: UrlColorState = { warmth: 10 };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('wh=');
+    });
+
+    it('round-trips paletteChromaNudgers', () => {
+      const state: UrlColorState = {
+        paletteChromaNudgers: [0.9, 1.0, 1.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).toContain('pcn=');
+      const decoded = decodeStateFromUrl(new URLSearchParams(encoded));
+      expect(decoded.paletteChromaNudgers?.[0]).toBeCloseTo(0.9, 6);
+      expect(decoded.paletteChromaNudgers?.[2]).toBeCloseTo(1.1, 6);
+    });
+
+    it('does not encode paletteChromaNudgers when all identity', () => {
+      const state: UrlColorState = {
+        paletteChromaNudgers: [1.0, 1.0, 1.0]
+      };
+      const encoded = encodeStateToUrl(state);
+      expect(encoded).not.toContain('pcn=');
     });
   });
 });

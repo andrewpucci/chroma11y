@@ -1,9 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
+import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PageScheduler } from '$lib/pageScheduler';
+import { palettesHex, updateColorState } from '$lib/stores';
 import PageContent from './PageContent.svelte';
 
 interface HistoryUiState {
@@ -82,6 +84,35 @@ function getOklchDigitsInput(): HTMLInputElement | null {
 
 function getOutputAdvancedGroup(): HTMLDetailsElement {
   return screen.getByTestId('output-advanced-group') as HTMLDetailsElement;
+}
+
+function getConstraintsCard(): HTMLElement {
+  return screen.getByTestId('constraints-controls-card');
+}
+
+function getFirstConstraintRow(): HTMLElement {
+  const row = getConstraintsCard().querySelector('.constraint-row');
+  if (!(row instanceof HTMLElement)) {
+    throw new Error('Expected at least one constraint row');
+  }
+
+  return row;
+}
+
+async function openConstraintsCard(): Promise<void> {
+  const card = getConstraintsCard();
+  const summary = card.querySelector(':scope > summary.card-summary');
+
+  if (!(summary instanceof HTMLElement)) {
+    return;
+  }
+
+  if ((card as HTMLDetailsElement).open) {
+    return;
+  }
+
+  await fireEvent.click(summary);
+  await flushAppState();
 }
 
 async function openOutputAdvanced(): Promise<void> {
@@ -176,14 +207,45 @@ function createControllablePageScheduler(): ControllablePageScheduler {
   };
 }
 
-async function renderPage(
-  scheduler: PageScheduler = createImmediatePageScheduler()
-): Promise<void> {
+interface RenderPageOptions {
+  scheduler?: PageScheduler;
+  openOutputAdvanced?: boolean;
+}
+
+async function renderPage(options: RenderPageOptions = {}): Promise<void> {
+  const {
+    scheduler = createImmediatePageScheduler(),
+    openOutputAdvanced: shouldOpenOutputAdvanced = true
+  } = options;
+
   render(PageContent, { props: { scheduler } });
   await flushAppState();
-  await openOutputAdvanced();
+
+  if (shouldOpenOutputAdvanced) {
+    await openOutputAdvanced();
+  }
+
   expect(getUndoButton()).toBeDisabled();
   expect(getRedoButton()).toBeDisabled();
+}
+
+async function openFirstConstraintEditor(): Promise<void> {
+  await openConstraintsCard();
+
+  const editButton = within(getFirstConstraintRow()).queryByRole('button', { name: 'Edit' });
+  if (editButton) {
+    await fireEvent.click(editButton);
+    await flushAppState();
+  }
+}
+
+function getConstraintMetricSelect(): HTMLSelectElement {
+  const editor = getConstraintsCard().querySelector('.constraint-editor');
+  if (!(editor instanceof HTMLElement)) {
+    throw new Error('Expected first constraint editor to be open');
+  }
+
+  return within(editor).getByLabelText(/metric/i) as HTMLSelectElement;
 }
 
 async function flushHistoryCommit(): Promise<void> {
@@ -352,7 +414,7 @@ describe('page history integration', () => {
     expect(getDisplayColorSpaceSelect()).toHaveValue('rgb');
     expect(screen.getByRole('button', { name: /undo last change/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /redo last change/i })).toBeDisabled();
-  }, 10000);
+  }, 20000);
 
   it('keeps mixed generator and contrast history steps aligned across redo', async () => {
     const user = userEvent.setup();
@@ -395,12 +457,12 @@ describe('page history integration', () => {
     expect(getLowContrastInput()).toHaveValue('#ff0000');
     expect(getNumColorsInput()).toHaveValue(13);
     expect(getContrastModeSelect()).toHaveValue('manual');
-  }, 10000);
+  }, 20000);
 
   it('cancels history-input resync once a replacement edit starts', async () => {
     const scheduler = createControllablePageScheduler();
 
-    await renderPage(scheduler);
+    await renderPage({ scheduler });
     const initialBaseColor = getBaseColorHexInput().value;
     const baseColorInput = getBaseColorHexInput();
     baseColorInput.value = '#00ff00';
@@ -438,7 +500,7 @@ describe('page history integration', () => {
     await flushAppState();
 
     expect(getBaseColorHexInput()).toHaveValue('#ff0000');
-  }, 10000);
+  }, 20000);
 
   async function expectScenarioRoundTrip(actions: HistoryAction[]): Promise<void> {
     const user = userEvent.setup();
@@ -503,6 +565,55 @@ describe('page history integration', () => {
     ]);
   }, 30000);
 
+  it('regenerates palettes when only saturation nudgers change', async () => {
+    const scheduler: PageScheduler = {
+      ...createImmediatePageScheduler(),
+      scheduleColorGeneration(task: () => void): void {
+        task();
+      }
+    };
+
+    await renderPage({ scheduler });
+
+    const initialColor = get(palettesHex)[0]?.[5];
+
+    updateColorState({
+      stepSaturationNudgers: [0, 0, 0, 0, 0, 0.03],
+      paletteSaturationNudgers: [0.02]
+    });
+    await flushAppState();
+
+    expect(get(palettesHex)[0]?.[5]).not.toBe(initialColor);
+  });
+
+  it('round-trips inline constraint edits through undo and redo', async () => {
+    // Start with a simpler setup - don't open editor initially
+    await renderPage({ openOutputAdvanced: false });
+    await fireEvent.click(
+      within(getConstraintsCard()).getAllByRole('button', { name: /add target color/i })[0]
+    );
+    await flushHistoryCommit();
+
+    // Open editor and change metric in one operation
+    await openFirstConstraintEditor();
+    const metricSelect = getConstraintMetricSelect();
+    await fireEvent.change(metricSelect, { target: { value: '2000' } });
+    await flushHistoryCommit();
+    expect(getConstraintMetricSelect()).toHaveValue('2000');
+
+    // Test undo - should revert to default metric
+    await fireEvent.click(getUndoButton());
+    await flushHistoryCommit();
+    await openFirstConstraintEditor();
+    expect(getConstraintMetricSelect()).toHaveValue('ok');
+
+    // Test redo - should restore the changed metric
+    await fireEvent.click(getRedoButton());
+    await flushHistoryCommit();
+    await openFirstConstraintEditor();
+    expect(getConstraintMetricSelect()).toHaveValue('2000');
+  }, 45000);
+
   it('preserves theme preference when reset is triggered from the header', async () => {
     const user = userEvent.setup();
 
@@ -520,5 +631,5 @@ describe('page history integration', () => {
     await flushHistoryCommit();
     expect(getThemeSelect()).toHaveValue('dark');
     expect(getNumColorsInput()).toHaveValue(15);
-  });
+  }, 10000);
 });

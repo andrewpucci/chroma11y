@@ -18,7 +18,10 @@
     showSwatchGamutWarnings,
     showSwatchContrastIndicators,
     swatchContrastIndicators,
-    contrastAlgorithm
+    contrastAlgorithm,
+    activeSwatchPicker,
+    updateConstraint,
+    updateContrastReference
   } from '$lib/stores';
   import { openDrawer } from '$lib/drawerStore';
   import { announce } from '$lib/announce';
@@ -32,6 +35,9 @@
     oklchColor?: Color | null;
     paletteName?: string;
     isNeutral?: boolean;
+    stepIndex?: number;
+    paletteIndex?: number;
+    onHistoryCommit?: (label: string) => void;
   }
 
   let {
@@ -40,7 +46,10 @@
     label = '',
     oklchColor = null,
     paletteName = '',
-    isNeutral = false
+    isNeutral = false,
+    stepIndex = undefined,
+    paletteIndex = undefined,
+    onHistoryCommit = undefined
   }: Props = $props();
 
   const contrastColorsLocal = $derived($contrastColors);
@@ -50,6 +59,7 @@
   const showSwatchContrastIndicatorsLocal = $derived($showSwatchContrastIndicators);
   const swatchContrastIndicatorsLocal = $derived($swatchContrastIndicators);
   const contrastAlgorithmLocal = $derived($contrastAlgorithm);
+  const activeSwatchPickerLocal = $derived($activeSwatchPicker);
 
   const renderedColor = $derived(displayValue || color);
   const shownValue = $derived(renderedColor);
@@ -237,6 +247,16 @@
     return low;
   });
   const indicatorTintPercent = $derived(`${(indicatorTintAlpha * 100).toFixed(2)}%`);
+  const resolvedStepIndex = $derived(
+    typeof stepIndex === 'number' ? stepIndex : Math.max(0, Math.round(Number(label) / 10) || 0)
+  );
+  const pickerInstruction = $derived.by(() => {
+    if (!activeSwatchPickerLocal) return null;
+    if (activeSwatchPickerLocal.kind === 'contrast-reference') {
+      return `Select as ${activeSwatchPickerLocal.target} reference`;
+    }
+    return 'Select as target color';
+  });
 
   /**
    * Determines the optimal text color for a swatch based on contrast ratios.
@@ -285,6 +305,41 @@
       return bgColor;
     }
   }
+
+  function handlePickerSelection(): void {
+    if (!activeSwatchPickerLocal) return;
+    const picker = activeSwatchPickerLocal;
+
+    if (picker.kind === 'contrast-reference') {
+      updateContrastReference(picker.target as 'low' | 'high', {
+        kind: isNeutral ? 'neutral' : 'palette',
+        stepIndex: resolvedStepIndex,
+        paletteIndex: isNeutral ? undefined : paletteIndex
+      });
+      activeSwatchPicker.set(null);
+      announce(`Set ${picker.target} reference to ${paletteName || 'palette'}, step ${label}`);
+      onHistoryCommit?.(
+        picker.target === 'low'
+          ? 'Low contrast reference changed'
+          : 'High contrast reference changed'
+      );
+      return;
+    }
+
+    updateConstraint(picker.target, (constraint) => {
+      if (constraint.type !== 'target-color') {
+        return constraint;
+      }
+
+      return {
+        ...constraint,
+        targetHex: renderedHex
+      };
+    });
+    activeSwatchPicker.set(null);
+    announce(`Set target color to ${renderedHex}`);
+    onHistoryCommit?.('Constraint target color changed');
+  }
 </script>
 
 <button
@@ -292,6 +347,11 @@
   class:color-swatch--gamut-warning={showGamutWarning}
   style="background-color: {renderedColor}; color: {textColor}; --swatch-indicator-tint-alpha: {indicatorTintPercent};"
   onclick={() => {
+    if (activeSwatchPickerLocal) {
+      handlePickerSelection();
+      return;
+    }
+
     if (sourceOklch) {
       openDrawer({
         hex: renderedHex,
@@ -306,10 +366,13 @@
       copyToClipboard(shownValue);
     }
   }}
-  title={oklchColor ? `View color details for ${shownValue}` : `Click to copy ${shownValue}`}
-  aria-label="{label ? `${label} ` : ''}{shownValue}{oklchColor
-    ? ' — view color details'
-    : ' — copy to clipboard'}"
+  title={pickerInstruction ??
+    (oklchColor ? `View color details for ${shownValue}` : `Click to copy ${shownValue}`)}
+  aria-label={pickerInstruction
+    ? `${label ? `${label} ` : ''}${shownValue} — ${pickerInstruction.toLowerCase()}`
+    : `${label ? `${label} ` : ''}${shownValue}${
+        oklchColor ? ' — view color details' : ' — copy to clipboard'
+      }`}
 >
   {#if showGamutWarning}
     <span class="gamut-warning-tag" aria-label={`Gamut mapped to ${gamutWarningLabel}`}>

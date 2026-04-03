@@ -3,6 +3,7 @@
  * Tests for browser-dependent functions (updateBrowserUrl, getUrlState)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { updateBrowserUrl, getUrlState } from './urlUtils';
 
 describe('urlUtils DOM', () => {

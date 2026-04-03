@@ -39,12 +39,4 @@ test.describe('Netlify Smoke', () => {
     const updatedSignature = await getPaletteSignature();
     expect(updatedSignature).not.toBe(initialSignature);
   });
-
-  test('can export JSON file', async ({ page }) => {
-    const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export JSON design tokens' }).click();
-
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/\.json$/);
-  });
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import BezierEditor from './BezierEditor.svelte';
+  import CheckboxRow from './CheckboxRow.svelte';
   import Icon from './Icon.svelte';
   import SliderNumberField from './SliderNumberField.svelte';
   import { getChromaMultiplierBounds } from '$lib/chromaMultiplier';
@@ -9,6 +10,7 @@
   interface Props {
     baseColor?: string;
     warmth?: number;
+    warmthHue?: number;
     chromaMultiplier?: number;
     gamutSpace?: GamutSpace;
     numColors?: number;
@@ -21,6 +23,7 @@
     onRangeDragEnd?: () => void;
     onBaseColorCommit?: () => void;
     onWarmthCommit?: () => void;
+    onWarmthHueCommit?: () => void;
     onSaturationCommit?: () => void;
     onNumColorsCommit?: () => void;
     onNumPalettesCommit?: () => void;
@@ -31,8 +34,9 @@
   }
 
   let {
-    baseColor = $bindable('#1862E6'),
+    baseColor = $bindable('#5EF784'),
     warmth = $bindable(0),
+    warmthHue = $bindable<number | undefined>(undefined),
     chromaMultiplier = $bindable(1),
     gamutSpace = 'srgb',
     numColors = $bindable(5),
@@ -45,6 +49,7 @@
     onRangeDragEnd,
     onBaseColorCommit,
     onWarmthCommit,
+    onWarmthHueCommit,
     onSaturationCommit,
     onNumColorsCommit,
     onNumPalettesCommit,
@@ -62,6 +67,10 @@
   }
 
   const WARMTH_RANGE: RangeConfig = { min: -50, max: 50, step: 1 };
+  const WARMTH_AMOUNT_RANGE: RangeConfig = { min: 0, max: 50, step: 1 };
+  const WARMTH_HUE_RANGE: RangeConfig = { min: 0, max: 359, step: 1 };
+  const DEFAULT_WARMTH_HUE = 60;
+  const DEFAULT_COOL_HUE = 250;
   const NUM_COLORS_RANGE: RangeConfig = { min: 2, max: 20, step: 1 };
   const NUM_PALETTES_RANGE: RangeConfig = { min: 1, max: 11, step: 1 };
   const SATURATION_STEP = 0.01;
@@ -100,7 +109,66 @@
   }
 
   function clampWarmthFromInput() {
-    warmth = clampWithRange(warmth, WARMTH_RANGE);
+    warmth = clampWithRange(warmth, warmthRange);
+  }
+
+  let warmthHueEnabled = $derived(warmthHue !== undefined);
+  let warmthDirection = $state<-1 | 1>(warmth < 0 ? -1 : 1);
+  let warmthHueValue = $state(warmth < 0 ? DEFAULT_COOL_HUE : DEFAULT_WARMTH_HUE);
+  let warmthRange = $derived(warmthHueEnabled ? WARMTH_AMOUNT_RANGE : WARMTH_RANGE);
+  let warmthLabel = $derived(warmthHueEnabled ? 'Warmth Amount' : 'Warmth');
+  let warmthValueInputLabel = $derived(
+    warmthHueEnabled ? 'Warmth amount value input' : 'Warmth value input'
+  );
+  let warmthHelpText = $derived(
+    warmthHueEnabled
+      ? `Range ${WARMTH_AMOUNT_RANGE.min} to ${WARMTH_AMOUNT_RANGE.max}. Warmth amount controls neutral tint strength while warmth hue controls tint direction.`
+      : `Range ${WARMTH_RANGE.min} to ${WARMTH_RANGE.max}. Use negative values for cooler neutrals and positive values for warmer neutrals.`
+  );
+
+  $effect(() => {
+    if (warmthHue !== undefined) {
+      warmthHueValue = warmthHue;
+    }
+  });
+
+  $effect(() => {
+    if (!warmthHueEnabled && warmth !== 0) {
+      warmthDirection = warmth < 0 ? -1 : 1;
+    }
+  });
+
+  $effect(() => {
+    if (!warmthHueEnabled) return;
+    const normalizedWarmth = clampWithRange(Math.abs(warmth), WARMTH_AMOUNT_RANGE);
+    if (normalizedWarmth !== warmth) {
+      warmth = normalizedWarmth;
+    }
+  });
+
+  function handleWarmthHueToggle() {
+    if (warmthHueEnabled) {
+      warmthHue = undefined;
+      warmth = clampWithRange(warmthDirection * Math.abs(warmth), WARMTH_RANGE);
+    } else {
+      if (warmth !== 0) {
+        warmthDirection = warmth < 0 ? -1 : 1;
+      }
+      warmth = clampWithRange(Math.abs(warmth), WARMTH_AMOUNT_RANGE);
+      warmthHue = clampWithRange(warmthHueValue, WARMTH_HUE_RANGE);
+    }
+    // Fires on both enable and disable so undo restores the previous toggle state.
+    onWarmthHueCommit?.();
+  }
+
+  function clampWarmthHueFromInput() {
+    warmthHueValue = clampWithRange(warmthHueValue, WARMTH_HUE_RANGE);
+    warmthHue = warmthHueValue;
+  }
+
+  function handleWarmthHueRangeChange() {
+    warmthHue = warmthHueValue;
+    onWarmthHueCommit?.();
   }
 
   function clampSaturationFromInput() {
@@ -188,7 +256,7 @@
             class="input"
             type="text"
             bind:value={baseColor}
-            placeholder="#1862E6"
+            placeholder="#5EF784"
             aria-label="Base color hex value"
             onchange={onBaseColorCommit}
             onblur={onBaseColorCommit}
@@ -198,18 +266,46 @@
 
       <SliderNumberField
         id="warmth"
-        label="Warmth"
-        valueInputLabel="Warmth value input"
-        min={WARMTH_RANGE.min}
-        max={WARMTH_RANGE.max}
-        step={WARMTH_RANGE.step}
+        label={warmthLabel}
+        valueInputLabel={warmthValueInputLabel}
+        min={warmthRange.min}
+        max={warmthRange.max}
+        step={warmthRange.step}
         bind:value={warmth}
-        groupHelpText={`Range ${WARMTH_RANGE.min} to ${WARMTH_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+        groupHelpText={warmthHelpText}
         onRangeChange={onWarmthCommit}
         onNumberInput={clampWarmthFromInput}
         onNumberChange={onWarmthCommit}
         onNumberBlur={clampWarmthFromInput}
       />
+
+      {#if warmth !== 0 || warmthHueEnabled}
+        <div class="warmth-hue-override">
+          <CheckboxRow
+            id="custom-warmth-hue"
+            label="Custom Warmth Hue"
+            checked={warmthHueEnabled}
+            ariaLabel="Custom Warmth Hue"
+            onChange={handleWarmthHueToggle}
+          />
+          {#if warmthHueEnabled}
+            <SliderNumberField
+              id="warmth-hue"
+              label="Warmth Hue"
+              valueInputLabel="Warmth hue value input"
+              min={WARMTH_HUE_RANGE.min}
+              max={WARMTH_HUE_RANGE.max}
+              step={WARMTH_HUE_RANGE.step}
+              bind:value={warmthHueValue}
+              groupHelpText="Hue angle 0 to 359 degrees. Overrides the default warm/cool hue direction."
+              onRangeChange={handleWarmthHueRangeChange}
+              onNumberInput={clampWarmthHueFromInput}
+              onNumberChange={onWarmthHueCommit}
+              onNumberBlur={clampWarmthHueFromInput}
+            />
+          {/if}
+        </div>
+      {/if}
 
       <SliderNumberField
         id="saturation"
@@ -515,5 +611,11 @@
         transition: transform var(--advanced-expand-duration) var(--advanced-expand-ease);
       }
     }
+  }
+
+  .warmth-hue-override {
+    display: grid;
+    gap: var(--space-xs);
+    padding-inline-start: var(--space-sm);
   }
 </style>

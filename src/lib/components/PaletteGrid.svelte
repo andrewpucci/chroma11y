@@ -177,6 +177,9 @@
                 label={String(index * 10)}
                 oklchColor={palettes[paletteIndex]?.[index] ?? null}
                 paletteName={paletteNames[paletteIndex]}
+                stepIndex={index}
+                {paletteIndex}
+                {onHistoryCommit}
               />
             {/each}
           </div>

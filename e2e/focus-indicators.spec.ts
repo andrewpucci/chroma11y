@@ -15,60 +15,6 @@ test.describe('Focus Indicators', () => {
   });
 
   test.describe('Keyboard navigation', () => {
-    test('Tab key moves focus through interactive elements', async ({ page }) => {
-      // Start from hex input (color picker is not keyboard-focusable in WebKit/Safari)
-      const hexInput = page.locator('#baseColorHex');
-      await hexInput.focus();
-
-      // Verify strict tab order from hex input through the collapsed Advanced disclosure.
-      const expectedTabOrder = [
-        { selector: '#warmth' },
-        { selector: '[aria-label="Warmth value input"]' },
-        { selector: '#saturation' },
-        { selector: '[aria-label="Saturation value input"]' },
-        { selector: '#numColors' },
-        { selector: '[aria-label="Number of colors value input"]' },
-        { selector: '#numPalettes' },
-        { selector: '[aria-label="Number of palettes value input"]' },
-        { selector: '[data-testid="generation-advanced-group"] summary' },
-        { selector: '#contrast-algorithm' }
-      ];
-
-      for (const item of expectedTabOrder) {
-        await page.keyboard.press('Tab');
-
-        const locator =
-          item.index !== undefined
-            ? page.locator(item.selector).nth(item.index)
-            : page.locator(item.selector);
-
-        await expect(locator).toBeFocused();
-      }
-
-      // Browser engines differ in checklist sub-order; ensure we traverse checklist controls
-      // before arriving at contrast mode.
-      const focusedControls: string[] = [];
-      let reachedContrastMode = false;
-      for (let i = 0; i < 12; i++) {
-        await page.keyboard.press('Tab');
-
-        const focusedControl = await page.evaluate(() => {
-          const active = document.activeElement as HTMLElement | null;
-          if (!active) return '';
-
-          return active.id || active.getAttribute('aria-label') || active.tagName;
-        });
-        focusedControls.push(focusedControl);
-
-        if (focusedControl === 'contrast-mode') {
-          reachedContrastMode = true;
-          break;
-        }
-      }
-
-      expect(reachedContrastMode).toBe(true);
-    });
-
     test('focus indicator is visible after keyboard navigation', async ({ page }) => {
       const hexInput = page.locator('#baseColorHex');
       await hexInput.focus();

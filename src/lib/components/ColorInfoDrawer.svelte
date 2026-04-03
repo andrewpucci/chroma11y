@@ -433,7 +433,7 @@
           <div class="contrast-rows">
             <div class="contrast-row">
               <div class="contrast-header">
-                <span class="contrast-label">Low step</span>
+                <span class="contrast-label">Low reference</span>
                 <div class="contrast-swatch-pair" aria-hidden="true">
                   <span
                     class="contrast-mini-swatch"
@@ -549,7 +549,7 @@
 
             <div class="contrast-row">
               <div class="contrast-header">
-                <span class="contrast-label">High step</span>
+                <span class="contrast-label">High reference</span>
                 <div class="contrast-swatch-pair" aria-hidden="true">
                   <span
                     class="contrast-mini-swatch"

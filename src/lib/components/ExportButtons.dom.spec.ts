@@ -92,7 +92,7 @@ describe('ExportButtons', () => {
   it('shows share button, copies current URL, and provides copy feedback', async () => {
     vi.useFakeTimers();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    window.history.replaceState({}, '', '/?baseColor=%231862E6&themePreference=dark');
+    window.history.replaceState({}, '', '/?baseColor=%235EF784&themePreference=dark');
 
     render(ExportButtons);
 

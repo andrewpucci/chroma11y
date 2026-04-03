@@ -30,6 +30,7 @@ import {
   getContrastForAlgorithm,
   getPrintableContrastForAlgorithm,
   maxChromaInGamut,
+  getAdaptiveGeneratedLightnessStepBounds,
   clearNearestColorCache,
   isValidHexColor,
   generateBaseNeutrals,
@@ -40,6 +41,15 @@ import Color from 'colorjs.io';
 
 /** Helper: convert Color[] to hex[] for string-based assertions */
 const toHexArray = (colors: InstanceType<typeof Color>[]) => colors.map((c) => colorToCssHex(c));
+
+function getPerceptualSaturation(color: Color): number {
+  const candidate = color.to('jzazbz');
+  const neutralReference = new Color('oklch', [color.oklch.l ?? 0, 0, 0]).to('jzazbz');
+  const deltaJ = (candidate.jzazbz.jz ?? 0) - (neutralReference.jzazbz.jz ?? 0);
+  const deltaA = (candidate.jzazbz.az ?? 0) - (neutralReference.jzazbz.az ?? 0);
+  const deltaB = (candidate.jzazbz.bz ?? 0) - (neutralReference.jzazbz.bz ?? 0);
+  return Math.sqrt(deltaJ * deltaJ + deltaA * deltaA + deltaB * deltaB);
+}
 
 describe('colorUtils', () => {
   describe('getContrast', () => {
@@ -242,6 +252,106 @@ describe('colorUtils', () => {
       expect(hexWith[10]).toBe(hexWithout[10]);
     });
 
+    it('applies lightness nudgers before palette chroma normalization', () => {
+      const withoutNudger = generatePalettes(baseParams);
+
+      const nudgers = new Array(11).fill(0);
+      nudgers[5] = 0.08;
+      const withNudger = generatePalettes({
+        ...baseParams,
+        lightnessNudgers: nudgers
+      });
+
+      const withoutStep = withoutNudger.palettes[0][5];
+      const withStep = withNudger.palettes[0][5];
+
+      expect(withStep.oklch.l).not.toBeCloseTo(withoutStep.oklch.l ?? 0, 6);
+      expect(withStep.oklch.c).not.toBeCloseTo(withoutStep.oklch.c ?? 0, 6);
+      expect(colorToCssHex(withStep)).not.toBe(colorToCssHex(withoutStep));
+
+      const withoutMax = maxChromaInGamut(
+        withoutStep.oklch.l ?? 0,
+        withoutStep.oklch.h ?? 0,
+        'srgb'
+      );
+      const withMax = maxChromaInGamut(withStep.oklch.l ?? 0, withStep.oklch.h ?? 0, 'srgb');
+
+      expect(withMax).not.toBeCloseTo(withoutMax, 6);
+    });
+
+    it('prevents lightness nudgers from collapsing multiple dark-end steps to pure black', () => {
+      const result = generatePalettes({
+        ...baseParams,
+        baseColor: '#e3ffe0',
+        warmth: 0.0005719877883279747,
+        x1: 0.38245467240682696,
+        y1: 0.00045639642418820873,
+        x2: 0.603949618923785,
+        y2: 0.8991119110056833,
+        lightnessNudgers: [0, 0, -0.05, -0.02, 0.022289988627065077, 0, -0.02, 0.05, 0.14, 0, 0],
+        hueNudgers: [
+          10.282258129658203, 6, -2.4989320029577584, -13.707977495757632, 10, 0, 0,
+          -6.698365646147806, -10, 21.095203466817736, 0
+        ]
+      });
+
+      const neutralBlackCount = result.neutrals.filter(
+        (color) => colorToCssHex(color).toLowerCase() === '#000000'
+      ).length;
+      expect(neutralBlackCount).toBe(1);
+
+      for (const palette of result.palettes) {
+        const blackCount = palette.filter(
+          (color) => colorToCssHex(color).toLowerCase() === '#000000'
+        ).length;
+        expect(blackCount).toBe(1);
+      }
+    });
+
+    it('bounds oversized adjacent lightness jumps when nudgers create local cliffs', () => {
+      const result = generatePalettes({
+        ...baseParams,
+        baseColor: '#e3ffe0',
+        warmth: 0.0005750566501674108,
+        x1: 0.3817821184020416,
+        y1: 0.000028715104868693704,
+        x2: 0.604956748218887,
+        y2: 0.8994482086891478,
+        lightnessNudgers: [0, 0, -0.05, -0.02, 0.022289988627065077, 0, -0.02, 0.05, 0.15, 0, 0],
+        hueNudgers: [
+          10.282258129658203, 6, -10.498932002957758, -13.707977495757632, 10, 0, 0,
+          -6.698365646147806, -10, 21.095203466817736, 0
+        ]
+      });
+
+      const neutralDrops = result.neutrals.slice(0, -1).map((color, index) => {
+        return (color.oklch.l ?? 0) - (result.neutrals[index + 1]?.oklch.l ?? 0);
+      });
+      const { maximumDelta } = getAdaptiveGeneratedLightnessStepBounds(result.neutrals);
+
+      expect(Math.max(...neutralDrops)).toBeLessThanOrEqual(maximumDelta + 1e-6);
+
+      for (const palette of result.palettes) {
+        const paletteDrops = palette.slice(0, -1).map((color, index) => {
+          return (color.oklch.l ?? 0) - (palette[index + 1]?.oklch.l ?? 0);
+        });
+
+        expect(Math.max(...paletteDrops)).toBeLessThanOrEqual(maximumDelta + 1e-6);
+      }
+    });
+
+    it('uses a looser adjacent lightness cap for shorter ramps', () => {
+      const longRampBounds = getAdaptiveGeneratedLightnessStepBounds(
+        Array.from({ length: 11 }, (_, index) => new Color('oklch', [1 - index / 10, 0, 0]))
+      );
+      const shortRampBounds = getAdaptiveGeneratedLightnessStepBounds(
+        Array.from({ length: 5 }, (_, index) => new Color('oklch', [1 - index / 4, 0, 0]))
+      );
+
+      expect(shortRampBounds.maximumDelta).toBeGreaterThan(longRampBounds.maximumDelta);
+      expect(longRampBounds.maximumDelta).toBeCloseTo(0.14, 6);
+    });
+
     it('applies hue nudgers to palettes', () => {
       const params1 = { ...baseParams, numPalettes: 1, hueNudgers: [0] };
       const result1 = generatePalettes(params1);
@@ -284,6 +394,39 @@ describe('colorUtils', () => {
 
       for (const palette of result.palettes) {
         expect(palette).toHaveLength(result.neutrals.length);
+      }
+    });
+
+    it('applies per-palette chroma nudgers independently', () => {
+      const params: ColorGenParams = {
+        ...baseParams,
+        numPalettes: 1,
+        paletteChromaNudgers: [0.8]
+      };
+      const result = generatePalettes(params);
+      const baseline = generatePalettes({ ...baseParams, numPalettes: 1 });
+
+      // Compare the same palette with and without a low nudger at a mid-tone step.
+      // Nudger < 1 should reduce chroma relative to the baseline for the same palette.
+      const step = 5;
+      const baseChroma = baseline.palettes[0][step].oklch.c ?? 0;
+      const lowChroma = result.palettes[0][step].oklch.c ?? 0;
+
+      expect(lowChroma).toBeLessThan(baseChroma + 1e-6);
+    });
+
+    it('chroma nudgers use per-palette hue gamut limits', () => {
+      const params: ColorGenParams = {
+        ...baseParams,
+        numPalettes: 2,
+        paletteChromaNudgers: [1.2, 1.2]
+      };
+      const result = generatePalettes(params);
+      // Both palettes should produce valid colors (no NaN)
+      for (const palette of result.palettes) {
+        for (const color of palette) {
+          expect(Number.isNaN(color.oklch.l ?? 0)).toBe(false);
+        }
       }
     });
   });
@@ -684,6 +827,28 @@ describe('colorUtils', () => {
       expect(neutrals[4].oklch.l).toBeCloseTo(0, 4);
       expect(neutrals[4].oklch.c ?? 0).toBeCloseTo(0, 6);
     });
+
+    it('uses warmthHue override instead of default warm hue', () => {
+      const params = { ...baseParams, warmth: 20, warmthHue: 120 };
+      const neutrals = generateBaseNeutrals(params);
+      const midNeutral = neutrals[2];
+      expect(midNeutral.oklch.h).toBeCloseTo(120, 0);
+    });
+
+    it('uses warmthHue override instead of default cool hue', () => {
+      const params = { ...baseParams, warmth: -20, warmthHue: 300 };
+      const neutrals = generateBaseNeutrals(params);
+      const midNeutral = neutrals[2];
+      expect(midNeutral.oklch.h).toBeCloseTo(300, 0);
+    });
+
+    it('falls back to default hue when warmthHue is undefined', () => {
+      const warmParams = { ...baseParams, warmth: 20, warmthHue: undefined };
+      const neutrals = generateBaseNeutrals(warmParams);
+      const midNeutral = neutrals[2];
+      // Default warm hue is 60
+      expect(midNeutral.oklch.h).toBeCloseTo(60, 0);
+    });
   });
 
   describe('getContrastForAlgorithm', () => {
@@ -732,7 +897,7 @@ describe('colorUtils', () => {
   });
 
   describe('cross-hue chroma consistency', () => {
-    it('keeps each step close to the base color gamut fraction', () => {
+    it('keeps each step within a tight perceptual saturation band across hues', () => {
       const params: ColorGenParams = {
         numColors: 11,
         numPalettes: 4,
@@ -750,37 +915,27 @@ describe('colorUtils', () => {
       };
 
       const result = generatePalettes(params);
-      const base = new Color(params.baseColor).to('oklch');
-      const baseL = base.oklch.l ?? 0;
-      const baseH = base.oklch.h ?? 0;
-      const baseC = base.oklch.c ?? 0;
-      const referenceMax = maxChromaInGamut(baseL, baseH, 'srgb');
-      const targetFraction = referenceMax > 1e-6 ? baseC / referenceMax : 0;
       let assertionsMade = 0;
 
       for (let step = 1; step < params.numColors - 1; step++) {
-        const fractions = result.palettes.map((palette) => {
+        const saturations = result.palettes.map((palette) => {
           const color = palette[step];
-          const l = color.oklch.l ?? 0;
-          const h = color.oklch.h ?? 0;
-          const c = color.oklch.c ?? 0;
-          const maxC = maxChromaInGamut(l, h, 'srgb');
-          return maxC > 1e-6 ? c / maxC : 0;
+          return getPerceptualSaturation(color);
         });
 
-        const nonZero = fractions.filter((f) => f > 0.01);
+        const nonZero = saturations.filter((value) => value > 0.0001);
         if (nonZero.length < 2) continue;
 
-        const avg = nonZero.reduce((a, b) => a + b, 0) / nonZero.length;
-        expect(avg).toBeGreaterThan(targetFraction - 0.05);
-        expect(avg).toBeLessThan(targetFraction + 0.05);
-        assertionsMade += 2;
+        const maxSaturation = Math.max(...nonZero);
+        const minSaturation = Math.min(...nonZero);
+        expect(maxSaturation - minSaturation).toBeLessThan(0.065);
+        assertionsMade += 1;
       }
 
       expect(assertionsMade).toBeGreaterThan(0);
     });
 
-    it('palettes use a consistent fraction of their gamut boundary across hues', () => {
+    it('does not exceed each hue maximum while allowing a relaxed shared target', () => {
       const params: ColorGenParams = {
         numColors: 11,
         numPalettes: 4,
@@ -800,35 +955,22 @@ describe('colorUtils', () => {
       const result = generatePalettes(params);
       let assertionsMade = 0;
 
-      // For each step (excluding endpoints which are black/white),
-      // compute each palette's chroma as a fraction of its hue's gamut boundary
       for (let step = 1; step < params.numColors - 1; step++) {
-        const fractions = result.palettes.map((palette) => {
+        for (const palette of result.palettes) {
           const color = palette[step];
           const l = color.oklch.l ?? 0;
           const h = color.oklch.h ?? 0;
-          const c = color.oklch.c ?? 0;
           const maxC = maxChromaInGamut(l, h, 'srgb');
-          return maxC > 1e-6 ? c / maxC : 0;
-        });
-
-        const nonZero = fractions.filter((f) => f > 0.01);
-        if (nonZero.length < 2) continue; // skip steps with insufficient data
-
-        const avg = nonZero.reduce((a, b) => a + b, 0) / nonZero.length;
-
-        // Each palette's gamut fraction should be within 5% of the mean
-        for (const f of nonZero) {
-          expect(f).toBeGreaterThan(avg - 0.05);
-          expect(f).toBeLessThan(avg + 0.05);
-          assertionsMade += 2;
+          const maxSaturation = getPerceptualSaturation(new Color('oklch', [l, maxC, h]));
+          expect(getPerceptualSaturation(color)).toBeLessThanOrEqual(maxSaturation + 0.0005);
+          assertionsMade += 1;
         }
       }
 
       expect(assertionsMade).toBeGreaterThan(0);
     });
 
-    it('high chroma multiplier approaches normalized gamut boundary without overflow', () => {
+    it('high chroma multiplier stays perceptually tighter than the old gamut-fraction model', () => {
       const params: ColorGenParams = {
         numColors: 11,
         numPalettes: 11,
@@ -849,29 +991,47 @@ describe('colorUtils', () => {
       let assertionsMade = 0;
 
       for (let step = 1; step < params.numColors - 1; step++) {
-        const fractions = result.palettes.map((palette) => {
+        const saturations = result.palettes.map((palette) => {
           const color = palette[step];
-          const l = color.oklch.l ?? 0;
-          const h = color.oklch.h ?? 0;
-          const c = color.oklch.c ?? 0;
-          const maxC = maxChromaInGamut(l, h, 'p3');
-          return maxC > 1e-6 ? c / maxC : 0;
+          return getPerceptualSaturation(color);
         });
 
-        const nonZero = fractions.filter((f) => f > 0.01);
+        const nonZero = saturations.filter((value) => value > 0.0001);
         if (nonZero.length < 2) continue;
 
-        const maxFraction = Math.max(...nonZero);
-        const minFraction = Math.min(...nonZero);
-        const avgFraction = nonZero.reduce((sum, f) => sum + f, 0) / nonZero.length;
-
-        expect(maxFraction).toBeLessThanOrEqual(1.001);
-        expect(avgFraction).toBeGreaterThan(0.9);
-        expect(maxFraction - minFraction).toBeLessThan(0.1);
-        assertionsMade += 3;
+        const maxSaturation = Math.max(...nonZero);
+        const minSaturation = Math.min(...nonZero);
+        expect(maxSaturation - minSaturation).toBeLessThan(0.08);
+        assertionsMade += 1;
       }
 
       expect(assertionsMade).toBeGreaterThan(0);
+    });
+
+    it('keeps warm red and yellow light steps perceptually close', () => {
+      const params: ColorGenParams = {
+        numColors: 11,
+        numPalettes: 4,
+        baseColor: '#f17451',
+        warmth: 0,
+        x1: 0.18,
+        y1: 0.04,
+        x2: 0.44,
+        y2: 0.38,
+        chromaMultiplier: 1,
+        currentTheme: 'light',
+        lightnessNudgers: new Array(11).fill(0),
+        hueNudgers: new Array(4).fill(0),
+        gamutSpace: 'srgb'
+      };
+
+      const result = generatePalettes(params);
+      const redStep = result.palettes[0][1];
+      const yellowStep = result.palettes[1][1];
+
+      expect(
+        Math.abs(getPerceptualSaturation(redStep) - getPerceptualSaturation(yellowStep))
+      ).toBeLessThan(0.0035);
     });
   });
 

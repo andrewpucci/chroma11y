@@ -11,6 +11,8 @@ import {
   contrastMode,
   lowStep,
   highStep,
+  lowReference,
+  highReference,
   neutrals,
   palettes,
   neutralsHex,
@@ -34,7 +36,11 @@ import {
   showSwatchContrastIndicators,
   swatchContrastIndicators,
   contrastAlgorithm,
+  solveAdjacentStopLows,
   oklchDisplaySignificantDigits,
+  constraints,
+  solverAdjustmentSnapshot,
+  constraintSolverSummary,
   neutralsDisplay,
   palettesDisplay,
   neutralsSwatchDisplay,
@@ -46,6 +52,11 @@ import {
   updateHueNudger,
   updateContrastFromNeutrals,
   updateContrastStep,
+  updateContrastReference,
+  addConstraint,
+  removeConstraint,
+  setSolverAdjustmentSnapshot,
+  setConstraintSolverSummary,
   resetColorState
 } from './stores';
 
@@ -81,6 +92,12 @@ describe('stores', () => {
       expect(get(highStep)).toBe(10);
     });
 
+    it('contrast references reflect colorStore references', () => {
+      expect.assertions(2);
+      expect(get(lowReference)).toEqual({ kind: 'neutral', stepIndex: 0 });
+      expect(get(highReference)).toEqual({ kind: 'neutral', stepIndex: 10 });
+    });
+
     it('neutrals reflects colorStore.neutrals', () => {
       expect.assertions(1);
       expect(get(neutrals)).toEqual([]);
@@ -103,7 +120,7 @@ describe('stores', () => {
 
     it('baseColor reflects colorStore.baseColor', () => {
       expect.assertions(1);
-      expect(get(baseColor)).toBe('#1862E6');
+      expect(get(baseColor)).toBe('#5EF784');
     });
 
     it('warmth reflects colorStore.warmth', () => {
@@ -181,9 +198,21 @@ describe('stores', () => {
       expect(get(contrastAlgorithm)).toBe('WCAG');
     });
 
+    it('solveAdjacentStopLows reflects colorStore.solveAdjacentStopLows', () => {
+      expect.assertions(1);
+      expect(get(solveAdjacentStopLows)).toBe(true);
+    });
+
     it('oklchDisplaySignificantDigits reflects colorStore.oklchDisplaySignificantDigits', () => {
       expect.assertions(1);
       expect(get(oklchDisplaySignificantDigits)).toBe(4);
+    });
+
+    it('constraints and solver metadata default to empty values', () => {
+      expect.assertions(3);
+      expect(get(constraints)).toEqual([]);
+      expect(get(solverAdjustmentSnapshot)).toBeNull();
+      expect(get(constraintSolverSummary)).toBeNull();
     });
   });
 
@@ -289,7 +318,7 @@ describe('stores', () => {
       updateColorState({ warmth: 5 });
 
       expect(get(warmth)).toBe(5);
-      expect(get(baseColor)).toBe('#1862E6');
+      expect(get(baseColor)).toBe('#5EF784');
     });
 
     it('updates multiple properties at once', () => {
@@ -335,6 +364,13 @@ describe('stores', () => {
         apcaFluent: true,
         apcaBody: false
       });
+    });
+
+    it('updates solveAdjacentStopLows', () => {
+      expect.assertions(1);
+      updateColorState({ solveAdjacentStopLows: false });
+
+      expect(get(solveAdjacentStopLows)).toBe(false);
     });
 
     it('forces gamutSpace to sRGB when displayColorSpace is hex', () => {
@@ -540,17 +576,93 @@ describe('stores', () => {
     });
   });
 
+  describe('updateContrastReference', () => {
+    it('updates a palette-backed low contrast reference and derived contrast color', () => {
+      expect.assertions(2);
+      updateColorState({
+        palettes: [[new Color('#ff0000'), new Color('#00ff00')]],
+        contrastMode: 'auto'
+      });
+
+      updateContrastReference('low', { kind: 'palette', paletteIndex: 0, stepIndex: 1 });
+
+      expect(get(lowReference)).toEqual({ kind: 'palette', paletteIndex: 0, stepIndex: 1 });
+      expect(get(contrastColors).low).toBe('#00ff00');
+    });
+  });
+
+  describe('constraint store helpers', () => {
+    it('adds and removes constraints', () => {
+      expect.assertions(2);
+      const constraint = {
+        id: 'constraint-1',
+        type: 'target-color' as const,
+        enabled: true,
+        targetHex: '#5ef784'
+      };
+
+      addConstraint(constraint);
+      expect(get(constraints)).toEqual([constraint]);
+
+      removeConstraint(constraint.id);
+      expect(get(constraints)).toEqual([]);
+    });
+
+    it('stores solver snapshot and summary values', () => {
+      expect.assertions(2);
+      setSolverAdjustmentSnapshot({
+        baseColor: '#5EF784',
+        warmth: -7,
+        chromaMultiplier: 1,
+        x1: 0.16,
+        y1: 0,
+        x2: 0.28,
+        y2: 0.38,
+        lightnessNudgers: [0],
+        hueNudgers: [0]
+      });
+      setConstraintSolverSummary({
+        solvedAt: 123,
+        passCount: 1,
+        warningCount: 1,
+        failCount: 0,
+        applied: true,
+        changed: true,
+        scoreBefore: 1.25,
+        scoreAfter: 0.5
+      });
+
+      expect(get(solverAdjustmentSnapshot)?.baseColor).toBe('#5EF784');
+      expect(get(constraintSolverSummary)?.warningCount).toBe(1);
+    });
+  });
+
   describe('resetColorState', () => {
-    it('resets to light theme preset while preserving theme preference', () => {
-      expect.assertions(3);
-      updateColorState({ warmth: 100, chromaMultiplier: 5 });
+    it('resets to light theme preset while preserving theme preference and constraints', () => {
+      expect.assertions(6);
+      updateColorState({
+        warmth: 100,
+        chromaMultiplier: 5,
+        lightnessNudgers: [0.02, -0.01],
+        hueNudgers: [4, -3]
+      });
+      addConstraint({
+        id: 'constraint-1',
+        type: 'target-color',
+        enabled: true,
+        targetHex: '#5EF784',
+        metric: 'ok'
+      });
       setThemePreference('light');
 
       resetColorState('light');
 
       expect(get(warmth)).toBe(-7);
       expect(get(chromaMultiplier)).toBe(1);
+      expect(get(lightnessNudgers)).toEqual([]);
+      expect(get(hueNudgers)).toEqual([]);
       expect(get(themePreference)).toBe('light');
+      expect(get(constraints)).toHaveLength(1);
     });
 
     it('resets to dark theme preset while preserving theme preference', () => {

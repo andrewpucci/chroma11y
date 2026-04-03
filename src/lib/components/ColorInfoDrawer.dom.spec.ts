@@ -348,12 +348,12 @@ describe('ColorInfoDrawer', () => {
 
   // ── Contrast ratios ────────────────────────────────────────
 
-  it('displays low step and high step contrast sections', () => {
+  it('displays low and high reference contrast sections', () => {
     openDrawer(makeDrawerData());
     render(ColorInfoDrawer);
 
-    expect(screen.getByText('Low step')).toBeInTheDocument();
-    expect(screen.getByText('High step')).toBeInTheDocument();
+    expect(screen.getByText('Low reference')).toBeInTheDocument();
+    expect(screen.getByText('High reference')).toBeInTheDocument();
   });
 
   it('shows iconized WCAG and APCA badges for both contrast rows', () => {

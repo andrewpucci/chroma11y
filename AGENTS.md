@@ -65,16 +65,23 @@ Test layers - **all must pass before commit**:
 **Testing principles:**
 
 - Test your own code, not dependencies — test wrapper function behavior
-- Avoid duplicate coverage — don't test same logic in multiple places unless testing different integration points
+- Avoid duplicate coverage — default to the lowest effective test layer and only repeat coverage when each layer is asserting a different integration risk
 - Document intentional coverage gaps — add JSDoc comment explaining why and reference the E2E test
 - Prefer integration over isolation — component tests with real interactions are more valuable than mocking everything
 - Keep tests focused — each test verifies one behavior, use descriptive `it()` names
+- New E2E coverage must justify why unit or DOM tests are insufficient
 
 **What belongs in each layer:**
 
 - Unit (server): Pure functions, algorithms, data transformations — NOT DOM interactions
-- Unit (dom): Component rendering, user events, ARIA attributes — NOT pointer capture or SVG transforms
-- E2E: Full user flows, visual output, cross-browser behavior, drag interactions
+- Unit (dom): Component rendering, user events, ARIA attributes, persistence wiring, and most form interactions — NOT pointer capture or SVG transforms
+- E2E: Browser-native behavior, full integrated workflows, real downloads, responsive/layout behavior, cross-browser behavior, drag interactions, and visual checkpoints
+
+Default layering guidance:
+
+- Prefer unit/server tests for pure logic, serialization, normalization, and store behavior
+- Prefer DOM tests for component interaction, persistence UI wiring, and most accessible form flows
+- Reserve E2E for behaviors that depend on the real browser event model, layout engine, download pipeline, or cross-browser rendering
 
 **Intentional coverage gaps:**
 

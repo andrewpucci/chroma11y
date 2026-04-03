@@ -95,7 +95,7 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 - **Design token system** - Fluid typography and spacing that scales with viewport
 - **Theme switching** - Light, dark, and auto (follows system preference)
 - **Responsive** - Container queries and compact collapsible mobile controls
-- **Fast performance** - All operations <200ms
+- **Responsive generation** - Interactive palette generation stays fast, while constraint solving offers fast and deep modes
 - **Intuitive controls** - Easy-to-use interface
 - **Direct slider value entry** - Use inline number inputs with native steppers beside each slider
 - **Quick reset** - Reset all settings from the header while preserving theme preference
@@ -158,6 +158,16 @@ npm run dev
 6. **Export** - Download as JSON, CSS, or SCSS
 
 Tip: each slider includes an inline number input with native up/down arrows for precise adjustments. On smaller screens, the main control cards collapse by default and the advanced generation and output sections can be expanded independently.
+
+### Constraint Solving
+
+Use the Constraints card when you need the generated palettes to hit specific color or contrast goals.
+
+- **Solve constraints** runs a bounded in-browser pass tuned for quick iteration.
+- **Deep solve** runs a more exhaustive in-browser search and may take noticeably longer on complex requests.
+- **Base color stays fixed during solving**. The solver adjusts curve controls and nudgers, not the original base color.
+- **Fit to threshold** targets the step median for the selected contrast rule while still requiring the minimum swatch in scope to meet the threshold.
+- **Must pass** target colors remain hard priorities in both solve modes.
 
 ### Control Explanations
 
@@ -412,17 +422,25 @@ When upgrading dependencies, treat `package.json` and `package-lock.json` as a p
 
 **E2E Tests** (`e2e/`):
 
-- Algorithm validation, export formats, mobile responsiveness
-- Design token system (fluid typography, spacing, touch targets, motion preferences)
-- URL/localStorage persistence, UI interactions, compact mobile controls
-- Bezier editor interaction, focus indicators
-- Visual regression tests (themes, palettes, mobile layouts, bezier editor)
+- Browser-native history and input behavior
+- Real export/download correctness
+- Mobile responsiveness and compact control behavior
+- Browser-rendered focus indicators, tooltip stacking, and Bezier editor interaction
+- Representative URL/localStorage restore and precedence coverage
+- Visual regression checkpoints for distinct high-risk UI states
 
 **Unit & DOM Tests** (`src/`):
 
 - Color utility functions, export format generators, URL encoding/decoding
 - Component DOM tests (BezierEditor, ColorControls, ColorInfoDrawer, ContrastControls, DisplaySettings, ExportButtons, NeutralPalette, PaletteGrid)
 - Favicon generation
+
+Choose the lowest effective test layer:
+
+- Unit: pure logic, serialization, normalization, and store behavior
+- DOM: component rendering, persistence wiring, ARIA, and most form interactions
+- E2E: real browser event-model behavior, real downloads, responsive/layout behavior, drag/pointer flows, and cross-browser risks
+- Argos visual: distinct visual risk states that are difficult to protect with structural assertions alone
 
 ### Linting & Formatting
 
@@ -488,7 +506,8 @@ Primary contributor guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ### Testing Requirements
 
-- Add E2E tests for new features
+- Default to unit or DOM coverage unless the behavior depends on the real browser, layout engine, download pipeline, or cross-browser rendering
+- Add E2E tests only when lower layers would miss the failure mode
 - Ensure all tests pass before submitting PR
 - Maintain test coverage for critical paths
 

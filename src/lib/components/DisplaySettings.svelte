@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from './Icon.svelte';
+  import CheckboxRow from './CheckboxRow.svelte';
   import {
     displayColorSpace,
     oklchDisplaySignificantDigits,
@@ -114,8 +115,7 @@
     return 'hidden';
   }
 
-  function handleSwatchLabelsToggle(which: 'step' | 'value', event: Event) {
-    const checked = (event.target as HTMLInputElement).checked;
+  function handleSwatchLabelsToggle(which: 'step' | 'value', checked: boolean) {
     const nextStep = which === 'step' ? checked : swatchStepLabelEnabled;
     const nextValue = which === 'value' ? checked : swatchValueLabelEnabled;
     const value = toSwatchLabels(nextStep, nextValue);
@@ -125,8 +125,7 @@
     onHistoryCommit?.('Swatch labels changed');
   }
 
-  function handleSwatchGamutWarningsToggle(event: Event) {
-    const checked = (event.target as HTMLInputElement).checked;
+  function handleSwatchGamutWarningsToggle(checked: boolean) {
     updateColorState({ showSwatchGamutWarnings: checked });
     announce(checked ? 'Swatch gamut warnings shown' : 'Swatch gamut warnings hidden');
     onHistoryCommit?.('Gamut warnings changed');
@@ -175,26 +174,20 @@
     <div class="field">
       <span class="label">Swatch Labels</span>
       <div class="checklist" role="group" aria-label="Swatch label display options">
-        <label class="check-item" for="swatch-label-step">
-          <input
-            id="swatch-label-step"
-            type="checkbox"
-            checked={swatchStepLabelEnabled}
-            onchange={(event) => handleSwatchLabelsToggle('step', event)}
-            aria-label="Show step labels on swatches"
-          />
-          <span>Step</span>
-        </label>
-        <label class="check-item" for="swatch-label-value">
-          <input
-            id="swatch-label-value"
-            type="checkbox"
-            checked={swatchValueLabelEnabled}
-            onchange={(event) => handleSwatchLabelsToggle('value', event)}
-            aria-label="Show value labels on swatches"
-          />
-          <span>Value</span>
-        </label>
+        <CheckboxRow
+          id="swatch-label-step"
+          label="Step"
+          checked={swatchStepLabelEnabled}
+          ariaLabel="Show step labels on swatches"
+          onChange={(checked) => handleSwatchLabelsToggle('step', checked)}
+        />
+        <CheckboxRow
+          id="swatch-label-value"
+          label="Value"
+          checked={swatchValueLabelEnabled}
+          ariaLabel="Show value labels on swatches"
+          onChange={(checked) => handleSwatchLabelsToggle('value', checked)}
+        />
       </div>
     </div>
   </section>
@@ -267,16 +260,13 @@
 
         <div class="field">
           <span class="label">Gamut Warnings</span>
-          <label class="check-item" for="show-swatch-gamut-warnings">
-            <input
-              id="show-swatch-gamut-warnings"
-              type="checkbox"
-              checked={showSwatchGamutWarningsLocal}
-              onchange={handleSwatchGamutWarningsToggle}
-              aria-label="Show gamut warnings on mapped swatches"
-            />
-            <span>Show warnings on gamut-mapped swatches</span>
-          </label>
+          <CheckboxRow
+            id="show-swatch-gamut-warnings"
+            label="Show warnings on gamut-mapped swatches"
+            checked={showSwatchGamutWarningsLocal}
+            ariaLabel="Show gamut warnings on mapped swatches"
+            onChange={handleSwatchGamutWarningsToggle}
+          />
         </div>
       </div>
     </div>
@@ -322,22 +312,6 @@
     display: grid;
     gap: var(--space-xs);
     padding: var(--space-xs) 0;
-  }
-
-  .check-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    min-height: var(--touch-target-comfortable);
-    font-size: var(--font-size-sm);
-    color: var(--text-primary);
-  }
-
-  .check-item input {
-    width: var(--touch-target-min);
-    height: var(--touch-target-min);
-    margin: 0;
-    accent-color: var(--accent);
   }
 
   .advanced-group {
