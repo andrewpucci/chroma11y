@@ -4,7 +4,11 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { waitForAppReady } from './test-utils';
+import {
+  ensureGenerationAdvancedExpanded,
+  ensureOutputControlsExpanded,
+  waitForAppReady
+} from './test-utils';
 import { maybeCaptureArgosVisual } from './visual';
 
 test.skip(
@@ -13,11 +17,26 @@ test.skip(
 );
 
 async function setTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
-  await page.locator('#theme-preference').selectOption(theme);
+  const themeSelect = page.locator('#theme-preference');
+  const outputSummary = page
+    .getByTestId('output-controls-card')
+    .locator(':scope > summary.card-summary');
+  const expandedForSelection = !(await themeSelect.isVisible());
+
+  if (expandedForSelection) {
+    await ensureOutputControlsExpanded(page);
+  }
+
+  await themeSelect.selectOption(theme);
   await page.waitForFunction(
     (nextTheme) => document.documentElement.getAttribute('data-theme') === nextTheme,
     theme
   );
+
+  if (expandedForSelection && (await outputSummary.isVisible())) {
+    await outputSummary.click();
+    await expect(themeSelect).not.toBeVisible();
+  }
 }
 
 test.describe('Visual Regression', () => {
@@ -187,6 +206,8 @@ test.describe('Visual Regression', () => {
   });
 
   test('bezier editor after control point move', async ({ page }, testInfo) => {
+    await ensureGenerationAdvancedExpanded(page);
+
     const p1xInput = page.getByLabel('P1 X coordinate');
     const initialX = parseFloat((await p1xInput.inputValue()) || '0');
 

@@ -37,6 +37,22 @@ async function ensureGenerationControlsExpanded(page: Page): Promise<void> {
   await expect(baseColorInput).toBeVisible({ timeout: 5000 });
 }
 
+export async function ensureOutputControlsExpanded(page: Page): Promise<void> {
+  const themeSelect = page.locator('#theme-preference');
+  if (await themeSelect.isVisible()) {
+    return;
+  }
+
+  const outputSummary = page
+    .getByTestId('output-controls-card')
+    .locator(':scope > summary.card-summary');
+  if (await outputSummary.isVisible()) {
+    await outputSummary.click();
+  }
+
+  await expect(themeSelect).toBeVisible({ timeout: 5000 });
+}
+
 export async function ensureGenerationAdvancedExpanded(page: Page): Promise<void> {
   await ensureGenerationControlsExpanded(page);
 
@@ -52,6 +68,8 @@ export async function ensureGenerationAdvancedExpanded(page: Page): Promise<void
 }
 
 export async function ensureOutputAdvancedExpanded(page: Page): Promise<void> {
+  await ensureOutputControlsExpanded(page);
+
   const gamutSelect = page.locator('#gamut-space');
   if (await gamutSelect.isVisible()) {
     return;
@@ -113,6 +131,7 @@ export async function getSwatchColor(page: Page, index: number = 0): Promise<str
  * Toggle theme and wait for transition
  */
 export async function toggleTheme(page: Page): Promise<void> {
+  await ensureOutputControlsExpanded(page);
   const themeSelect = page.locator('#theme-preference');
   const currentValue = await themeSelect.inputValue();
   const newValue = currentValue === 'dark' ? 'light' : 'dark';

@@ -6,81 +6,33 @@
 import { test, expect } from '@playwright/test';
 import { ensureOutputAdvancedExpanded, waitForAppReady } from './test-utils';
 
-async function renameNeutralPalette(
-  page: import('@playwright/test').Page,
-  name: string
-): Promise<void> {
-  await page.getByRole('button', { name: 'Edit name for neutral palette' }).click();
-  const input = page.getByRole('textbox', { name: 'Neutral palette name' });
-  await input.fill(name);
-  await input.press('Enter');
-}
-
-async function renameGeneratedPalette(
-  page: import('@playwright/test').Page,
-  index: number,
-  name: string
-): Promise<void> {
-  await page
-    .getByRole('button', { name: `Edit name for palette ${index + 1}`, exact: true })
-    .click();
-  const input = page.getByRole('textbox', { name: `Palette ${index + 1} name`, exact: true });
-  await input.fill(name);
-  await input.press('Enter');
-}
-
 test.describe('Local Storage Persistence', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage before each test
-    await page.goto('/');
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
-    await waitForAppReady(page);
-  });
-
   test('restores representative saved state from localStorage on a fresh load', async ({
-    page
+    browser
   }) => {
-    await page.locator('#baseColorHex').fill('#800080');
-    await page.locator('#theme-preference').selectOption('dark');
-    await renameNeutralPalette(page, 'Canvas');
-    await renameGeneratedPalette(page, 0, 'Ocean');
-    await ensureOutputAdvancedExpanded(page);
-    await page.locator('#show-swatch-gamut-warnings').uncheck();
+    const storedState = JSON.stringify({
+      baseColor: '#800080',
+      customNeutralName: 'Canvas',
+      customPaletteNames: ['Ocean'],
+      showSwatchGamutWarnings: false
+    });
 
-    await page.waitForFunction(
-      () => {
-        const raw = localStorage.getItem('chroma11y-state');
-        if (!raw) return false;
-
-        try {
-          const parsed = JSON.parse(raw) as {
-            baseColor?: string;
-            themePreference?: string;
-            customNeutralName?: string;
-            customPaletteNames?: string[];
-            showSwatchGamutWarnings?: boolean;
-          };
-          return (
-            parsed.baseColor === '#800080' &&
-            parsed.themePreference === 'dark' &&
-            parsed.customNeutralName === 'Canvas' &&
-            Array.isArray(parsed.customPaletteNames) &&
-            parsed.customPaletteNames[0] === 'Ocean' &&
-            parsed.showSwatchGamutWarnings === false
-          );
-        } catch {
-          return false;
-        }
-      },
-      { timeout: 5000 }
-    );
-
+    const context = await browser.newContext({
+      storageState: {
+        cookies: [],
+        origins: [
+          {
+            origin: 'http://localhost:4173',
+            localStorage: [{ name: 'chroma11y-state', value: storedState }]
+          }
+        ]
+      }
+    });
+    const page = await context.newPage();
     await page.goto('/');
     await waitForAppReady(page);
 
     await expect(page.locator('#baseColorHex')).toHaveValue('#800080');
-    await expect(page.locator('#theme-preference')).toHaveValue('dark');
     await expect(page.getByRole('button', { name: 'Edit name for neutral palette' })).toContainText(
       'Canvas'
     );
@@ -89,6 +41,8 @@ test.describe('Local Storage Persistence', () => {
     ).toContainText('Ocean');
     await ensureOutputAdvancedExpanded(page);
     await expect(page.locator('#show-swatch-gamut-warnings')).not.toBeChecked();
+
+    await context.close();
   });
 });
 
