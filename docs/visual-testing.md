@@ -52,23 +52,21 @@ The visual suite captures these states:
 
 1. App full page light
 2. App full page dark
-3. Palette grid default
-4. Neutral palette default
-5. Bezier editor default
-6. Focus indicator light
-7. Focus indicator dark
-8. Mobile full page light (375x667)
-9. Mobile full page dark (375x667)
-10. Sidebar controls panel desktop expanded
-11. Sidebar controls panel compact default state
-12. Output settings tooltip open in OKLCH mode
-13. Contrast controls in custom mode
-14. Contrast algorithm switched to APCA
-15. Drawer open from neutral swatch
-16. Palette grid after hue nudger change
-17. Neutral palette after lightness nudger change
-18. Bezier editor after control point move
-19. Export controls panel
+3. Focus indicator light
+4. Focus indicator dark
+5. Mobile full page light (375x667)
+6. Mobile full page dark (375x667)
+7. Sidebar controls panel compact default state
+8. Output settings tooltip open in OKLCH mode
+9. Drawer open from neutral swatch
+10. Palette grid after hue nudger change
+11. Bezier editor after control point move
+
+Guidance for future visual captures:
+
+- Prefer distinct risk states over exhaustive default-state coverage.
+- Let full-page captures subsume nested default component states when they are already visible in the page-level snapshot.
+- Add element-level captures only when the state would be too small, too transient, or too noisy to validate well in the full-page view.
 
 ## Local Development
 

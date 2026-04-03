@@ -45,6 +45,7 @@ Tests run in Chromium, Firefox, and WebKit.
 - Shared helpers: `test-utils.ts`
 - Use Playwright UI mode for local debugging: `npx playwright test --ui`
 - E2E should focus on full user flows, browser behavior, and integration outcomes
+- Do not add E2E coverage for browser-independent logic already covered by unit or DOM tests
 
 ## What E2E tests should cover
 
@@ -54,6 +55,13 @@ Tests run in Chromium, Firefox, and WebKit.
 - End-to-end workflows (input -> generation -> output/export)
 - Inline slider numeric input flows (spinbutton entry, native steppers, slider sync, and clamping)
 - Visual states through Argos capture points
+- Real downloads, responsive layout behavior, and focus-visible behavior that depends on the browser
+
+Use this checklist before adding an E2E test:
+
+1. The behavior depends on the real browser event model, layout engine, download pipeline, or cross-browser rendering.
+2. A unit or DOM test would miss the failure mode you are targeting.
+3. The test covers one high-value workflow or browser-specific risk, not generic app boot or duplicated serialization logic.
 
 ## Relationship to unit tests
 
@@ -79,17 +87,13 @@ Visual checkpoints are centralized in `visual-regression.spec.ts`.
 Current visual checkpoint coverage:
 
 - App full page (light, dark)
-- Palette grid + neutral palette defaults
-- Bezier editor default + moved control point state
 - Focus indicator states (light, dark)
 - Mobile full-page states (light, dark)
-- Sidebar controls panel (desktop expanded, compact default state)
+- Sidebar controls panel (compact default state)
 - Output settings tooltip open (OKLCH)
-- Contrast custom mode
-- Contrast algorithm APCA state
 - Drawer open state
-- Palette and neutral nudger-adjusted states
-- Export controls panel
+- One nudger-adjusted palette state
+- Bezier editor after control point move
 
 ## Adding new test files
 
@@ -102,13 +106,12 @@ When adding a new E2E test file:
 
 ## Test file inventory
 
-- `algorithm-validation.spec.ts` — color generation algorithm correctness
 - `bezier-editor.spec.ts` — bezier interactions, accessibility, integration behaviors
-- `design-tokens.spec.ts` — runtime behavior of design token system
+- `design-tokens.spec.ts` — runtime token behavior that depends on browser media, layout, or text scaling
 - `export-validation.spec.ts` — export format and download correctness
-- `focus-indicators.spec.ts` — keyboard navigation + focus behavior assertions
+- `focus-indicators.spec.ts` — browser-rendered focus indicator assertions
 - `mobile-responsiveness.spec.ts` — responsive layout and touch-target behavior
 - `netlify-smoke.spec.ts` — deploy-preview smoke checks (non-visual)
-- `persistence.spec.ts` — URL/localStorage persistence behavior
-- `ui-interactions.spec.ts` — non-visual interaction flows and UI behaviors
+- `persistence.spec.ts` — representative URL/localStorage restore and precedence behavior
+- `ui-interactions.spec.ts` — browser-specific tooltip and compact-constraints interactions
 - `visual-regression.spec.ts` — Argos-only visual checkpoint suite

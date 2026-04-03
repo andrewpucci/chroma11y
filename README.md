@@ -422,17 +422,25 @@ When upgrading dependencies, treat `package.json` and `package-lock.json` as a p
 
 **E2E Tests** (`e2e/`):
 
-- Algorithm validation, export formats, mobile responsiveness
-- Design token system (fluid typography, spacing, touch targets, motion preferences)
-- URL/localStorage persistence, UI interactions, compact mobile controls
-- Bezier editor interaction, focus indicators
-- Visual regression tests (themes, palettes, mobile layouts, bezier editor)
+- Browser-native history and input behavior
+- Real export/download correctness
+- Mobile responsiveness and compact control behavior
+- Browser-rendered focus indicators, tooltip stacking, and Bezier editor interaction
+- Representative URL/localStorage restore and precedence coverage
+- Visual regression checkpoints for distinct high-risk UI states
 
 **Unit & DOM Tests** (`src/`):
 
 - Color utility functions, export format generators, URL encoding/decoding
 - Component DOM tests (BezierEditor, ColorControls, ColorInfoDrawer, ContrastControls, DisplaySettings, ExportButtons, NeutralPalette, PaletteGrid)
 - Favicon generation
+
+Choose the lowest effective test layer:
+
+- Unit: pure logic, serialization, normalization, and store behavior
+- DOM: component rendering, persistence wiring, ARIA, and most form interactions
+- E2E: real browser event-model behavior, real downloads, responsive/layout behavior, drag/pointer flows, and cross-browser risks
+- Argos visual: distinct visual risk states that are difficult to protect with structural assertions alone
 
 ### Linting & Formatting
 
@@ -498,7 +506,8 @@ Primary contributor guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ### Testing Requirements
 
-- Add E2E tests for new features
+- Default to unit or DOM coverage unless the behavior depends on the real browser, layout engine, download pipeline, or cross-browser rendering
+- Add E2E tests only when lower layers would miss the failure mode
 - Ensure all tests pass before submitting PR
 - Maintain test coverage for critical paths
 

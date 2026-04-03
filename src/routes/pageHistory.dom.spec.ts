@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
 import { get } from 'svelte/store';
@@ -88,6 +88,15 @@ function getOutputAdvancedGroup(): HTMLDetailsElement {
 
 function getConstraintsCard(): HTMLElement {
   return screen.getByTestId('constraints-controls-card');
+}
+
+function getFirstConstraintRow(): HTMLElement {
+  const row = getConstraintsCard().querySelector('.constraint-row');
+  if (!(row instanceof HTMLElement)) {
+    throw new Error('Expected at least one constraint row');
+  }
+
+  return row;
 }
 
 async function openConstraintsCard(): Promise<void> {
@@ -223,11 +232,20 @@ async function renderPage(options: RenderPageOptions = {}): Promise<void> {
 async function openFirstConstraintEditor(): Promise<void> {
   await openConstraintsCard();
 
-  const editButton = screen.queryAllByRole('button', { name: 'Edit' })[0];
+  const editButton = within(getFirstConstraintRow()).queryByRole('button', { name: 'Edit' });
   if (editButton) {
     await fireEvent.click(editButton);
     await flushAppState();
   }
+}
+
+function getConstraintMetricSelect(): HTMLSelectElement {
+  const editor = getConstraintsCard().querySelector('.constraint-editor');
+  if (!(editor instanceof HTMLElement)) {
+    throw new Error('Expected first constraint editor to be open');
+  }
+
+  return within(editor).getByLabelText(/metric/i) as HTMLSelectElement;
 }
 
 async function flushHistoryCommit(): Promise<void> {
@@ -571,27 +589,29 @@ describe('page history integration', () => {
   it('round-trips inline constraint edits through undo and redo', async () => {
     // Start with a simpler setup - don't open editor initially
     await renderPage({ openOutputAdvanced: false });
-    await fireEvent.click(screen.getAllByRole('button', { name: /add target color/i })[0]);
+    await fireEvent.click(
+      within(getConstraintsCard()).getAllByRole('button', { name: /add target color/i })[0]
+    );
     await flushHistoryCommit();
 
     // Open editor and change metric in one operation
     await openFirstConstraintEditor();
-    const metricSelect = screen.getByLabelText(/metric/i);
+    const metricSelect = getConstraintMetricSelect();
     await fireEvent.change(metricSelect, { target: { value: '2000' } });
     await flushHistoryCommit();
-    expect(screen.getByLabelText(/metric/i)).toHaveValue('2000');
+    expect(getConstraintMetricSelect()).toHaveValue('2000');
 
     // Test undo - should revert to default metric
     await fireEvent.click(getUndoButton());
     await flushHistoryCommit();
     await openFirstConstraintEditor();
-    expect(screen.getByLabelText(/metric/i)).toHaveValue('ok');
+    expect(getConstraintMetricSelect()).toHaveValue('ok');
 
     // Test redo - should restore the changed metric
     await fireEvent.click(getRedoButton());
     await flushHistoryCommit();
     await openFirstConstraintEditor();
-    expect(screen.getByLabelText(/metric/i)).toHaveValue('2000');
+    expect(getConstraintMetricSelect()).toHaveValue('2000');
   }, 45000);
 
   it('preserves theme preference when reset is triggered from the header', async () => {
