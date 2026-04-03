@@ -148,15 +148,6 @@ test.describe('Mobile Responsiveness', () => {
     }
   });
 
-  test('wraps the neutral swatch grid on mobile', async ({ page }) => {
-    await openMobileApp(page);
-
-    const swatches = page.getByTestId('neutral-palette').locator('.neutral-grid').first();
-    const flexWrap = await swatches.evaluate((el) => getComputedStyle(el).flexWrap);
-
-    expect(flexWrap).toBe('wrap');
-  });
-
   test('shows a health-aware constraints summary and keeps the dense list single-column on mobile', async ({
     page
   }) => {

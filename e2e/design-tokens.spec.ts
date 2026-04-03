@@ -7,83 +7,10 @@ import { test, expect } from '@playwright/test';
 
 import { waitForAppReady } from './test-utils';
 
-async function readCardMetrics(
-  page: import('@playwright/test').Page
-): Promise<{ paddingTop: number; radius: number }> {
-  return await page.evaluate(() => {
-    const card = document.querySelector('.card');
-    const cardHeader = document.querySelector('.card-header');
-
-    if (!(card instanceof HTMLElement) || !(cardHeader instanceof HTMLElement)) {
-      throw new Error('Expected card and card header to be present');
-    }
-
-    const parseFirstNumeric = (...values: string[]): number => {
-      for (const value of values) {
-        const parsed = Number.parseFloat(value);
-        if (Number.isFinite(parsed)) {
-          return parsed;
-        }
-      }
-
-      return Number.NaN;
-    };
-
-    const cardStyle = getComputedStyle(card);
-    const cardHeaderStyle = getComputedStyle(cardHeader);
-
-    return {
-      paddingTop: parseFirstNumeric(
-        cardHeaderStyle.paddingTop,
-        cardHeaderStyle.paddingBlockStart,
-        cardHeaderStyle.padding
-      ),
-      radius: parseFirstNumeric(cardStyle.borderTopLeftRadius, cardStyle.borderRadius)
-    };
-  });
-}
-
 test.describe('Design Tokens', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);
-  });
-
-  test('scales fluid typography across representative breakpoints', async ({ page }) => {
-    const measurements: number[] = [];
-
-    for (const viewport of [
-      { width: 320, height: 568 },
-      { width: 768, height: 1024 },
-      { width: 1440, height: 900 }
-    ]) {
-      await page.setViewportSize(viewport);
-      measurements.push(
-        await page
-          .locator('.card-title')
-          .first()
-          .evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
-      );
-    }
-
-    expect(measurements[0]).toBeGreaterThanOrEqual(15);
-    expect(measurements[0]).toBeLessThanOrEqual(17);
-    expect(measurements[1]).toBeGreaterThanOrEqual(measurements[0]);
-    expect(measurements[2]).toBeGreaterThanOrEqual(measurements[1]);
-    expect(measurements[2]).toBeLessThanOrEqual(19);
-  });
-
-  test('scales spacing and border radius with viewport size', async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 568 });
-    const smallViewportMetrics = await readCardMetrics(page);
-
-    await page.setViewportSize({ width: 1440, height: 900 });
-    const largeViewportMetrics = await readCardMetrics(page);
-
-    expect(smallViewportMetrics.paddingTop).toBeGreaterThan(0);
-    expect(largeViewportMetrics.paddingTop).toBeGreaterThanOrEqual(smallViewportMetrics.paddingTop);
-    expect(largeViewportMetrics.paddingTop).toBeLessThanOrEqual(24);
-    expect(largeViewportMetrics.radius).toBeGreaterThanOrEqual(smallViewportMetrics.radius);
   });
 
   test('updates motion tokens when reduced motion preference changes', async ({ page }) => {

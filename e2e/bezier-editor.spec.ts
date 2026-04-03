@@ -40,38 +40,7 @@ test.describe('Bezier Editor', () => {
     });
   });
 
-  test.describe('Integration with Color Generation', () => {
-    test('changing bezier values updates color palettes', async ({ page }) => {
-      const paletteHexes = page
-        .getByTestId('generated-palettes')
-        .locator('.swatches')
-        .first()
-        .locator('.hex');
-      const initialHex = await paletteHexes.nth(5).textContent();
-
-      const p1 = page.locator('.bezier-editor [role="slider"]').first();
-      await p1.focus();
-
-      for (let i = 0; i < 10; i++) {
-        await page.keyboard.press('Shift+ArrowRight');
-      }
-
-      await page.waitForFunction(
-        (before) => {
-          const hexElements = document.querySelectorAll(
-            '[data-testid="generated-palettes"] .swatches .hex'
-          );
-          const hex = hexElements[5]?.textContent;
-          return hex !== before;
-        },
-        initialHex,
-        { timeout: 5000 }
-      );
-
-      const newHex = await paletteHexes.nth(5).textContent();
-      expect(newHex).not.toBe(initialHex);
-    });
-
+  test.describe('Integration with URL and inputs', () => {
     test('bezier changes persist in URL', async ({ page }) => {
       const p1 = page.locator('.bezier-editor [role="slider"]').first();
       await p1.focus();

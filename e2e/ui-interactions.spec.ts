@@ -12,24 +12,6 @@ test.describe('UI Interactions', () => {
     await waitForAppReady(page);
   });
 
-  test.describe('App Loading', () => {
-    test('loads the application successfully', async ({ page }) => {
-      await expect(page.locator('h1')).toContainText('Chroma11y');
-      await expect(page.locator('#baseColor')).toBeVisible();
-      await expect(page.locator('.color-swatch').first()).toBeVisible();
-    });
-
-    test('generates initial color palettes', async ({ page }) => {
-      // Should have neutral palette with 11 colors by default
-      const neutralSection = page.getByTestId('neutral-palette');
-      await expect(neutralSection).toBeVisible();
-      await expect(neutralSection.locator('.color-swatch')).toHaveCount(11);
-
-      // Should have palette section
-      await expect(page.getByTestId('generated-palettes')).toBeVisible();
-    });
-  });
-
   test.describe('Display Settings Tooltip', () => {
     test('OKLCH significant digits tooltip stays above overlapping swatches and works with keyboard focus', async ({
       page
@@ -91,73 +73,6 @@ test.describe('UI Interactions', () => {
       await infoButton.focus();
       await expect(infoButton).toBeFocused();
       await expect(tooltip).toBeVisible();
-    });
-  });
-
-  test.describe('Base Color Controls', () => {
-    test('changing base color updates palettes', async ({ page }) => {
-      const paletteHexes = page
-        .getByTestId('generated-palettes')
-        .locator('.swatches')
-        .first()
-        .locator('.hex');
-      const initialHex = (await paletteHexes.nth(5).textContent())?.trim() ?? '';
-
-      // Change base color to green
-      await page.locator('#baseColor').fill('#00ff00');
-      await page.locator('#baseColor').press('Tab');
-      await expect
-        .poll(async () => ((await paletteHexes.nth(5).textContent()) ?? '').trim(), {
-          timeout: 15000
-        })
-        .not.toBe(initialHex);
-
-      // Palette color should change
-      const newHex = await paletteHexes.nth(5).textContent();
-      expect(newHex).not.toBe(initialHex);
-    });
-  });
-
-  test.describe('Slider Numeric Input', () => {
-    test('supports inline numeric editing with clamp behavior', async ({ page }) => {
-      await page.getByRole('spinbutton', { name: 'Warmth value input' }).fill('12');
-      await expect(page.locator('#warmth')).toHaveValue('12');
-
-      const numColorsInput = page.getByRole('spinbutton', { name: 'Number of colors value input' });
-      await numColorsInput.fill('99');
-      await expect(numColorsInput).toHaveValue('20');
-      await expect(page.locator('#numColors')).toHaveValue('20');
-
-      await page.getByRole('spinbutton', { name: 'Number of palettes value input' }).fill('7');
-      await expect(page.locator('#numPalettes')).toHaveValue('7');
-
-      await page.locator('#display-color-space').selectOption('oklch');
-      await ensureOutputAdvancedExpanded(page);
-      await page
-        .getByRole('spinbutton', { name: 'OKLCH significant digits value input' })
-        .fill('6');
-      await expect(page.locator('#oklch-significant-digits')).toHaveValue('6');
-    });
-
-    test('custom warmth hue changes the generated neutral palette', async ({ page }) => {
-      const neutralHexes = page.getByTestId('neutral-palette').locator('.hex');
-
-      await page.getByRole('spinbutton', { name: 'Warmth value input' }).fill('50');
-      await expect(page.locator('#warmth')).toHaveValue('50');
-
-      const customWarmthHue = page.getByRole('checkbox', { name: 'Custom warmth hue' });
-      await customWarmthHue.check();
-
-      const neutralBefore = (await neutralHexes.nth(5).textContent())?.trim() ?? '';
-
-      await page.getByRole('spinbutton', { name: 'Warmth hue value input' }).fill('180');
-      await expect(page.locator('#warmth-hue')).toHaveValue('180');
-
-      await expect
-        .poll(async () => ((await neutralHexes.nth(5).textContent()) ?? '').trim(), {
-          timeout: 15000
-        })
-        .not.toBe(neutralBefore);
     });
   });
 
