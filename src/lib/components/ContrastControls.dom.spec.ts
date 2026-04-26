@@ -57,7 +57,12 @@ describe('ContrastControls', () => {
   it('renders contrast algorithm select and WCAG indicator checklist by default', () => {
     render(ContrastControls);
 
-    expect(screen.getByLabelText(/contrast algorithm/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Contrast algorithm', { selector: 'select' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /explain contrast algorithm/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /explain swatch contrast indicators/i })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /explain contrast mode/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/show wcag 3 to 1 indicator/i)).toBeChecked();
     expect(screen.getByLabelText(/show wcag aa indicator/i)).toBeChecked();
     expect(screen.getByLabelText(/show wcag aaa indicator/i)).toBeChecked();
@@ -70,7 +75,7 @@ describe('ContrastControls', () => {
   it('switches indicator checklist when changing algorithm to APCA', async () => {
     render(ContrastControls);
 
-    await fireEvent.change(screen.getByLabelText(/contrast algorithm/i), {
+    await fireEvent.change(screen.getByLabelText('Contrast algorithm', { selector: 'select' }), {
       target: { value: 'APCA' }
     });
 
@@ -101,7 +106,7 @@ describe('ContrastControls', () => {
     await fireEvent.click(screen.getByLabelText(/show wcag 3 to 1 indicator/i));
     await fireEvent.click(screen.getByLabelText(/show wcag aa indicator/i));
     await fireEvent.click(screen.getByLabelText(/show wcag aaa indicator/i));
-    await fireEvent.change(screen.getByLabelText(/contrast algorithm/i), {
+    await fireEvent.change(screen.getByLabelText('Contrast algorithm', { selector: 'select' }), {
       target: { value: 'APCA' }
     });
     await fireEvent.click(screen.getByLabelText(/show apca large indicator/i));
@@ -122,7 +127,9 @@ describe('ContrastControls', () => {
   it('renders auto-mode reference controls', () => {
     render(ContrastControls);
 
-    expect(screen.getByLabelText(/contrast mode/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Contrast Mode', { selector: 'select' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /explain low reference/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /explain high reference/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /pick low reference/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /pick high reference/i })).toBeInTheDocument();
     expect(
@@ -133,7 +140,7 @@ describe('ContrastControls', () => {
   it('switches to manual mode and shows manual color inputs', async () => {
     render(ContrastControls);
 
-    const modeSelect = screen.getByLabelText(/contrast mode/i);
+    const modeSelect = screen.getByLabelText('Contrast Mode', { selector: 'select' });
     await fireEvent.change(modeSelect, { target: { value: 'manual' } });
 
     expect(get(contrastMode)).toBe('manual');
@@ -144,7 +151,7 @@ describe('ContrastControls', () => {
   it('does not update store when given an invalid manual hex value', async () => {
     render(ContrastControls);
 
-    await fireEvent.change(screen.getByLabelText(/contrast mode/i), {
+    await fireEvent.change(screen.getByLabelText('Contrast Mode', { selector: 'select' }), {
       target: { value: 'manual' }
     });
 

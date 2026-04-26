@@ -188,4 +188,23 @@ describe('ColorControls', () => {
     expect(p1XInput.value).toBe('0.16');
     expect(p2YInput.value).toBe('0.38');
   });
+
+  it('renders help tooltip triggers for major color controls', () => {
+    render(ColorControls, {
+      props: {
+        warmth: 12,
+        warmthHue: 180,
+        advancedOpen: true
+      }
+    });
+
+    expect(screen.getByRole('button', { name: 'Explain Base Color' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Warmth Amount' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Custom Warmth Hue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Warmth Hue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Saturation' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Number of Colors' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Number of Palettes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Bezier Curve' })).toBeInTheDocument();
+  });
 });

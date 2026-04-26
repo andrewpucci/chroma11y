@@ -48,6 +48,7 @@ describe('DisplaySettings', () => {
     const advancedSummary = getAdvancedSummary();
 
     expect(screen.getByLabelText('Display color space format')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Color Space' })).toBeInTheDocument();
     expect(screen.getByLabelText('Theme preference')).toBeInTheDocument();
     expect(screen.getByLabelText('Show step labels on swatches')).toBeInTheDocument();
     expect(screen.getByLabelText('Show value labels on swatches')).toBeInTheDocument();
@@ -64,6 +65,8 @@ describe('DisplaySettings', () => {
 
     await user.click(getAdvancedSummary());
     expect(screen.getByLabelText('Gamut mapping target')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Gamut Mapping' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explain Gamut Warnings' })).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Display color space format'), 'oklch');
 

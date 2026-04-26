@@ -76,6 +76,35 @@ test.describe('UI Interactions', () => {
     });
   });
 
+  test.describe('Getting Started Guide', () => {
+    test('keeps keyboard focus inside the modal and returns focus to the Help trigger', async ({
+      page
+    }) => {
+      const helpButton = page.getByRole('button', { name: 'Open Getting Started guide' });
+      await helpButton.click();
+
+      const dialog = page.getByRole('dialog', { name: 'Getting Started' });
+      await expect(dialog).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Close Getting Started guide' })).toBeFocused();
+
+      for (let index = 0; index < 12; index += 1) {
+        await page.keyboard.press('Tab');
+        await expect
+          .poll(async () => {
+            return await page.evaluate(() =>
+              Boolean(document.activeElement?.closest('#getting-started-dialog'))
+            );
+          })
+          .toBe(true);
+      }
+
+      await page.keyboard.press('Escape');
+
+      await expect(dialog).toBeHidden();
+      await expect(helpButton).toBeFocused();
+    });
+  });
+
   test.describe('Constraints Panel', () => {
     test('keeps closed constraints content out of the tab order until expanded and supports filter and enabled toggles', async ({
       page

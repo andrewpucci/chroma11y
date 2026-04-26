@@ -26,6 +26,7 @@ describe('ExportButtons', () => {
   it('disables export actions when there are no colors', () => {
     render(ExportButtons, { props: { neutrals: [], palettes: [] } });
 
+    expect(screen.getByRole('button', { name: /explain export format/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /export json design tokens/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /export css custom properties/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /export scss variables/i })).toBeDisabled();
