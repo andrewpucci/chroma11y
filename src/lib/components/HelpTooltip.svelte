@@ -1,4 +1,5 @@
 <script lang="ts">
+  /* eslint-disable svelte/no-dom-manipulating */
   import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 
   import Icon from './Icon.svelte';
@@ -24,6 +25,22 @@
   let tooltipY = $state(0);
   const alignEnd = $derived(align === 'end');
   const placement = $derived(alignEnd ? 'top-end' : 'top-start');
+
+  $effect(() => {
+    if (!tooltipElement || tooltipElement.parentElement === document.body) {
+      return;
+    }
+
+    // Keep the floating tooltip out of clipped stacking contexts so it can
+    // overlay the surrounding controls consistently.
+    document.body.appendChild(tooltipElement);
+
+    return () => {
+      if (tooltipElement?.parentElement === document.body) {
+        tooltipElement.remove();
+      }
+    };
+  });
 
   function show(): void {
     if (!disabled) {
@@ -101,23 +118,23 @@
   >
     <Icon name="help" size="var(--icon-size-help)" stroke="var(--icon-stroke-help)" />
   </button>
-  <span
-    {id}
-    bind:this={tooltipElement}
-    class="help-tooltip"
-    class:help-tooltip--open={open}
-    role="tooltip"
-    hidden={!open}
-    style:left={`${tooltipX}px`}
-    style:top={`${tooltipY}px`}
-  >
-    {text}
-  </span>
+</span>
+
+<span
+  {id}
+  bind:this={tooltipElement}
+  class="help-tooltip"
+  class:help-tooltip--open={open}
+  role="tooltip"
+  hidden={!open}
+  style:left={`${tooltipX}px`}
+  style:top={`${tooltipY}px`}
+>
+  {text}
 </span>
 
 <style>
   .help-tooltip-wrapper {
-    --help-tooltip-inline-size: min(36ch, calc(100vw - var(--space-xl)));
     position: relative;
     display: inline-flex;
     align-items: center;
@@ -159,7 +176,7 @@
     inset-block-start: 0;
     inset-inline-start: 0;
     z-index: 30;
-    inline-size: var(--help-tooltip-inline-size);
+    inline-size: min(36ch, calc(100vw - var(--space-xl)));
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
     border: var(--border-width-thin) solid var(--border);
