@@ -4,6 +4,7 @@ lighthouse-report
 .lighthouseci
 coverage
 node_modules
+.npm-cache
 
 # Output
 /.svelte-kit
