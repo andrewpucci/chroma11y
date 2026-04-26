@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { HELP_TOPICS } from '$lib/help/helpContent';
   import Icon from './Icon.svelte';
   import CheckboxRow from './CheckboxRow.svelte';
+  import HelpTooltip from './HelpTooltip.svelte';
   import {
     displayColorSpace,
     oklchDisplaySignificantDigits,
@@ -141,7 +143,14 @@
 <section class="display-settings" data-testid="display-settings">
   <section class="control-subsection">
     <div class="field">
-      <label class="label" for="display-color-space">Color Space</label>
+      <div class="label-row">
+        <label class="label" for="display-color-space">Color Space</label>
+        <HelpTooltip
+          id="color-space-help"
+          label="Explain Color Space"
+          text={HELP_TOPICS.colorSpace.tooltip}
+        />
+      </div>
       <select
         class="select"
         id="display-color-space"
@@ -228,7 +237,7 @@
             groupHelpText="Use slider for coarse adjustment and number input for precise adjustment."
             infoButtonLabel="Explain OKLCH significant digits"
             infoTooltipId="oklch-significant-digits-help"
-            infoTooltipText="Controls how many significant digits OKLCH swatches use for rendering and labels."
+            infoTooltipText={HELP_TOPICS.oklchPrecision.tooltip}
             onRangeInput={handleOklchSignificantDigitsInput}
             onRangeChange={handleOklchSignificantDigitsChange}
             onNumberInput={handleOklchSignificantDigitsInput}
@@ -237,7 +246,14 @@
         {/if}
 
         <div class="field">
-          <label class="label" for="gamut-space">Gamut Mapping</label>
+          <div class="label-row">
+            <label class="label" for="gamut-space">Gamut Mapping</label>
+            <HelpTooltip
+              id="gamut-mapping-help"
+              label="Explain Gamut Mapping"
+              text={HELP_TOPICS.gamutMapping.tooltip}
+            />
+          </div>
           <select
             class="select"
             id="gamut-space"
@@ -259,12 +275,21 @@
         </div>
 
         <div class="field">
-          <span class="label">Gamut Warnings</span>
+          <div class="label-row">
+            <span class="label">Gamut Warnings</span>
+            <HelpTooltip
+              id="gamut-warnings-help"
+              label="Explain Gamut Warnings"
+              text={HELP_TOPICS.gamutWarnings.tooltip}
+            />
+          </div>
           <CheckboxRow
             id="show-swatch-gamut-warnings"
             label="Show warnings on gamut-mapped swatches"
             checked={showSwatchGamutWarningsLocal}
             ariaLabel="Show gamut warnings on mapped swatches"
+            helpLabel="Explain gamut-mapped swatch warnings"
+            helpText={HELP_TOPICS.gamutWarnings.tooltip}
             onChange={handleSwatchGamutWarningsToggle}
           />
         </div>
@@ -312,6 +337,13 @@
     display: grid;
     gap: var(--space-xs);
     padding: var(--space-xs) 0;
+  }
+
+  .label-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
   }
 
   .advanced-group {

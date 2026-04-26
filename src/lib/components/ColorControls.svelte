@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
+  import { HELP_TOPICS } from '$lib/help/helpContent';
   import BezierEditor from './BezierEditor.svelte';
   import CheckboxRow from './CheckboxRow.svelte';
+  import HelpTooltip from './HelpTooltip.svelte';
   import Icon from './Icon.svelte';
   import SliderNumberField from './SliderNumberField.svelte';
   import { getChromaMultiplierBounds } from '$lib/chromaMultiplier';
@@ -241,7 +243,14 @@
   <section class="control-subsection">
     <div class="control-grid">
       <div class="field base-color">
-        <label class="label" for="baseColor">Base Color</label>
+        <div class="label-row">
+          <label class="label" for="baseColor">Base Color</label>
+          <HelpTooltip
+            id="base-color-help"
+            label="Explain Base Color"
+            text={HELP_TOPICS.baseColor.tooltip}
+          />
+        </div>
         <div class="base-color-row">
           <input
             id="baseColor"
@@ -273,6 +282,9 @@
         step={warmthRange.step}
         bind:value={warmth}
         groupHelpText={warmthHelpText}
+        infoButtonLabel={`Explain ${warmthLabel}`}
+        infoTooltipId="warmth-help"
+        infoTooltipText={HELP_TOPICS.warmth.tooltip}
         onRangeChange={onWarmthCommit}
         onNumberInput={clampWarmthFromInput}
         onNumberChange={onWarmthCommit}
@@ -286,6 +298,8 @@
             label="Custom Warmth Hue"
             checked={warmthHueEnabled}
             ariaLabel="Custom Warmth Hue"
+            helpLabel="Explain Custom Warmth Hue"
+            helpText={HELP_TOPICS.customWarmthHue.tooltip}
             onChange={handleWarmthHueToggle}
           />
           {#if warmthHueEnabled}
@@ -298,6 +312,9 @@
               step={WARMTH_HUE_RANGE.step}
               bind:value={warmthHueValue}
               groupHelpText="Hue angle 0 to 359 degrees. Overrides the default warm/cool hue direction."
+              infoButtonLabel="Explain Warmth Hue"
+              infoTooltipId="warmth-hue-help"
+              infoTooltipText={HELP_TOPICS.customWarmthHue.tooltip}
               onRangeChange={handleWarmthHueRangeChange}
               onNumberInput={clampWarmthHueFromInput}
               onNumberChange={onWarmthHueCommit}
@@ -316,6 +333,9 @@
         step={SATURATION_RANGE.step}
         bind:value={chromaMultiplier}
         groupHelpText="Normalized range 0 to 1. Use slider for coarse adjustment and number input for precise adjustment."
+        infoButtonLabel="Explain Saturation"
+        infoTooltipId="saturation-help"
+        infoTooltipText={HELP_TOPICS.saturation.tooltip}
         onRangeChange={onSaturationCommit}
         onNumberInput={clampSaturationFromInput}
         onNumberChange={onSaturationCommit}
@@ -331,6 +351,9 @@
         step={NUM_COLORS_RANGE.step}
         bind:value={numColors}
         groupHelpText={`Range ${NUM_COLORS_RANGE.min} to ${NUM_COLORS_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+        infoButtonLabel="Explain Number of Colors"
+        infoTooltipId="number-of-colors-help"
+        infoTooltipText={HELP_TOPICS.numberOfColors.tooltip}
         onRangePointerDown={handlePointerDown}
         onRangeInput={handleKeyboardInput}
         onRangeChange={onNumColorsCommit}
@@ -348,6 +371,9 @@
         step={NUM_PALETTES_RANGE.step}
         bind:value={numPalettes}
         groupHelpText={`Range ${NUM_PALETTES_RANGE.min} to ${NUM_PALETTES_RANGE.max}. Use slider for coarse adjustment and number input for precise adjustment.`}
+        infoButtonLabel="Explain Number of Palettes"
+        infoTooltipId="number-of-palettes-help"
+        infoTooltipText={HELP_TOPICS.numberOfPalettes.tooltip}
         onRangePointerDown={handlePointerDown}
         onRangeInput={handleKeyboardInput}
         onRangeChange={onNumPalettesCommit}
@@ -382,7 +408,14 @@
     <div class="advanced-panel">
       <div class="advanced-body">
         <div class="bezier-section">
-          <div class="bezier-title">Bezier Curve</div>
+          <div class="label-row">
+            <div class="bezier-title">Bezier Curve</div>
+            <HelpTooltip
+              id="bezier-curve-help"
+              label="Explain Bezier Curve"
+              text={HELP_TOPICS.bezierCurve.tooltip}
+            />
+          </div>
           <BezierEditor
             bind:x1
             bind:y1
@@ -432,6 +465,13 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-md);
+  }
+
+  .label-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
   }
 
   .base-color-row {

@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
+  import { HELP_TOPICS } from '$lib/help/helpContent';
   import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/exportUtils';
   import { copyToClipboard } from '$lib/colorUtils';
   import { announce } from '$lib/announce';
   import Button from './Button.svelte';
+  import HelpTooltip from './HelpTooltip.svelte';
   import Icon from './Icon.svelte';
 
   interface Props {
@@ -78,6 +80,14 @@
 </script>
 
 <div class="export-buttons">
+  <div class="label-row">
+    <span class="label">Export Format</span>
+    <HelpTooltip
+      id="export-format-help"
+      label="Explain Export Format"
+      text={HELP_TOPICS.exportFormat.tooltip}
+    />
+  </div>
   <Button
     onclick={shareURL}
     ariaLabel={copyConfirmed ? 'URL copied to clipboard' : 'Copy shareable URL to clipboard'}
@@ -117,6 +127,13 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
+  }
+
+  .label-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
   }
 
   .label-enter {
