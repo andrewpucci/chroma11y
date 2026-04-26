@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import HelpTooltip from './HelpTooltip.svelte';
 
   interface Props {
     id: string;
@@ -115,14 +116,7 @@
   <div class="label-row">
     <label class="label" id={labelId} for={id}>{label}</label>
     {#if infoButtonLabel && infoTooltipId && infoTooltipText}
-      <span class="help-popover">
-        <button type="button" class="info-button" aria-label={infoButtonLabel}>
-          <span aria-hidden="true">i</span>
-        </button>
-        <span id={infoTooltipId} class="help-tooltip" role="tooltip">
-          {infoTooltipText}
-        </span>
-      </span>
+      <HelpTooltip id={infoTooltipId} label={infoButtonLabel} text={infoTooltipText} align="end" />
     {/if}
   </div>
 
@@ -214,61 +208,6 @@
     text-align: center;
     min-height: var(--touch-target-comfortable);
     padding-block: 0;
-  }
-
-  .help-popover {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .info-button {
-    width: var(--touch-target-min);
-    min-width: var(--touch-target-min);
-    height: var(--touch-target-min);
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: var(--bg-primary);
-    color: var(--text-secondary);
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-semibold);
-    line-height: 1;
-    cursor: help;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .help-tooltip {
-    position: absolute;
-    inset-block-start: calc(100% + var(--space-xs));
-    inset-inline-end: 0;
-    inset-inline-start: auto;
-    z-index: 20;
-    inline-size: min(32ch, calc(100vw - var(--space-xl)));
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: var(--font-size-sm);
-    line-height: var(--line-height-normal);
-    box-shadow: 0 6px 16px color-mix(in oklab, black 14%, transparent);
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(-2px);
-    pointer-events: none;
-    transition:
-      opacity var(--transition-fast),
-      transform var(--transition-fast),
-      visibility var(--transition-fast);
-  }
-
-  .help-popover:hover .help-tooltip,
-  .help-popover:focus-within .help-tooltip {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
   }
 
   @media (max-width: 768px) {

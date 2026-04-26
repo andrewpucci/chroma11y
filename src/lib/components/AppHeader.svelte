@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { HistoryMenuEntry } from '$lib/history';
+  import { gettingStartedDialog, openGettingStartedGuide } from '$lib/help/helpDialogStore';
   import Brand from './Brand.svelte';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
@@ -30,12 +31,28 @@
     onUndoJump = () => {},
     onRedoJump = () => {}
   }: Props = $props();
+
+  let gettingStartedOpen = $derived($gettingStartedDialog.open);
+
+  function handleHelpOpen(event: MouseEvent): void {
+    openGettingStartedGuide(event.currentTarget as HTMLElement);
+  }
 </script>
 
 <header class="topbar">
   <div class="topbar-inner" bind:this={bindInner}>
     <Brand />
     <div class="history-controls" aria-label="History controls">
+      <Button
+        onclick={handleHelpOpen}
+        variant="secondary"
+        ariaLabel="Open Getting Started guide"
+        ariaControls="getting-started-dialog"
+        ariaExpanded={gettingStartedOpen}
+      >
+        <Icon name="help" />
+        <span>Help</span>
+      </Button>
       <Button onclick={onReset} variant="ghost" ariaLabel="Reset all settings to defaults">
         <Icon name="reset" />
         <span>Reset</span>

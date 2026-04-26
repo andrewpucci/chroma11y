@@ -83,6 +83,8 @@
   import AppHeader from '$lib/components/AppHeader.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import ColorInfoDrawer from '$lib/components/ColorInfoDrawer.svelte';
+  import GettingStartedDialog from '$lib/components/GettingStartedDialog.svelte';
+  import GettingStartedCallout from '$lib/components/GettingStartedCallout.svelte';
 
   interface Props {
     scheduler?: PageScheduler;
@@ -1289,6 +1291,7 @@
     onUndoJump={handleHistoryJump}
     onRedoJump={handleHistoryJump}
   />
+  <GettingStartedDialog />
 
   <div class="layout-container">
     <div class="layout" data-testid="app-layout" bind:this={layoutEl}>
@@ -1331,6 +1334,8 @@
               />
             {/key}
           </Card>
+
+          <GettingStartedCallout />
 
           <Card
             title="Constraints"
@@ -1433,6 +1438,8 @@
               />
             {/key}
           </Card>
+
+          <GettingStartedCallout />
 
           <Card
             title="Constraints"

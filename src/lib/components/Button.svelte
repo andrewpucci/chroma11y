@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte';
 
   interface Props {
-    onclick?: () => void;
+    onclick?: (event: MouseEvent) => void;
     disabled?: boolean;
     variant?: 'primary' | 'secondary' | 'ghost';
     compact?: boolean;

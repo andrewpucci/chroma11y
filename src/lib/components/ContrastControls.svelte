@@ -20,7 +20,9 @@
     resolveGeneratedPaletteNames,
     resolveNeutralPaletteName
   } from '$lib/paletteNameUtils';
+  import { HELP_TOPICS } from '$lib/help/helpContent';
   import CheckboxRow from './CheckboxRow.svelte';
+  import HelpTooltip from './HelpTooltip.svelte';
   import type { ContrastAlgorithm, SwatchContrastIndicators } from '$lib/types';
 
   interface Props {
@@ -55,20 +57,6 @@
         )
       : []
   );
-  const APCA_LEVEL_DESCRIPTIONS = {
-    large:
-      'APCA Lc 45 minimum for larger, heavier text such as headlines, and for icons or pictograms with fine detail.',
-    fluent:
-      'APCA Lc 60 minimum for fluent content text that is not body/column text. This is text users are expected to read.',
-    body: 'APCA Lc 75 minimum for columns of body text where readability is critical. APCA guidance prefers Lc 90 for body text.'
-  } as const;
-  const WCAG_LEVEL_DESCRIPTIONS = {
-    threeToOne:
-      'WCAG 2.2 3:1 threshold used for large text, UI components/graphics, and link color differentiation from surrounding text when color is used.',
-    aa: 'WCAG 2.2 AA text threshold: 4.5:1 for normal-size text.',
-    aaa: 'WCAG 2.2 AAA text threshold: 7:1 for normal-size text.'
-  } as const;
-
   function handleModeChange(event: Event) {
     const target = event.target as HTMLSelectElement;
     const newMode = target.value as 'auto' | 'manual';
@@ -225,7 +213,14 @@
 
 <section class="contrast-controls">
   <div class="field">
-    <label class="label" for="contrast-algorithm">Contrast Algorithm</label>
+    <div class="label-row">
+      <label class="label" for="contrast-algorithm">Contrast Algorithm</label>
+      <HelpTooltip
+        id="contrast-algorithm-help"
+        label="Explain Contrast Algorithm"
+        text={HELP_TOPICS.contrastAlgorithm.tooltip}
+      />
+    </div>
     <select
       class="select"
       id="contrast-algorithm"
@@ -239,7 +234,14 @@
   </div>
 
   <div class="field">
-    <span class="label">Swatch Contrast Indicators</span>
+    <div class="label-row">
+      <span class="label">Swatch Contrast Indicators</span>
+      <HelpTooltip
+        id="indicator-levels-help"
+        label="Explain Swatch Contrast Indicators"
+        text={HELP_TOPICS.indicatorLevels.tooltip}
+      />
+    </div>
     <div class="checklist" role="group" aria-label="Swatch contrast indicators">
       {#if contrastAlgorithmLocal === 'WCAG'}
         <CheckboxRow
@@ -248,7 +250,7 @@
           checked={swatchContrastIndicatorsLocal.wcagThreeToOne}
           ariaLabel="Show WCAG 3 to 1 indicator"
           helpLabel="Explain WCAG 3 to 1 level"
-          helpText={WCAG_LEVEL_DESCRIPTIONS.threeToOne}
+          helpText={HELP_TOPICS.wcagThreeToOne.tooltip}
           onChange={(checked) => handleIndicatorToggle('wcagThreeToOne', checked)}
         />
         <CheckboxRow
@@ -257,7 +259,7 @@
           checked={swatchContrastIndicatorsLocal.wcagAA}
           ariaLabel="Show WCAG AA indicator"
           helpLabel="Explain WCAG AA level"
-          helpText={WCAG_LEVEL_DESCRIPTIONS.aa}
+          helpText={HELP_TOPICS.wcagAA.tooltip}
           onChange={(checked) => handleIndicatorToggle('wcagAA', checked)}
         />
         <CheckboxRow
@@ -266,7 +268,7 @@
           checked={swatchContrastIndicatorsLocal.wcagAAA}
           ariaLabel="Show WCAG AAA indicator"
           helpLabel="Explain WCAG AAA level"
-          helpText={WCAG_LEVEL_DESCRIPTIONS.aaa}
+          helpText={HELP_TOPICS.wcagAAA.tooltip}
           onChange={(checked) => handleIndicatorToggle('wcagAAA', checked)}
         />
       {:else}
@@ -276,7 +278,7 @@
           checked={swatchContrastIndicatorsLocal.apcaLarge}
           ariaLabel="Show APCA Large indicator"
           helpLabel="Explain APCA Large level"
-          helpText={APCA_LEVEL_DESCRIPTIONS.large}
+          helpText={HELP_TOPICS.apcaLarge.tooltip}
           onChange={(checked) => handleIndicatorToggle('apcaLarge', checked)}
         />
         <CheckboxRow
@@ -285,7 +287,7 @@
           checked={swatchContrastIndicatorsLocal.apcaFluent}
           ariaLabel="Show APCA Fluent indicator"
           helpLabel="Explain APCA Fluent level"
-          helpText={APCA_LEVEL_DESCRIPTIONS.fluent}
+          helpText={HELP_TOPICS.apcaFluent.tooltip}
           onChange={(checked) => handleIndicatorToggle('apcaFluent', checked)}
         />
         <CheckboxRow
@@ -294,7 +296,7 @@
           checked={swatchContrastIndicatorsLocal.apcaBody}
           ariaLabel="Show APCA Body indicator"
           helpLabel="Explain APCA Body level"
-          helpText={APCA_LEVEL_DESCRIPTIONS.body}
+          helpText={HELP_TOPICS.apcaBody.tooltip}
           onChange={(checked) => handleIndicatorToggle('apcaBody', checked)}
         />
       {/if}
@@ -302,7 +304,14 @@
   </div>
 
   <div class="field">
-    <label class="label" for="contrast-mode">Contrast Mode</label>
+    <div class="label-row">
+      <label class="label" for="contrast-mode">Contrast Mode</label>
+      <HelpTooltip
+        id="contrast-mode-help"
+        label="Explain Contrast Mode"
+        text={HELP_TOPICS.contrastMode.tooltip}
+      />
+    </div>
     <select class="select" id="contrast-mode" value={contrastModeLocal} onchange={handleModeChange}>
       <option value="auto">Auto</option>
       <option value="manual">Manual</option>
@@ -312,7 +321,14 @@
   {#if contrastModeLocal === 'manual'}
     <div class="manual-controls">
       <div class="field">
-        <label class="label" for="contrast-low">Low Contrast Color</label>
+        <div class="label-row">
+          <label class="label" for="contrast-low">Low Contrast Color</label>
+          <HelpTooltip
+            id="low-reference-help"
+            label="Explain Low Reference"
+            text={HELP_TOPICS.lowReference.tooltip}
+          />
+        </div>
         <div class="color-input-group">
           <input
             id="contrast-low"
@@ -334,7 +350,14 @@
       </div>
 
       <div class="field">
-        <label class="label" for="contrast-high">High Contrast Color</label>
+        <div class="label-row">
+          <label class="label" for="contrast-high">High Contrast Color</label>
+          <HelpTooltip
+            id="high-reference-help"
+            label="Explain High Reference"
+            text={HELP_TOPICS.highReference.tooltip}
+          />
+        </div>
         <div class="color-input-group">
           <input
             id="contrast-high"
@@ -358,7 +381,14 @@
   {:else}
     <div class="auto-controls">
       <div class="field">
-        <span class="label">Low Reference</span>
+        <div class="label-row">
+          <span class="label">Low Reference</span>
+          <HelpTooltip
+            id="low-reference-help"
+            label="Explain Low Reference"
+            text={HELP_TOPICS.lowReference.tooltip}
+          />
+        </div>
         <div class="reference-row">
           <div class="reference-chip" class:reference-chip--invalid={!lowReferenceSummary.valid}>
             <span
@@ -375,7 +405,14 @@
       </div>
 
       <div class="field">
-        <span class="label">High Reference</span>
+        <div class="label-row">
+          <span class="label">High Reference</span>
+          <HelpTooltip
+            id="high-reference-help"
+            label="Explain High Reference"
+            text={HELP_TOPICS.highReference.tooltip}
+          />
+        </div>
         <div class="reference-row">
           <div class="reference-chip" class:reference-chip--invalid={!highReferenceSummary.valid}>
             <span
@@ -411,6 +448,13 @@
     display: grid;
     gap: var(--space-xs);
     padding: var(--space-xs) 0;
+  }
+
+  .label-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
   }
 
   .color-input-group {

@@ -9,6 +9,7 @@
     IconChevronDown,
     IconCopy,
     IconFileTypeCss,
+    IconHelpCircle,
     IconPencil,
     IconRefresh,
     IconShare,
@@ -26,6 +27,7 @@
     | 'undo'
     | 'redo'
     | 'edit'
+    | 'help'
     | 'chevron-down'
     | 'status-pass'
     | 'status-fail';
@@ -48,6 +50,7 @@
     undo: IconArrowBackUp,
     redo: IconArrowForwardUp,
     edit: IconPencil,
+    help: IconHelpCircle,
     'chevron-down': IconChevronDown,
     scss: IconBrandSass,
     'status-pass': IconCheck,

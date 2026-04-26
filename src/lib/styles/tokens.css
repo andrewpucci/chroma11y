@@ -139,8 +139,11 @@
 :root {
   --icon-size-disclosure: 16px;
   --icon-size-disclosure-compact: 18px;
+  --icon-size-help: 16px;
+  --icon-size-dialog-close: 18px;
   --icon-stroke-disclosure: 2;
   --icon-stroke-disclosure-compact: 2.35;
+  --icon-stroke-help: 2;
 }
 
 /* ============================================================================
