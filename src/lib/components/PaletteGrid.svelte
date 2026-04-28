@@ -20,6 +20,7 @@
     palettes?: Color[][];
     palettesHex?: string[][];
     palettesDisplay?: string[][];
+    palettesSimulatedDisplay?: string[][] | null;
     hueNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
   }
@@ -28,6 +29,7 @@
     palettes = [],
     palettesHex = [],
     palettesDisplay = [],
+    palettesSimulatedDisplay = null,
     hueNudgerValues = [],
     onHistoryCommit
   }: Props = $props();
@@ -192,6 +194,7 @@
               <ColorSwatch
                 {color}
                 displayValue={palettesDisplay[paletteIndex]?.[index] ?? color}
+                simulatedColor={palettesSimulatedDisplay?.[paletteIndex]?.[index] ?? ''}
                 label={String(index * 10)}
                 oklchColor={palettes[paletteIndex]?.[index] ?? null}
                 paletteName={paletteNames[paletteIndex]}
