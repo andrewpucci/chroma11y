@@ -177,6 +177,13 @@ export const HELP_TOPICS = {
     tooltip: 'Exports the current palette as shareable URLs, design tokens, CSS, or SCSS.',
     guide:
       'Export when the palette is ready to move into a design system or codebase. CSS and SCSS respect the selected display color space.'
+  },
+  cvdSimulation: {
+    label: 'Color vision simulation',
+    tooltip:
+      'Simulates how swatches appear to users with color vision deficiencies. Swatch labels and contrast checks always show real values.',
+    guide:
+      'Color vision deficiency simulation approximates how a palette looks to users with protanopia (red-blind), deuteranopia (green-blind), tritanopia (blue-blind), or achromatopsia (full color blindness). Only the swatch fill is simulated — hex values, contrast badges, and exports are unchanged.'
   }
 } as const satisfies Record<string, HelpTopic>;
 

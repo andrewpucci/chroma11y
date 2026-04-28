@@ -11,7 +11,8 @@ import type {
   ContrastAlgorithm,
   OklchDisplaySignificantDigits,
   SwatchContrastIndicators,
-  ContrastReference
+  ContrastReference,
+  CvdMode
 } from './types';
 import type { Constraint } from './types';
 import { isValidConstraint } from './constraintValidation';
@@ -25,6 +26,13 @@ const VALID_GAMUT_SPACES: GamutSpace[] = ['srgb', 'p3', 'rec2020'];
 const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
 const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
 const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
+const VALID_CVD_MODES: CvdMode[] = [
+  'none',
+  'protanopia',
+  'deuteranopia',
+  'tritanopia',
+  'achromatopsia'
+];
 const DEFAULT_SWATCH_CONTRAST_INDICATORS: SwatchContrastIndicators = {
   wcagThreeToOne: true,
   wcagAA: true,
@@ -302,6 +310,7 @@ export function encodeStateToUrl(state: UrlColorState): string {
   if (state.constraintSolverSummary) {
     params.set('cs', encodeJsonState(state.constraintSolverSummary));
   }
+  if (state.cvdMode && state.cvdMode !== 'none') params.set('cvd', state.cvdMode);
 
   return params.toString();
 }
@@ -513,6 +522,9 @@ export function decodeStateFromUrl(searchParams: URLSearchParams): UrlColorState
   if (constraintSolverSummary) {
     state.constraintSolverSummary = decodeJsonState(constraintSolverSummary) ?? undefined;
   }
+
+  const cvd = searchParams.get('cvd');
+  if (cvd && VALID_CVD_MODES.includes(cvd as CvdMode)) state.cvdMode = cvd as CvdMode;
 
   const effectiveDisplaySpace = state.displayColorSpace ?? 'hex';
   if (state.gamutSpace && state.gamutSpace !== 'srgb' && effectiveDisplaySpace === 'hex') {
