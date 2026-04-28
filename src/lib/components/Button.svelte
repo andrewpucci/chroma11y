@@ -12,6 +12,7 @@
     ariaLabel?: string;
     ariaControls?: string;
     ariaExpanded?: boolean;
+    'data-testid'?: string;
     children: Snippet;
   }
 
@@ -26,7 +27,8 @@
     ariaLabel,
     ariaControls,
     ariaExpanded,
-    children
+    children,
+    ...restProps
   }: Props = $props();
 
   const variantClass = $derived(`btn-${variant}`);
@@ -42,6 +44,7 @@
   aria-label={ariaLabel || undefined}
   aria-controls={ariaControls || undefined}
   aria-expanded={ariaExpanded}
+  {...restProps}
 >
   {@render children()}
 </button>
@@ -63,6 +66,11 @@
       background-color var(--transition-fast),
       border-color var(--transition-fast),
       color var(--transition-fast);
+  }
+
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .btn:active:not(:disabled) {
