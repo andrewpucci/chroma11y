@@ -31,6 +31,7 @@
   interface Props {
     color: string;
     displayValue?: string;
+    simulatedColor?: string;
     label?: string;
     oklchColor?: Color | null;
     paletteName?: string;
@@ -43,6 +44,7 @@
   let {
     color,
     displayValue = '',
+    simulatedColor = '',
     label = '',
     oklchColor = null,
     paletteName = '',
@@ -62,6 +64,8 @@
   const activeSwatchPickerLocal = $derived($activeSwatchPicker);
 
   const renderedColor = $derived(displayValue || color);
+  // simulatedColor, if provided, is the CVD-transformed fill; label and interactions use renderedColor
+  const backgroundColor = $derived(simulatedColor || renderedColor);
   const shownValue = $derived(renderedColor);
   const renderedHex = $derived.by(() => {
     try {
@@ -211,17 +215,21 @@
     return groups;
   });
 
-  const textColor = $derived(calculateTextColor(renderedColor, contrastColorsLocal));
+  const textColor = $derived(calculateTextColor(backgroundColor, contrastColorsLocal));
   const indicatorTintAlpha = $derived.by(() => {
     if (!shouldShowIndicators) return INDICATOR_TINT_MAX_ALPHA;
 
     const minimumContrast =
       contrastAlgorithmLocal === 'APCA' ? MIN_APCA_LC_FLUENT : MIN_CONTRAST_RATIO;
-    const baseContrast = getContrastForAlgorithm(renderedColor, textColor, contrastAlgorithmLocal);
+    const baseContrast = getContrastForAlgorithm(
+      backgroundColor,
+      textColor,
+      contrastAlgorithmLocal
+    );
     if (baseContrast < minimumContrast) return 0;
 
     const contrastAtMaxTint = getContrastForAlgorithm(
-      getTintedBackgroundColor(renderedColor, textColor, INDICATOR_TINT_MAX_ALPHA),
+      getTintedBackgroundColor(backgroundColor, textColor, INDICATOR_TINT_MAX_ALPHA),
       textColor,
       contrastAlgorithmLocal
     );
@@ -232,7 +240,7 @@
     for (let i = 0; i < INDICATOR_TINT_SEARCH_ITERATIONS; i++) {
       const mid = (low + high) / 2;
       const contrastAtMidTint = getContrastForAlgorithm(
-        getTintedBackgroundColor(renderedColor, textColor, mid),
+        getTintedBackgroundColor(backgroundColor, textColor, mid),
         textColor,
         contrastAlgorithmLocal
       );
@@ -345,7 +353,7 @@
 <button
   class="color-swatch"
   class:color-swatch--gamut-warning={showGamutWarning}
-  style="background-color: {renderedColor}; color: {textColor}; --swatch-indicator-tint-alpha: {indicatorTintPercent};"
+  style="background-color: {backgroundColor}; color: {textColor}; --swatch-indicator-tint-alpha: {indicatorTintPercent};"
   onclick={() => {
     if (activeSwatchPickerLocal) {
       handlePickerSelection();
