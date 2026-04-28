@@ -10,7 +10,8 @@ import type {
   DisplayColorSpace,
   GamutSpace,
   ContrastAlgorithm,
-  OklchDisplaySignificantDigits
+  OklchDisplaySignificantDigits,
+  CvdMode
 } from '$lib/types';
 
 // Re-export Color so consumers can use it as the OKLCH type
@@ -1100,6 +1101,48 @@ export function colorToCssHsl(color: Color): string {
   }
 }
 
+// Machado et al. 2009, Table 3 — linear sRGB 3×3 matrices at severity 1.0
+// "A Physiologically-based Model for Simulation of Color Vision Deficiency"
+const CVD_MATRICES: Record<Exclude<CvdMode, 'none' | 'achromatopsia'>, number[][]> = {
+  protanopia: [
+    [0.152286, 1.052583, -0.204868],
+    [0.114503, 0.786281, 0.099216],
+    [-0.003882, -0.048116, 1.051998]
+  ],
+  deuteranopia: [
+    [0.367322, 0.860646, -0.227968],
+    [0.280085, 0.672501, 0.047413],
+    [-0.01182, 0.04294, 0.968881]
+  ],
+  tritanopia: [
+    [1.255528, -0.076749, -0.178779],
+    [-0.078411, 0.930809, 0.147602],
+    [0.004733, 0.691367, 0.3039]
+  ]
+};
+
+export function simulateCvd(color: Color, mode: CvdMode): Color {
+  if (mode === 'none') return color;
+  const linear = color.to('srgb-linear');
+  const r = linear.coords[0] ?? 0;
+  const g = linear.coords[1] ?? 0;
+  const b = linear.coords[2] ?? 0;
+  let sr: number, sg: number, sb: number;
+  if (mode === 'achromatopsia') {
+    // BT.709 luminance in linear sRGB
+    const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    sr = y;
+    sg = y;
+    sb = y;
+  } else {
+    const m = CVD_MATRICES[mode];
+    sr = m[0][0] * r + m[0][1] * g + m[0][2] * b;
+    sg = m[1][0] * r + m[1][1] * g + m[1][2] * b;
+    sb = m[2][0] * r + m[2][1] * g + m[2][2] * b;
+  }
+  return new Color('srgb-linear', [sr, sg, sb]);
+}
+
 /**
  * Formats a Color object as a CSS string in the given render color space and gamut.
  * This is the main dispatcher used by derived stores and components.
@@ -1112,45 +1155,47 @@ export function colorToCssHsl(color: Color): string {
 export function colorToCssRender(
   color: Color,
   space: DisplayColorSpace,
-  gamut: GamutSpace
+  gamut: GamutSpace,
+  cvdMode: CvdMode = 'none'
 ): string {
+  const c = cvdMode !== 'none' ? simulateCvd(color, cvdMode) : color;
   switch (space) {
     case 'oklch':
-      return colorToCssOklch(color, gamut);
+      return colorToCssOklch(c, gamut);
     case 'hex':
       switch (gamut) {
         case 'p3':
-          return colorToCssP3(color);
+          return colorToCssP3(c);
         case 'rec2020':
-          return colorToCssRec2020(color);
+          return colorToCssRec2020(c);
         default:
-          return colorToCssHex(color);
+          return colorToCssHex(c);
       }
     case 'rgb':
       switch (gamut) {
         case 'p3':
-          return colorToCssP3(color);
+          return colorToCssP3(c);
         case 'rec2020':
-          return colorToCssRec2020(color);
+          return colorToCssRec2020(c);
         default:
-          return colorToCssRgb(color);
+          return colorToCssRgb(c);
       }
     case 'hsl':
       switch (gamut) {
         case 'p3':
-          return colorToCssP3(color);
+          return colorToCssP3(c);
         case 'rec2020':
-          return colorToCssRec2020(color);
+          return colorToCssRec2020(c);
         default:
-          return colorToCssHsl(color);
+          return colorToCssHsl(c);
       }
     default:
-      return colorToCssHex(color);
+      return colorToCssHex(c);
   }
 }
 
 /**
- * Formats a Color for swatch labels/rendering.
+ * Formats a Color for swatch background rendering (simulated when cvdMode is active).
  * Uses compact rounding only for OKLCH to improve readability on swatches while
  * leaving all other formats unchanged.
  */
@@ -1158,12 +1203,14 @@ export function colorToCssSwatchRender(
   color: Color,
   space: DisplayColorSpace,
   gamut: GamutSpace,
-  oklchSignificantDigits: OklchDisplaySignificantDigits = DEFAULT_OKLCH_DISPLAY_SIGNIFICANT_DIGITS
+  oklchSignificantDigits: OklchDisplaySignificantDigits = DEFAULT_OKLCH_DISPLAY_SIGNIFICANT_DIGITS,
+  cvdMode: CvdMode = 'none'
 ): string {
+  const c = cvdMode !== 'none' ? simulateCvd(color, cvdMode) : color;
   if (space === 'oklch') {
-    return colorToCssOklchSwatch(color, gamut, oklchSignificantDigits);
+    return colorToCssOklchSwatch(c, gamut, oklchSignificantDigits);
   }
-  return colorToCssRender(color, space, gamut);
+  return colorToCssRender(c, space, gamut);
 }
 
 // ===== CONTRAST ALGORITHM HELPERS =====
