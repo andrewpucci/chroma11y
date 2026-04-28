@@ -46,6 +46,9 @@
     constraints,
     solverAdjustmentSnapshot,
     constraintSolverSummary,
+    cvdMode,
+    neutralsSimulatedDisplay,
+    palettesSimulatedDisplay,
     updateColorState,
     updateContrastFromNeutrals,
     resetColorState,
@@ -86,6 +89,8 @@
   import ExportPreviewDialog from '$lib/components/ExportPreviewDialog.svelte';
   import GettingStartedDialog from '$lib/components/GettingStartedDialog.svelte';
   import GettingStartedCallout from '$lib/components/GettingStartedCallout.svelte';
+  import NoticeBanner from '$lib/components/NoticeBanner.svelte';
+  import type { CvdMode } from '$lib/types';
 
   interface Props {
     scheduler?: PageScheduler;
@@ -144,6 +149,16 @@
   let constraintsLocal = $derived($constraints);
   let solverAdjustmentSnapshotLocal = $derived($solverAdjustmentSnapshot);
   let constraintSolverSummaryLocal = $derived($constraintSolverSummary);
+  let cvdModeLocal = $derived($cvdMode);
+  let neutralsSimulatedDisplayLocal = $derived($neutralsSimulatedDisplay);
+  let palettesSimulatedDisplayLocal = $derived($palettesSimulatedDisplay);
+
+  const CVD_BANNER_TEXT: Record<Exclude<CvdMode, 'none'>, string> = {
+    protanopia: 'Simulating Protanopia (red-blind)',
+    deuteranopia: 'Simulating Deuteranopia (green-blind)',
+    tritanopia: 'Simulating Tritanopia (blue-blind)',
+    achromatopsia: 'Simulating Achromatopsia (full color blindness)'
+  };
   let constraintNeutralLabel = $derived(
     neutralsHexLocal.length > 0
       ? resolveNeutralPaletteName(neutralsHexLocal, contrastColorsLocal.low, customNeutralNameLocal)
@@ -1114,6 +1129,7 @@
       solveAdjacentStopLows: solveAdjacentStopLowsLocal,
       oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
       themePreference: themePreferenceLocal,
+      cvdMode: cvdModeLocal,
       customNeutralName: customNeutralNameLocal,
       customPaletteNames: customPaletteNamesLocal,
       constraints: constraintsLocal,
@@ -1222,6 +1238,9 @@
     }
     if (urlState.constraintSolverSummary !== undefined) {
       stateUpdate.constraintSolverSummary = urlState.constraintSolverSummary;
+    }
+    if (urlState.cvdMode !== undefined) {
+      stateUpdate.cvdMode = urlState.cvdMode;
     }
 
     // Apply stored values after theme preference to ensure they override any defaults
@@ -1493,11 +1512,19 @@
         data-testid="app-content"
       >
         <div class="content-inner">
+          {#if cvdModeLocal !== 'none'}
+            <NoticeBanner
+              tone="info"
+              title={CVD_BANNER_TEXT[cvdModeLocal]}
+              body="Swatch fills approximate how this palette appears to viewers with this condition. Hex values, contrast badges, and exports remain unchanged."
+            />
+          {/if}
           {#key `neutral-palette-${historyRestoreRevision}`}
             <NeutralPalette
               neutrals={neutralsLocal}
               neutralsHex={neutralsHexLocal}
               neutralsDisplay={neutralsSwatchDisplayLocal}
+              neutralsSimulatedDisplay={neutralsSimulatedDisplayLocal}
               {lightnessNudgerValues}
               onHistoryCommit={scheduleHistoryCommit}
             />
@@ -1507,6 +1534,7 @@
               palettes={palettesLocal}
               palettesHex={palettesHexLocal}
               palettesDisplay={palettesSwatchDisplayLocal}
+              palettesSimulatedDisplay={palettesSimulatedDisplayLocal}
               {hueNudgerValues}
               onHistoryCommit={scheduleHistoryCommit}
             />
