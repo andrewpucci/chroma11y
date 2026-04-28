@@ -137,9 +137,7 @@ test.describe('Export Format Validation', () => {
     expect(content).not.toContain(':root');
   });
 
-  test('preview menu opens dialog and downloads from inside it', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-
+  test('preview menu opens dialog and downloads from inside it', async ({ page }) => {
     await page.getByRole('button', { name: 'More options for CSS custom properties' }).click();
     await page.getByRole('menuitem', { name: 'Preview…' }).click();
 
@@ -168,7 +166,12 @@ test.describe('Export Format Validation', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('chevron Copy menu writes the chosen format to the clipboard', async ({ page, context }) => {
+  test('chevron Copy menu writes the chosen format to the clipboard', async ({
+    page,
+    context,
+    browserName
+  }) => {
+    test.skip(browserName !== 'chromium', 'Clipboard read API not supported in Firefox/WebKit');
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
     await page.getByRole('button', { name: 'More options for JSON design tokens' }).click();
@@ -180,9 +183,7 @@ test.describe('Export Format Validation', () => {
     expect(Object.keys(parsed).length).toBeGreaterThan(0);
   });
 
-  test('per-palette Copy button scopes preview to that palette only', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-
+  test('per-palette Copy button scopes preview to that palette only', async ({ page }) => {
     const firstPaletteSwatchHexes = await page
       .getByTestId('generated-palettes')
       .locator('.swatches')
@@ -211,9 +212,7 @@ test.describe('Export Format Validation', () => {
     }
   });
 
-  test('neutral palette Copy button scopes preview to neutrals only', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-
+  test('neutral palette Copy button scopes preview to neutrals only', async ({ page }) => {
     const neutralHexes = (
       await page.getByTestId('neutral-palette').locator('.color-swatch .hex').allTextContents()
     ).map((hex) => hex.trim());
