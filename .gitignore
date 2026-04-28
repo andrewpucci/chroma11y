@@ -1,5 +1,6 @@
 test-results
 playwright-report
+.playwright-mcp
 lighthouse-report
 .lighthouseci
 coverage

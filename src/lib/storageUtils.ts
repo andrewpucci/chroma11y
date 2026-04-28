@@ -12,7 +12,8 @@ import type {
   ContrastAlgorithm,
   OklchDisplaySignificantDigits,
   SwatchContrastIndicators,
-  ContrastReference
+  ContrastReference,
+  CvdMode
 } from './types';
 import { isValidConstraint } from './constraintValidation';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from './paletteNameUtils';
@@ -39,6 +40,13 @@ const VALID_THEME_PREFS: ThemePreference[] = ['light', 'dark', 'auto'];
 const VALID_SWATCH_LABELS: SwatchLabels[] = ['both', 'step', 'value', 'none'];
 const VALID_CONTRAST_ALGOS: ContrastAlgorithm[] = ['WCAG', 'APCA'];
 const VALID_OKLCH_SIG_DIGITS: OklchDisplaySignificantDigits[] = [1, 2, 3, 4, 5, 6];
+const VALID_CVD_MODES: CvdMode[] = [
+  'none',
+  'protanopia',
+  'deuteranopia',
+  'tritanopia',
+  'achromatopsia'
+];
 function isValidSwatchContrastIndicators(value: unknown): value is SwatchContrastIndicators {
   if (typeof value !== 'object' || value === null) return false;
 
@@ -199,6 +207,9 @@ export function loadStateFromStorage(): StoredColorState | null {
       )
     ) {
       delete state.oklchDisplaySignificantDigits;
+    }
+    if (state.cvdMode && !VALID_CVD_MODES.includes(state.cvdMode as CvdMode)) {
+      delete state.cvdMode;
     }
     if (state.lowReference && !isValidContrastReference(state.lowReference)) {
       delete state.lowReference;

@@ -20,6 +20,7 @@
     neutrals?: Color[];
     neutralsHex?: string[];
     neutralsDisplay?: string[];
+    neutralsSimulatedDisplay?: string[] | null;
     lightnessNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
   }
@@ -28,6 +29,7 @@
     neutrals = [],
     neutralsHex = [],
     neutralsDisplay = [],
+    neutralsSimulatedDisplay = null,
     lightnessNudgerValues = [],
     onHistoryCommit
   }: Props = $props();
@@ -132,6 +134,7 @@
           <ColorSwatch
             {color}
             displayValue={neutralsDisplay[index] ?? color}
+            simulatedColor={neutralsSimulatedDisplay?.[index] ?? ''}
             label={String(index * 10)}
             oklchColor={neutrals[index] ?? null}
             paletteName={neutralName}

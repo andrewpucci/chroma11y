@@ -14,7 +14,8 @@ import type {
   Constraint,
   SolverAdjustmentSnapshot,
   ConstraintSolverSummary,
-  ConstraintSolveRunState
+  ConstraintSolveRunState,
+  CvdMode
 } from '$lib/types';
 
 /**
@@ -58,6 +59,7 @@ interface ColorState {
   contrastAlgorithm: ContrastAlgorithm;
   solveAdjacentStopLows: boolean;
   oklchDisplaySignificantDigits: OklchDisplaySignificantDigits;
+  cvdMode: CvdMode;
   customNeutralName?: string;
   customPaletteNames?: string[];
   constraints: Constraint[];
@@ -154,6 +156,7 @@ const DEFAULT_STATE = {
   contrastAlgorithm: 'WCAG' as ContrastAlgorithm,
   solveAdjacentStopLows: true,
   oklchDisplaySignificantDigits: 4 as OklchDisplaySignificantDigits,
+  cvdMode: 'none' as CvdMode,
   constraints: [] as Constraint[],
   solverAdjustmentSnapshot: null as SolverAdjustmentSnapshot | null,
   constraintSolverSummary: null as ConstraintSolverSummary | null
@@ -273,6 +276,9 @@ export const paletteChromaNudgers = derived(
   ($colorStore) => $colorStore.paletteChromaNudgers
 );
 
+// Derived store for CVD simulation mode
+export const cvdMode = derived(colorStore, ($colorStore) => $colorStore.cvdMode);
+
 // Derived store for display color space
 export const displayColorSpace = derived(
   colorStore,
@@ -385,6 +391,36 @@ export const palettesSwatchDisplay = derived(colorStore, ($colorStore) =>
       )
     )
   )
+);
+
+// Derived store for neutrals simulated background colors (CVD mode applied, no label rounding)
+export const neutralsSimulatedDisplay = derived(colorStore, ($colorStore) =>
+  $colorStore.cvdMode === 'none'
+    ? null
+    : $colorStore.neutrals.map((c) =>
+        colorToCssRender(
+          c,
+          $colorStore.displayColorSpace,
+          $colorStore.gamutSpace,
+          $colorStore.cvdMode
+        )
+      )
+);
+
+// Derived store for palettes simulated background colors (CVD mode applied, no label rounding)
+export const palettesSimulatedDisplay = derived(colorStore, ($colorStore) =>
+  $colorStore.cvdMode === 'none'
+    ? null
+    : $colorStore.palettes.map((palette) =>
+        palette.map((c) =>
+          colorToCssRender(
+            c,
+            $colorStore.displayColorSpace,
+            $colorStore.gamutSpace,
+            $colorStore.cvdMode
+          )
+        )
+      )
 );
 
 /**

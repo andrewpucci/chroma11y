@@ -13,6 +13,9 @@ export type SwatchLabels = 'both' | 'step' | 'value' | 'none';
 /** Supported contrast algorithm identifiers */
 export type ContrastAlgorithm = 'WCAG' | 'APCA';
 
+/** Color vision deficiency simulation modes */
+export type CvdMode = 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia' | 'achromatopsia';
+
 /** Contrast reference source kinds for auto contrast mode */
 export type ContrastReferenceKind = 'neutral' | 'palette';
 
@@ -238,6 +241,7 @@ export interface SerializableColorState {
   contrastAlgorithm?: ContrastAlgorithm;
   solveAdjacentStopLows?: boolean;
   oklchDisplaySignificantDigits?: OklchDisplaySignificantDigits;
+  cvdMode?: CvdMode;
   customNeutralName?: string;
   customPaletteNames?: string[];
   constraints?: Constraint[];
