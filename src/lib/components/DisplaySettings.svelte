@@ -3,6 +3,7 @@
   import Icon from './Icon.svelte';
   import CheckboxRow from './CheckboxRow.svelte';
   import HelpTooltip from './HelpTooltip.svelte';
+  import SelectField from './SelectField.svelte';
   import {
     displayColorSpace,
     oklchDisplaySignificantDigits,
@@ -10,6 +11,7 @@
     themePreference,
     swatchLabels,
     showSwatchGamutWarnings,
+    cvdMode,
     updateColorState,
     setThemePreference
   } from '$lib/stores';
@@ -21,7 +23,8 @@
     GamutSpace,
     ThemePreference,
     SwatchLabels,
-    OklchDisplaySignificantDigits
+    OklchDisplaySignificantDigits,
+    CvdMode
   } from '$lib/types';
 
   interface Props {
@@ -47,12 +50,21 @@
   const themePreferenceLocal = $derived($themePreference);
   const swatchLabelsLocal = $derived($swatchLabels);
   const showSwatchGamutWarningsLocal = $derived($showSwatchGamutWarnings);
+  const cvdModeLocal = $derived($cvdMode);
   const swatchStepLabelEnabled = $derived(
     swatchLabelsLocal === 'both' || swatchLabelsLocal === 'step'
   );
   const swatchValueLabelEnabled = $derived(
     swatchLabelsLocal === 'both' || swatchLabelsLocal === 'value'
   );
+
+  const CVD_OPTIONS: { value: CvdMode; label: string }[] = [
+    { value: 'none', label: 'None' },
+    { value: 'protanopia', label: 'Protanopia (red-blind)' },
+    { value: 'deuteranopia', label: 'Deuteranopia (green-blind)' },
+    { value: 'tritanopia', label: 'Tritanopia (blue-blind)' },
+    { value: 'achromatopsia', label: 'Achromatopsia (full)' }
+  ];
 
   function setOklchSignificantDigits(value: number, shouldAnnounce: boolean): void {
     const clampedValue = clampOklchDisplaySignificantDigits(value) as OklchDisplaySignificantDigits;
@@ -63,25 +75,25 @@
     }
   }
 
-  function handleDisplayColorSpaceChange(event: Event) {
-    const value = (event.target as HTMLSelectElement).value as DisplayColorSpace;
-    if (value === 'hex') {
-      updateColorState({ displayColorSpace: value, gamutSpace: 'srgb' });
+  function handleDisplayColorSpaceChange(value: string) {
+    const space = value as DisplayColorSpace;
+    if (space === 'hex') {
+      updateColorState({ displayColorSpace: space, gamutSpace: 'srgb' });
       announce('Display color space changed to hex. Gamut mapping fixed to sRGB');
       onHistoryCommit?.('Display color space changed');
       return;
     }
 
-    updateColorState({ displayColorSpace: value });
-    announce(`Display color space changed to ${value}`);
+    updateColorState({ displayColorSpace: space });
+    announce(`Display color space changed to ${space}`);
     onHistoryCommit?.('Display color space changed');
   }
 
-  function handleGamutSpaceChange(event: Event) {
-    const value = (event.target as HTMLSelectElement).value as GamutSpace;
-    updateColorState({ gamutSpace: value });
+  function handleGamutSpaceChange(value: string) {
+    const space = value as GamutSpace;
+    updateColorState({ gamutSpace: space });
     announce(
-      `Gamut mapping changed to ${value === 'srgb' ? 'sRGB' : value === 'p3' ? 'Display P3' : 'Rec. 2020'}`
+      `Gamut mapping changed to ${space === 'srgb' ? 'sRGB' : space === 'p3' ? 'Display P3' : 'Rec. 2020'}`
     );
     onHistoryCommit?.('Gamut mapping changed');
   }
@@ -96,11 +108,22 @@
     setOklchSignificantDigits(parsed, true);
   }
 
-  function handleThemePreferenceChange(event: Event) {
-    const value = (event.target as HTMLSelectElement).value as ThemePreference;
-    setThemePreference(value);
-    announce(`Theme preference changed to ${value === 'auto' ? 'auto (system)' : value}`);
+  function handleThemePreferenceChange(value: string) {
+    const pref = value as ThemePreference;
+    setThemePreference(pref);
+    announce(`Theme preference changed to ${pref === 'auto' ? 'auto (system)' : pref}`);
     onHistoryCommit?.('Theme preference changed');
+  }
+
+  function handleCvdModeChange(value: string) {
+    const mode = value as CvdMode;
+    updateColorState({ cvdMode: mode });
+    announce(
+      mode === 'none'
+        ? 'Color vision simulation off'
+        : `Simulating ${CVD_OPTIONS.find((o) => o.value === mode)?.label ?? mode}`
+    );
+    onHistoryCommit?.('CVD simulation changed');
   }
 
   function toSwatchLabels(stepEnabled: boolean, valueEnabled: boolean): SwatchLabels {
@@ -142,43 +165,47 @@
 
 <section class="display-settings" data-testid="display-settings">
   <section class="control-subsection">
-    <div class="field">
-      <div class="label-row">
-        <label class="label" for="display-color-space">Color Space</label>
-        <HelpTooltip
-          id="color-space-help"
-          label="Explain Color Space"
-          text={HELP_TOPICS.colorSpace.tooltip}
-        />
-      </div>
-      <select
-        class="select"
-        id="display-color-space"
-        value={displayColorSpaceLocal}
-        onchange={handleDisplayColorSpaceChange}
-        aria-label="Display color space format"
-      >
-        <option value="hex">Hex</option>
-        <option value="rgb">RGB</option>
-        <option value="oklch">OKLCH</option>
-        <option value="hsl">HSL</option>
-      </select>
-    </div>
+    <SelectField
+      id="display-color-space"
+      label="Color Space"
+      value={displayColorSpaceLocal}
+      options={[
+        { value: 'hex', label: 'Hex' },
+        { value: 'rgb', label: 'RGB' },
+        { value: 'oklch', label: 'OKLCH' },
+        { value: 'hsl', label: 'HSL' }
+      ]}
+      ariaLabel="Display color space format"
+      helpId="color-space-help"
+      helpLabel="Explain Color Space"
+      helpText={HELP_TOPICS.colorSpace.tooltip}
+      onchange={handleDisplayColorSpaceChange}
+    />
 
-    <div class="field">
-      <label class="label" for="theme-preference">Theme</label>
-      <select
-        class="select"
-        id="theme-preference"
-        value={themePreferenceLocal}
-        onchange={handleThemePreferenceChange}
-        aria-label="Theme preference"
-      >
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-        <option value="auto">Auto (System)</option>
-      </select>
-    </div>
+    <SelectField
+      id="theme-preference"
+      label="Theme"
+      value={themePreferenceLocal}
+      options={[
+        { value: 'light', label: 'Light' },
+        { value: 'dark', label: 'Dark' },
+        { value: 'auto', label: 'Auto (System)' }
+      ]}
+      ariaLabel="Theme preference"
+      onchange={handleThemePreferenceChange}
+    />
+
+    <SelectField
+      id="cvd-mode"
+      label="Color Vision Simulation"
+      value={cvdModeLocal}
+      options={CVD_OPTIONS}
+      ariaLabel="Color vision deficiency simulation"
+      helpId="cvd-mode-help"
+      helpLabel="Explain Color Vision Simulation"
+      helpText={HELP_TOPICS.cvdSimulation.tooltip}
+      onchange={handleCvdModeChange}
+    />
 
     <div class="field">
       <span class="label">Swatch Labels</span>
@@ -245,34 +272,26 @@
           />
         {/if}
 
-        <div class="field">
-          <div class="label-row">
-            <label class="label" for="gamut-space">Gamut Mapping</label>
-            <HelpTooltip
-              id="gamut-mapping-help"
-              label="Explain Gamut Mapping"
-              text={HELP_TOPICS.gamutMapping.tooltip}
-            />
-          </div>
-          <select
-            class="select"
-            id="gamut-space"
-            value={gamutSpaceLocal}
-            onchange={handleGamutSpaceChange}
-            aria-label="Gamut mapping target"
-            disabled={displayColorSpaceLocal === 'hex'}
-            aria-describedby={displayColorSpaceLocal === 'hex' ? 'gamut-space-help' : undefined}
-          >
-            <option value="srgb">sRGB</option>
-            <option value="p3">Display P3</option>
-            <option value="rec2020">Rec. 2020</option>
-          </select>
-          {#if displayColorSpaceLocal === 'hex'}
-            <p id="gamut-space-help" class="field-help">
-              Hex output is fixed to sRGB, so gamut mapping cannot be changed.
-            </p>
-          {/if}
-        </div>
+        <SelectField
+          id="gamut-space"
+          label="Gamut Mapping"
+          value={gamutSpaceLocal}
+          options={[
+            { value: 'srgb', label: 'sRGB' },
+            { value: 'p3', label: 'Display P3' },
+            { value: 'rec2020', label: 'Rec. 2020' }
+          ]}
+          ariaLabel="Gamut mapping target"
+          helpId="gamut-mapping-help"
+          helpLabel="Explain Gamut Mapping"
+          helpText={HELP_TOPICS.gamutMapping.tooltip}
+          disabled={displayColorSpaceLocal === 'hex'}
+          describedById={displayColorSpaceLocal === 'hex' ? 'gamut-space-help' : undefined}
+          fieldHelp={displayColorSpaceLocal === 'hex'
+            ? 'Hex output is fixed to sRGB, so gamut mapping cannot be changed.'
+            : undefined}
+          onchange={handleGamutSpaceChange}
+        />
 
         <div class="field">
           <div class="label-row">
@@ -419,12 +438,6 @@
     gap: var(--space-md);
     padding: var(--space-md);
     border-top: var(--border-width-thin) solid color-mix(in oklab, var(--border) 42%, transparent);
-  }
-
-  .field-help {
-    margin: var(--space-xs) 0 0;
-    font-size: var(--font-size-xs);
-    color: var(--text-secondary);
   }
 
   @media (max-width: 980px) {
