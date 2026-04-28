@@ -9,7 +9,10 @@
   } from '$lib/stores';
   import Card from '$lib/components/Card.svelte';
   import PaletteNameEditor from '$lib/components/PaletteNameEditor.svelte';
+  import Button from './Button.svelte';
   import ColorSwatch from './ColorSwatch.svelte';
+  import Icon from './Icon.svelte';
+  import { openExportPreview } from '$lib/help/exportPreviewStore';
   import '$lib/styles/nudger.css';
   import type Color from 'colorjs.io';
 
@@ -75,6 +78,11 @@
     }
   }
 
+  function handleCopyClick(event: MouseEvent): void {
+    const opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    openExportPreview('neutral', 'list', opener);
+  }
+
   function handleNeutralNameCommit(nextValue: string | undefined): void {
     if (nextValue === $customNeutralName || (!nextValue && !$customNeutralName)) {
       return;
@@ -106,6 +114,14 @@
           onCommit={handleNeutralNameCommit}
         />
       </h3>
+      <Button
+        ariaLabel={`Copy ${neutralName} palette`}
+        data-testid="copy-neutral-palette"
+        onclick={handleCopyClick}
+      >
+        <Icon name="copy" />
+        <span>Copy</span>
+      </Button>
     </div>
     <div class="neutral-grid">
       {#each neutralsHex as color, index (index)}
@@ -210,6 +226,11 @@
   }
 
   .neutral-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    flex-wrap: wrap;
     margin-bottom: var(--space-md);
   }
 
@@ -218,6 +239,7 @@
     font-size: var(--font-size-md);
     font-weight: var(--font-weight-bold);
     margin: 0;
+    flex: 1 1 auto;
   }
 
   .neutral-item {

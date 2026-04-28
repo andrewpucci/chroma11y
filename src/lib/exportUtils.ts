@@ -214,6 +214,48 @@ export function exportAsSCSS(
 }
 
 /**
+ * Exports colors as a plain newline-separated value list, grouped by palette
+ * with comment dividers. When displayNeutrals/displayPalettes are provided,
+ * those formatted values are used instead of the hex values.
+ */
+export function exportAsList(
+  neutrals: string[],
+  palettes: string[][],
+  options: ExportNameOptions = { lowContrastColor: '#ffffff' },
+  displayNeutrals?: string[],
+  displayPalettes?: string[][]
+): string {
+  const exportNames = resolveExportPaletteNames({
+    neutrals,
+    palettes,
+    lowContrastColor: options.lowContrastColor,
+    customNeutralName: options.customNeutralName,
+    customPaletteNames: options.customPaletteNames
+  });
+
+  const sections: string[] = [];
+
+  if (neutrals.length > 0) {
+    const lines = [`/* ${escapeCommentLabel(exportNames.neutral.label)} */`];
+    neutrals.forEach((color, index) => {
+      lines.push(displayNeutrals?.[index] ?? color);
+    });
+    sections.push(lines.join('\n'));
+  }
+
+  palettes.forEach((palette, paletteIndex) => {
+    const paletteName = exportNames.palettes[paletteIndex];
+    const lines = [`/* ${escapeCommentLabel(paletteName.label)} */`];
+    palette.forEach((color, index) => {
+      lines.push(displayPalettes?.[paletteIndex]?.[index] ?? color);
+    });
+    sections.push(lines.join('\n'));
+  });
+
+  return sections.length > 0 ? `${sections.join('\n\n')}\n` : '';
+}
+
+/**
  * Downloads data as a file.
  * @throws Error if running in non-browser environment or if download fails
  *

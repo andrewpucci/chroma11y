@@ -137,6 +137,108 @@ test.describe('Export Format Validation', () => {
     expect(content).not.toContain(':root');
   });
 
+  test('preview menu opens dialog and downloads from inside it', async ({ page }) => {
+    await page.getByRole('button', { name: 'More options for CSS custom properties' }).click();
+    await page.getByRole('menuitem', { name: 'Preview…' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('tab', { name: 'CSS', selected: true })).toBeVisible();
+
+    const previewContent = await dialog.getByTestId('export-preview-content').textContent();
+    expect(previewContent ?? '').toContain(':root {');
+    expect(previewContent ?? '').toMatch(/--color-[a-z0-9-]+-0:/i);
+
+    await dialog.getByRole('tab', { name: 'SCSS' }).click();
+    const scssContent = await dialog.getByTestId('export-preview-content').textContent();
+    expect(scssContent ?? '').toMatch(/\$color-[a-z0-9-]+-0:/i);
+
+    const downloadPromise = page.waitForEvent('download');
+    await dialog
+      .getByRole('button', {
+        name: /download scss as palette-1\.scss|download scss as colors\.scss/i
+      })
+      .click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe('colors.scss');
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
+  test('chevron Copy menu writes the chosen format to the clipboard', async ({
+    page,
+    context,
+    browserName
+  }) => {
+    test.skip(browserName !== 'chromium', 'Clipboard read API not supported in Firefox/WebKit');
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+    await page.getByRole('button', { name: 'More options for JSON design tokens' }).click();
+    await page.getByRole('menuitem', { name: 'Copy' }).click();
+
+    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+    const parsed = JSON.parse(clipboard) as Record<string, unknown>;
+    expect(typeof parsed).toBe('object');
+    expect(Object.keys(parsed).length).toBeGreaterThan(0);
+  });
+
+  test('per-palette Copy button scopes preview to that palette only', async ({ page }) => {
+    const firstPaletteSwatchHexes = await page
+      .getByTestId('generated-palettes')
+      .locator('.swatches')
+      .first()
+      .locator('.hex')
+      .allTextContents();
+    const firstHex = firstPaletteSwatchHexes[0]?.trim() ?? '';
+    expect(firstHex).not.toEqual('');
+
+    await page.getByTestId('copy-palette-0').click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('tab', { name: 'List', selected: true })).toBeVisible();
+
+    const content = (await dialog.getByTestId('export-preview-content').textContent()) ?? '';
+    expect(content).toContain(firstHex);
+
+    const neutralHexes = await page
+      .getByTestId('neutral-palette')
+      .locator('.color-swatch .hex')
+      .allTextContents();
+    const aNeutralHex = neutralHexes[0]?.trim() ?? '';
+    if (aNeutralHex && aNeutralHex !== firstHex) {
+      expect(content).not.toContain(aNeutralHex);
+    }
+  });
+
+  test('neutral palette Copy button scopes preview to neutrals only', async ({ page }) => {
+    const neutralHexes = (
+      await page.getByTestId('neutral-palette').locator('.color-swatch .hex').allTextContents()
+    ).map((hex) => hex.trim());
+
+    await page.getByTestId('copy-neutral-palette').click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    const content = (await dialog.getByTestId('export-preview-content').textContent()) ?? '';
+    for (const hex of neutralHexes) {
+      expect(content).toContain(hex);
+    }
+
+    const generatedHexes = await page
+      .getByTestId('generated-palettes')
+      .locator('.swatches')
+      .first()
+      .locator('.hex')
+      .allTextContents();
+    const aGeneratedHex = generatedHexes[0]?.trim() ?? '';
+    if (aGeneratedHex && !neutralHexes.includes(aGeneratedHex)) {
+      expect(content).not.toContain(aGeneratedHex);
+    }
+  });
+
   test('custom neutral and palette names round-trip through URL and exports', async ({ page }) => {
     await renameNeutralPalette(page, 'Canvas');
     await renameGeneratedPalette(page, 0, 'Ocean');

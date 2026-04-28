@@ -2,7 +2,13 @@
  * Export Utilities Unit Tests
  */
 import { describe, it, expect } from 'vitest';
-import { exportAsDesignTokens, exportAsCSS, exportAsSCSS, type DesignTokens } from './exportUtils';
+import {
+  exportAsDesignTokens,
+  exportAsCSS,
+  exportAsSCSS,
+  exportAsList,
+  type DesignTokens
+} from './exportUtils';
 
 describe('exportUtils', () => {
   const sampleNeutrals = ['#ffffff', '#e0e0e0', '#c0c0c0', '#808080', '#404040', '#000000'];
@@ -123,6 +129,59 @@ describe('exportUtils', () => {
     it('does not use :root selector', () => {
       const scss = exportAsSCSS(sampleNeutrals, samplePalettes, defaultOptions);
       expect(scss).not.toContain(':root');
+    });
+  });
+
+  describe('exportAsList', () => {
+    it('emits a comment divider followed by neutral values', () => {
+      const list = exportAsList(sampleNeutrals, [], defaultOptions);
+      expect(list).toContain('/* Gray */');
+      expect(list).toContain('#ffffff');
+      expect(list).toContain('#000000');
+    });
+
+    it('separates each palette section with a blank line', () => {
+      const list = exportAsList(sampleNeutrals, samplePalettes, defaultOptions);
+      expect(list).toMatch(/\n\n\/\* Azure \*\//);
+      expect(list).toMatch(/\n\n\/\* Mellow Melon \*\//);
+    });
+
+    it('uses display values when provided', () => {
+      const displayNeutrals = ['oklch(100% 0 0)', 'oklch(0% 0 0)'];
+      const list = exportAsList(['#ffffff', '#000000'], [], defaultOptions, displayNeutrals);
+      expect(list).toContain('oklch(100% 0 0)');
+      expect(list).toContain('oklch(0% 0 0)');
+      expect(list).not.toContain('#ffffff');
+    });
+
+    it('honors custom palette names', () => {
+      const list = exportAsList(sampleNeutrals, samplePalettes, {
+        lowContrastColor: '#ffffff',
+        customNeutralName: 'Canvas',
+        customPaletteNames: ['Ocean', 'Bloom']
+      });
+      expect(list).toContain('/* Canvas */');
+      expect(list).toContain('/* Ocean */');
+      expect(list).toContain('/* Bloom */');
+    });
+
+    it('supports single-palette scoping via single-element arrays', () => {
+      const list = exportAsList([], [samplePalettes[0]], defaultOptions);
+      expect(list).toContain('/* Azure */');
+      expect(list).not.toContain('/* Mellow Melon */');
+    });
+
+    it('returns an empty string when there is nothing to export', () => {
+      expect(exportAsList([], [], defaultOptions)).toBe('');
+    });
+
+    it('escapes embedded comment terminators in custom names', () => {
+      const list = exportAsList(sampleNeutrals, [], {
+        lowContrastColor: '#ffffff',
+        customNeutralName: 'Canvas */ malicious'
+      });
+      expect(list).toContain('/* Canvas * / malicious */');
+      expect(list).not.toContain('/* Canvas */ malicious');
     });
   });
 
