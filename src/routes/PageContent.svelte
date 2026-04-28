@@ -83,6 +83,7 @@
   import AppHeader from '$lib/components/AppHeader.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import ColorInfoDrawer from '$lib/components/ColorInfoDrawer.svelte';
+  import ExportPreviewDialog from '$lib/components/ExportPreviewDialog.svelte';
   import GettingStartedDialog from '$lib/components/GettingStartedDialog.svelte';
   import GettingStartedCallout from '$lib/components/GettingStartedCallout.svelte';
 
@@ -1517,6 +1518,16 @@
 </div>
 
 <ColorInfoDrawer />
+
+<ExportPreviewDialog
+  neutrals={neutralsHexLocal}
+  palettes={palettesHexLocal}
+  lowContrastColor={contrastColorsLocal.low}
+  displayNeutrals={neutralsSwatchDisplayLocal}
+  displayPalettes={palettesSwatchDisplayLocal}
+  customNeutralName={customNeutralNameLocal}
+  customPaletteNames={customPaletteNamesLocal}
+/>
 
 <style>
   .app-shell {

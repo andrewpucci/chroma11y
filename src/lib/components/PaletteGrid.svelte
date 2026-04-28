@@ -9,7 +9,10 @@
   } from '$lib/stores';
   import Card from '$lib/components/Card.svelte';
   import PaletteNameEditor from '$lib/components/PaletteNameEditor.svelte';
+  import Button from './Button.svelte';
   import ColorSwatch from './ColorSwatch.svelte';
+  import Icon from './Icon.svelte';
+  import { openExportPreview } from '$lib/help/exportPreviewStore';
   import '$lib/styles/nudger.css';
   import type Color from 'colorjs.io';
 
@@ -104,6 +107,11 @@
     onHistoryCommit?.('Palette hue adjusted');
   }
 
+  function handleCopyClick(paletteIndex: number, event: MouseEvent): void {
+    const opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    openExportPreview({ paletteIndex }, 'list', opener);
+  }
+
   function handlePaletteNameCommit(paletteIndex: number, nextValue: string | undefined): void {
     const currentNames = $customPaletteNames ? [...$customPaletteNames] : [];
     const currentValue = currentNames[paletteIndex];
@@ -146,27 +154,37 @@
                 onCommit={(value) => handlePaletteNameCommit(paletteIndex, value)}
               />
             </h3>
-            <div class="hue-nudger">
-              <label class="hue-nudger-label" for="hue-nudger-{paletteIndex}">Hue</label>
-              <div class="nudger-container">
-                <input
-                  bind:this={inputEls[paletteIndex]}
-                  id="hue-nudger-{paletteIndex}"
-                  type="number"
-                  min="-180"
-                  max="180"
-                  step="1"
-                  value={hueNudgerValues[paletteIndex] ?? 0}
-                  data-nonzero={(hueNudgerValues[paletteIndex] ?? 0) !== 0 ? '' : undefined}
-                  oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
-                  onblur={(e) => handleHueNudgerBlur(paletteIndex, e)}
-                  onkeydown={(e) => handleKeyDown(paletteIndex, e)}
-                  class="nudger-input input mono hue-input"
-                  aria-label="Hue adjustment for {paletteNames[
-                    paletteIndex
-                  ]} palette, -180 to 180 degrees"
-                />
+            <div class="palette-header-controls">
+              <div class="hue-nudger">
+                <label class="hue-nudger-label" for="hue-nudger-{paletteIndex}">Hue</label>
+                <div class="nudger-container">
+                  <input
+                    bind:this={inputEls[paletteIndex]}
+                    id="hue-nudger-{paletteIndex}"
+                    type="number"
+                    min="-180"
+                    max="180"
+                    step="1"
+                    value={hueNudgerValues[paletteIndex] ?? 0}
+                    data-nonzero={(hueNudgerValues[paletteIndex] ?? 0) !== 0 ? '' : undefined}
+                    oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
+                    onblur={(e) => handleHueNudgerBlur(paletteIndex, e)}
+                    onkeydown={(e) => handleKeyDown(paletteIndex, e)}
+                    class="nudger-input input mono hue-input"
+                    aria-label="Hue adjustment for {paletteNames[
+                      paletteIndex
+                    ]} palette, -180 to 180 degrees"
+                  />
+                </div>
               </div>
+              <Button
+                ariaLabel={`Copy ${paletteNames[paletteIndex]} palette`}
+                data-testid={`copy-palette-${paletteIndex}`}
+                onclick={(e) => handleCopyClick(paletteIndex, e)}
+              >
+                <Icon name="copy" />
+                <span>Copy</span>
+              </Button>
             </div>
           </div>
           <div class="swatches">
@@ -262,6 +280,13 @@
     font-weight: var(--font-weight-bold);
     flex: 1 1 16rem;
     min-width: 0;
+  }
+
+  .palette-header-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
   }
 
   .hue-nudger {
