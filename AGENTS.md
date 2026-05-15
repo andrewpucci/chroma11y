@@ -12,6 +12,20 @@ capture durable guidance about users, brand personality, aesthetic direction, an
 Update `.impeccable.md` when the project's long-term design direction changes instead of duplicating the
 same guidance elsewhere.
 
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in this repo's GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the canonical labels `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This repo uses a single-context domain-doc layout rooted at `CONTEXT.md` and `docs/adr/` when present. See `docs/agents/domain.md`.
+
 ## Build commands
 
 | Command                     | Description                                   |
