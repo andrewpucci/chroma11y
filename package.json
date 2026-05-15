@@ -26,7 +26,6 @@
     "generate:favicons": "node scripts/generate-favicons.js",
     "prepare": "svelte-kit sync || true && husky",
     "hooks:install": "husky",
-    "pr:create": "sh ./scripts/create-pr.sh",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
