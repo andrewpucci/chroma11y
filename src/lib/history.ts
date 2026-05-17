@@ -11,7 +11,8 @@ import type {
   SolverAdjustmentSnapshot,
   SwatchContrastIndicators,
   SwatchLabels,
-  ThemePreference
+  ThemePreference,
+  ColorDifferenceMetric
 } from '$lib/types';
 
 const INITIAL_HISTORY_LABEL = 'Starting state';
@@ -62,6 +63,8 @@ export interface HistorySnapshot {
   constraints?: Constraint[];
   solverAdjustmentSnapshot?: SolverAdjustmentSnapshot | null;
   constraintSolverSummary?: ConstraintSolverSummary | null;
+  comparisonMetric?: ColorDifferenceMetric;
+  swatchChangeThreshold?: number;
 }
 
 export interface HistoryEntryMeta {
