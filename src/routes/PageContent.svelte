@@ -953,7 +953,7 @@
       updateColorState({
         ...(storedReferenceWorkspace.referenceConfiguration && {
           referenceConfiguration:
-            storedReferenceWorkspace.referenceConfiguration as ReferenceConfiguration
+            storedReferenceWorkspace.referenceConfiguration as unknown as ReferenceConfiguration
         }),
         comparisonMetric: storedReferenceWorkspace.comparisonMetric,
         swatchChangeThreshold: storedReferenceWorkspace.swatchChangeThreshold
@@ -1248,7 +1248,7 @@
     const refConfig = referenceConfigurationLocal;
     if (refConfig) {
       saveReferenceWorkspaceToStorage({
-        referenceConfiguration: refConfig as Record<string, unknown>,
+        referenceConfiguration: refConfig as unknown as Record<string, unknown>,
         viewMode: 'reference',
         comparisonMetric: comparisonMetricLocal,
         swatchChangeThreshold: swatchChangeThresholdLocal
