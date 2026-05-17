@@ -680,6 +680,58 @@ export const clearReferenceConfiguration = () => {
   }));
 };
 
+export const replaceReferenceConfiguration = () => {
+  colorStore.update((currentState) => {
+    if (!currentState.referenceConfiguration) return currentState;
+    return {
+      ...currentState,
+      referenceConfiguration: createReferenceConfiguration(currentState)
+    };
+  });
+};
+
+export const restoreReferenceConfiguration = () => {
+  colorStore.update((currentState) => {
+    const ref = currentState.referenceConfiguration;
+    if (!ref) return currentState;
+    return normalizeDisplayState({
+      ...currentState,
+      baseColor: ref.baseColor,
+      warmth: ref.warmth,
+      warmthHue: ref.warmthHue,
+      chromaMultiplier: ref.chromaMultiplier,
+      numColors: ref.numColors,
+      numPalettes: ref.numPalettes,
+      x1: ref.x1,
+      y1: ref.y1,
+      x2: ref.x2,
+      y2: ref.y2,
+      lightnessNudgers: [...ref.lightnessNudgers],
+      hueNudgers: [...ref.hueNudgers],
+      stepSaturationNudgers: [...ref.stepSaturationNudgers],
+      paletteSaturationNudgers: [...ref.paletteSaturationNudgers],
+      paletteChromaNudgers: [...ref.paletteChromaNudgers],
+      contrastMode: ref.contrastMode,
+      lowStep: ref.lowStep,
+      highStep: ref.highStep,
+      lowReference: structuredClone(ref.lowReference),
+      highReference: structuredClone(ref.highReference),
+      contrast: { low: ref.contrast.low, high: ref.contrast.high },
+      solveAdjacentStopLows: ref.solveAdjacentStopLows,
+      displayColorSpace: ref.displayColorSpace,
+      gamutSpace: ref.gamutSpace,
+      swatchLabels: ref.swatchLabels,
+      showSwatchGamutWarnings: ref.showSwatchGamutWarnings,
+      showSwatchContrastIndicators: ref.showSwatchContrastIndicators,
+      swatchContrastIndicators: structuredClone(ref.swatchContrastIndicators),
+      contrastAlgorithm: ref.contrastAlgorithm,
+      customNeutralName: ref.customNeutralName,
+      customPaletteNames: ref.customPaletteNames ? [...ref.customPaletteNames] : undefined,
+      _lastUpdated: Date.now()
+    });
+  });
+};
+
 export const setComparisonMetric = (metric: ColorDifferenceMetric) => {
   colorStore.update((currentState) => ({
     ...currentState,

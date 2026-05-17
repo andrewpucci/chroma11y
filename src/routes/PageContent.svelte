@@ -1574,6 +1574,7 @@
               referencePalettesHex={referenceColors.palettesHex}
               referencePalettesDisplay={referenceColors.palettesSwatchDisplay}
               referencePalettesSimulatedDisplay={referenceColors.palettesSimulatedDisplay}
+              referenceContrastColors={referenceConfigurationLocal.contrast}
               currentConfig={{
                 numColors: numColorsLocal,
                 numPalettes: numPalettesLocal,

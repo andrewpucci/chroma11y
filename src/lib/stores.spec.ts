@@ -6,6 +6,7 @@ import { get } from 'svelte/store';
 import Color from 'colorjs.io';
 import { colorToCssOklch, colorToCssOklchSwatch } from './colorUtils';
 import {
+  colorStore,
   currentTheme,
   contrastColors,
   contrastMode,
@@ -60,6 +61,8 @@ import {
   setConstraintSolverSummary,
   pinReferenceConfiguration,
   clearReferenceConfiguration,
+  restoreReferenceConfiguration,
+  replaceReferenceConfiguration,
   resetColorState
 } from './stores';
 
@@ -767,6 +770,52 @@ describe('stores', () => {
       resetColorState('light');
 
       expect(get(referenceConfiguration)).toBe(null);
+    });
+
+    it('replaceReferenceConfiguration replaces the pinned config with the current palette state', () => {
+      expect.assertions(2);
+
+      updateColorState({ baseColor: '#FF0000' });
+      pinReferenceConfiguration();
+
+      updateColorState({ baseColor: '#00FF00' });
+      replaceReferenceConfiguration();
+
+      const ref = get(referenceConfiguration);
+      expect(ref?.baseColor).toBe('#00FF00');
+      expect(ref?.pinnedAt).toBeDefined();
+    });
+
+    it('replaceReferenceConfiguration is a no-op when no reference is pinned', () => {
+      expect.assertions(1);
+
+      replaceReferenceConfiguration();
+
+      expect(get(referenceConfiguration)).toBeNull();
+    });
+
+    it('restoreReferenceConfiguration applies pinned config as current palette without clearing the reference', () => {
+      expect.assertions(3);
+
+      updateColorState({ baseColor: '#FF0000', numColors: 9 });
+      pinReferenceConfiguration();
+
+      updateColorState({ baseColor: '#00FF00', numColors: 13 });
+      restoreReferenceConfiguration();
+
+      const colorState = get(colorStore);
+      expect(colorState.baseColor).toBe('#FF0000');
+      expect(colorState.numColors).toBe(9);
+      expect(get(referenceConfiguration)).not.toBeNull();
+    });
+
+    it('restoreReferenceConfiguration is a no-op when no reference is pinned', () => {
+      expect.assertions(1);
+
+      const before = get(colorStore).baseColor;
+      restoreReferenceConfiguration();
+
+      expect(get(colorStore).baseColor).toBe(before);
     });
   });
 });

@@ -24,6 +24,7 @@
     referencePalettesHex: string[][];
     referencePalettesDisplay: string[][];
     referencePalettesSimulatedDisplay: string[][] | null;
+    referenceContrastColors?: { low: string; high: string };
     currentConfig?: Record<string, unknown>;
     onCurrentHistoryCommit?: (message: string) => void;
   }
@@ -47,6 +48,7 @@
     referencePalettesHex,
     referencePalettesDisplay,
     referencePalettesSimulatedDisplay,
+    referenceContrastColors = undefined,
     currentConfig = {},
     onCurrentHistoryCommit = () => {}
   }: Props = $props();
@@ -71,6 +73,7 @@
             neutralsSimulatedDisplay={referenceNeutralsSimulatedDisplay}
             lightnessNudgerValues={[]}
             readonly={true}
+            contrastColorsOverride={referenceContrastColors}
           />
           <PaletteGrid
             palettes={referencePalettes}
@@ -79,6 +82,7 @@
             palettesSimulatedDisplay={referencePalettesSimulatedDisplay}
             hueNudgerValues={[]}
             readonly={true}
+            contrastColorsOverride={referenceContrastColors}
           />
         </div>
       </div>

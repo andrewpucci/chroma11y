@@ -39,6 +39,7 @@
     stepIndex?: number;
     paletteIndex?: number;
     onHistoryCommit?: (label: string) => void;
+    contrastColorsOverride?: { low: string; high: string };
   }
 
   let {
@@ -51,10 +52,11 @@
     isNeutral = false,
     stepIndex = undefined,
     paletteIndex = undefined,
-    onHistoryCommit = undefined
+    onHistoryCommit = undefined,
+    contrastColorsOverride = undefined
   }: Props = $props();
 
-  const contrastColorsLocal = $derived($contrastColors);
+  const contrastColorsLocal = $derived(contrastColorsOverride ?? $contrastColors);
   const swatchLabelsLocal = $derived($swatchLabels);
   const gamutSpaceLocal = $derived($gamutSpace);
   const showSwatchGamutWarningsLocal = $derived($showSwatchGamutWarnings);

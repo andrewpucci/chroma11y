@@ -24,6 +24,7 @@
     lightnessNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
     readonly?: boolean;
+    contrastColorsOverride?: { low: string; high: string };
   }
 
   let {
@@ -33,15 +34,18 @@
     neutralsSimulatedDisplay = null,
     lightnessNudgerValues = [],
     onHistoryCommit,
-    readonly = false
+    readonly = false,
+    contrastColorsOverride = undefined
   }: Props = $props();
 
+  const effectiveContrastLow = $derived(contrastColorsOverride?.low ?? $contrastColors.low);
+
   const generatedNeutralName = $derived(
-    neutralsHex.length > 0 ? resolveNeutralPaletteName(neutralsHex, $contrastColors.low) : 'Gray'
+    neutralsHex.length > 0 ? resolveNeutralPaletteName(neutralsHex, effectiveContrastLow) : 'Gray'
   );
   const neutralName = $derived(
     neutralsHex.length > 0
-      ? resolveNeutralPaletteName(neutralsHex, $contrastColors.low, $customNeutralName)
+      ? resolveNeutralPaletteName(neutralsHex, effectiveContrastLow, $customNeutralName)
       : 'Gray'
   );
 
@@ -143,6 +147,7 @@
             isNeutral={true}
             stepIndex={index}
             {onHistoryCommit}
+            {contrastColorsOverride}
           />
           <div class="nudger-container">
             <label for="lightness-nudger-{index}" class="visually-hidden"

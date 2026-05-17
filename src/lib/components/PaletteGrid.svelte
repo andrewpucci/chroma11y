@@ -24,6 +24,7 @@
     hueNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
     readonly?: boolean;
+    contrastColorsOverride?: { low: string; high: string };
   }
 
   let {
@@ -33,16 +34,19 @@
     palettesSimulatedDisplay = null,
     hueNudgerValues = [],
     onHistoryCommit,
-    readonly = false
+    readonly = false,
+    contrastColorsOverride = undefined
   }: Props = $props();
 
+  const effectiveContrastLow = $derived(contrastColorsOverride?.low ?? $contrastColors.low);
+
   const generatedPaletteNames = $derived(
-    palettesHex.length === 0 ? [] : resolveGeneratedPaletteNames(palettesHex, $contrastColors.low)
+    palettesHex.length === 0 ? [] : resolveGeneratedPaletteNames(palettesHex, effectiveContrastLow)
   );
   const paletteNames = $derived(
     palettesHex.length === 0
       ? []
-      : resolveGeneratedPaletteNames(palettesHex, $contrastColors.low, $customPaletteNames)
+      : resolveGeneratedPaletteNames(palettesHex, effectiveContrastLow, $customPaletteNames)
   );
 
   let inputEls: HTMLInputElement[] = $state([]);
@@ -213,6 +217,7 @@
                 stepIndex={index}
                 {paletteIndex}
                 {onHistoryCommit}
+                {contrastColorsOverride}
               />
             {/each}
           </div>
