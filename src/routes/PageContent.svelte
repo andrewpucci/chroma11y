@@ -949,10 +949,14 @@
 
     // Load persisted reference workspace (AC1)
     const storedReferenceWorkspace = loadReferenceWorkspaceFromStorage();
-    if (storedReferenceWorkspace?.referenceConfiguration) {
+    if (storedReferenceWorkspace) {
       updateColorState({
-        referenceConfiguration:
-          storedReferenceWorkspace.referenceConfiguration as ReferenceConfiguration
+        ...(storedReferenceWorkspace.referenceConfiguration && {
+          referenceConfiguration:
+            storedReferenceWorkspace.referenceConfiguration as ReferenceConfiguration
+        }),
+        comparisonMetric: storedReferenceWorkspace.comparisonMetric,
+        swatchChangeThreshold: storedReferenceWorkspace.swatchChangeThreshold
       });
     }
 

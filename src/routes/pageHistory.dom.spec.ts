@@ -5,7 +5,13 @@ import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PageScheduler } from '$lib/pageScheduler';
-import { palettesHex, referenceConfiguration, updateColorState } from '$lib/stores';
+import {
+  palettesHex,
+  referenceConfiguration,
+  comparisonMetric,
+  swatchChangeThreshold,
+  updateColorState
+} from '$lib/stores';
 import PageContent from './PageContent.svelte';
 
 interface HistoryUiState {
@@ -690,5 +696,20 @@ describe('page history integration', () => {
     await flushHistoryCommit();
 
     expect(get(referenceConfiguration)).toBeNull();
+  }, 20000);
+
+  it('AC1c: persisted comparisonMetric and swatchChangeThreshold are restored when the page loads', async () => {
+    const seedWorkspace = {
+      referenceConfiguration: { baseColor: '#5EF784', numColors: 11, pinnedAt: Date.now() },
+      viewMode: 'reference',
+      comparisonMetric: '2000',
+      swatchChangeThreshold: 42
+    };
+    localStorage.setItem('chroma11y-reference-workspace', JSON.stringify(seedWorkspace));
+
+    await renderPage({ openOutputAdvanced: false });
+
+    expect(get(comparisonMetric)).toBe('2000');
+    expect(get(swatchChangeThreshold)).toBe(42);
   }, 20000);
 });
