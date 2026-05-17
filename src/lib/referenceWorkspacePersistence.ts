@@ -30,7 +30,10 @@ function isValidComparisonMetric(value: unknown): value is ColorDifferenceMetric
  * Type guard for validating view mode
  */
 function isValidViewMode(value: unknown): value is 'default' | 'reference' | 'comparison' {
-  return VALID_VIEW_MODES.includes(value as string);
+  return (
+    typeof value === 'string' &&
+    VALID_VIEW_MODES.includes(value as 'default' | 'reference' | 'comparison')
+  );
 }
 
 /**
