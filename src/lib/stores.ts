@@ -2,6 +2,7 @@ import { writable, derived } from 'svelte/store';
 import type Color from 'colorjs.io';
 import { colorToCssHex, colorToCssRender, colorToCssSwatchRender } from '$lib/colorUtils';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from '$lib/paletteNameUtils';
+import { createReferenceConfiguration } from '$lib/referenceConfiguration';
 import type {
   DisplayColorSpace,
   GamutSpace,
@@ -15,13 +16,15 @@ import type {
   SolverAdjustmentSnapshot,
   ConstraintSolverSummary,
   ConstraintSolveRunState,
-  CvdMode
+  CvdMode,
+  ColorDifferenceMetric
 } from '$lib/types';
+import type { ReferenceConfiguration } from '$lib/referenceConfiguration';
 
 /**
  * Interface for color state
  */
-interface ColorState {
+export interface ColorState {
   numColors: number;
   numPalettes: number;
   baseColor: string;
@@ -65,6 +68,9 @@ interface ColorState {
   constraints: Constraint[];
   solverAdjustmentSnapshot: SolverAdjustmentSnapshot | null;
   constraintSolverSummary: ConstraintSolverSummary | null;
+  referenceConfiguration: ReferenceConfiguration | null;
+  comparisonMetric: ColorDifferenceMetric;
+  swatchChangeThreshold: number;
   _lastUpdated?: number;
 }
 
@@ -159,7 +165,10 @@ const DEFAULT_STATE = {
   cvdMode: 'none' as CvdMode,
   constraints: [] as Constraint[],
   solverAdjustmentSnapshot: null as SolverAdjustmentSnapshot | null,
-  constraintSolverSummary: null as ConstraintSolverSummary | null
+  constraintSolverSummary: null as ConstraintSolverSummary | null,
+  referenceConfiguration: null as ReferenceConfiguration | null,
+  comparisonMetric: 'ok' as ColorDifferenceMetric,
+  swatchChangeThreshold: 1
 };
 
 function normalizeDisplayState(state: ColorState): ColorState {
@@ -351,6 +360,21 @@ export const constraintSolverSummary = derived(
 export const activeConstraintSolveRunState = derived(
   constraintSolveRunState,
   ($constraintSolveRunState) => $constraintSolveRunState
+);
+
+// Derived store for reference configuration
+export const referenceConfiguration = derived(
+  colorStore,
+  ($colorStore) => $colorStore.referenceConfiguration
+);
+
+// Derived store for comparison metric (Delta E OK or 2000)
+export const comparisonMetric = derived(colorStore, ($colorStore) => $colorStore.comparisonMetric);
+
+// Derived store for swatch change threshold
+export const swatchChangeThreshold = derived(
+  colorStore,
+  ($colorStore) => $colorStore.swatchChangeThreshold
 );
 
 // Derived store for neutrals formatted in the selected display color space
@@ -642,6 +666,34 @@ export const setConstraintSolveRunState = (runState: ConstraintSolveRunState) =>
   constraintSolveRunState.set(runState);
 };
 
+export const pinReferenceConfiguration = () => {
+  colorStore.update((currentState) => ({
+    ...currentState,
+    referenceConfiguration: createReferenceConfiguration(currentState)
+  }));
+};
+
+export const clearReferenceConfiguration = () => {
+  colorStore.update((currentState) => ({
+    ...currentState,
+    referenceConfiguration: null
+  }));
+};
+
+export const setComparisonMetric = (metric: ColorDifferenceMetric) => {
+  colorStore.update((currentState) => ({
+    ...currentState,
+    comparisonMetric: metric
+  }));
+};
+
+export const setSwatchChangeThreshold = (threshold: number) => {
+  colorStore.update((currentState) => ({
+    ...currentState,
+    swatchChangeThreshold: Math.max(0, threshold)
+  }));
+};
+
 /**
  * Resets the color state to default values
  */
@@ -666,6 +718,9 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
       customPaletteNames: undefined,
       solverAdjustmentSnapshot: null,
       constraintSolverSummary: null,
+      referenceConfiguration: null,
+      comparisonMetric: 'ok' as ColorDifferenceMetric,
+      swatchChangeThreshold: 1,
       _lastUpdated: Date.now()
     } as ColorState);
   });

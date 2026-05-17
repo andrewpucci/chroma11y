@@ -45,6 +45,7 @@ import {
   palettesDisplay,
   neutralsSwatchDisplay,
   palettesSwatchDisplay,
+  referenceConfiguration,
   updateColorState,
   setTheme,
   setThemePreference,
@@ -57,6 +58,8 @@ import {
   removeConstraint,
   setSolverAdjustmentSnapshot,
   setConstraintSolverSummary,
+  pinReferenceConfiguration,
+  clearReferenceConfiguration,
   resetColorState
 } from './stores';
 
@@ -692,6 +695,78 @@ describe('stores', () => {
       resetColorState('invalid');
 
       expect(get(currentTheme)).toBe('dark');
+    });
+  });
+
+  describe('reference configuration', () => {
+    it('referenceConfiguration derived store is null by default', () => {
+      expect.assertions(1);
+      expect(get(referenceConfiguration)).toBe(null);
+    });
+
+    it('pinReferenceConfiguration captures the current state', () => {
+      expect.assertions(1);
+      pinReferenceConfiguration();
+
+      const ref = get(referenceConfiguration);
+      expect(ref).not.toBe(null);
+    });
+
+    it('pinReferenceConfiguration captures all core parameters', () => {
+      expect.assertions(8);
+      updateColorState({
+        baseColor: '#FF0000',
+        warmth: 5,
+        chromaMultiplier: 0.8,
+        numColors: 9,
+        numPalettes: 6
+      });
+
+      pinReferenceConfiguration();
+
+      const ref = get(referenceConfiguration);
+      expect(ref?.baseColor).toBe('#FF0000');
+      expect(ref?.warmth).toBe(5);
+      expect(ref?.chromaMultiplier).toBe(0.8);
+      expect(ref?.numColors).toBe(9);
+      expect(ref?.numPalettes).toBe(6);
+      expect(ref?.displayColorSpace).toBeDefined();
+      expect(ref?.gamutSpace).toBeDefined();
+      expect(ref?.pinnedAt).toBeDefined();
+    });
+
+    it('clearReferenceConfiguration sets it to null', () => {
+      expect.assertions(2);
+      pinReferenceConfiguration();
+      expect(get(referenceConfiguration)).not.toBe(null);
+
+      clearReferenceConfiguration();
+
+      expect(get(referenceConfiguration)).toBe(null);
+    });
+
+    it('pinReferenceConfiguration can be called multiple times (overwrites previous)', () => {
+      expect.assertions(2);
+      updateColorState({ baseColor: '#FF0000' });
+      pinReferenceConfiguration();
+      const firstRef = get(referenceConfiguration);
+
+      updateColorState({ baseColor: '#00FF00' });
+      pinReferenceConfiguration();
+      const secondRef = get(referenceConfiguration);
+
+      expect(firstRef?.baseColor).toBe('#FF0000');
+      expect(secondRef?.baseColor).toBe('#00FF00');
+    });
+
+    it('resetColorState clears the reference configuration', () => {
+      expect.assertions(2);
+      pinReferenceConfiguration();
+      expect(get(referenceConfiguration)).not.toBe(null);
+
+      resetColorState('light');
+
+      expect(get(referenceConfiguration)).toBe(null);
     });
   });
 });
