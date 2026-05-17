@@ -23,6 +23,7 @@
     neutralsSimulatedDisplay?: string[] | null;
     lightnessNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
+    readonly?: boolean;
   }
 
   let {
@@ -31,7 +32,8 @@
     neutralsDisplay = [],
     neutralsSimulatedDisplay = null,
     lightnessNudgerValues = [],
-    onHistoryCommit
+    onHistoryCommit,
+    readonly = false
   }: Props = $props();
 
   const generatedNeutralName = $derived(
@@ -155,39 +157,41 @@
               step="0.01"
               value={lightnessNudgerValues[index] ?? 0}
               data-nonzero={(lightnessNudgerValues[index] ?? 0) !== 0 ? '' : undefined}
+              disabled={readonly}
               oninput={(e) => {
-                if (e && e.target) {
-                  const inputValue = (e.target as HTMLInputElement).value;
-                  // Allow empty string, "-", "." while typing (don't reset to 0)
-                  if (inputValue === '' || inputValue === '-' || inputValue === '.') {
-                    return;
-                  }
-                  const newValue = parseFloat(inputValue);
-                  // Validate before updating to prevent NaN propagation
-                  if (!isNaN(newValue) && isFinite(newValue)) {
-                    // Clamp to valid range
-                    const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
-                    // Only update the store, let the parent handle reactivity
-                    updateLightnessNudger(index, clampedValue);
-                  }
-                  // Don't reset on invalid - let the user continue typing
+                if (readonly || !e || !e.target) return;
+                const inputValue = (e.target as HTMLInputElement).value;
+                // Allow empty string, "-", "." while typing (don't reset to 0)
+                if (inputValue === '' || inputValue === '-' || inputValue === '.') {
+                  return;
                 }
+                const newValue = parseFloat(inputValue);
+                // Validate before updating to prevent NaN propagation
+                if (!isNaN(newValue) && isFinite(newValue)) {
+                  // Clamp to valid range
+                  const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
+                  // Only update the store, let the parent handle reactivity
+                  updateLightnessNudger(index, clampedValue);
+                }
+                // Don't reset on invalid - let the user continue typing
               }}
               onblur={(e) => {
+                if (readonly || !e || !e.target) return;
                 // On blur, reset invalid values to 0
-                if (e && e.target) {
-                  const inputValue = (e.target as HTMLInputElement).value;
-                  const newValue = parseFloat(inputValue);
-                  if (isNaN(newValue) || !isFinite(newValue)) {
-                    (e.target as HTMLInputElement).value = '0';
-                    updateLightnessNudger(index, 0);
-                    onHistoryCommit?.('Neutral lightness adjusted');
-                  } else {
-                    onHistoryCommit?.('Neutral lightness adjusted');
-                  }
+                const inputValue = (e.target as HTMLInputElement).value;
+                const newValue = parseFloat(inputValue);
+                if (isNaN(newValue) || !isFinite(newValue)) {
+                  (e.target as HTMLInputElement).value = '0';
+                  updateLightnessNudger(index, 0);
+                  onHistoryCommit?.('Neutral lightness adjusted');
+                } else {
+                  onHistoryCommit?.('Neutral lightness adjusted');
                 }
               }}
-              onkeydown={(e) => handleKeyDown(index, e)}
+              onkeydown={(e) => {
+                if (readonly) return;
+                handleKeyDown(index, e);
+              }}
               class="nudger-input"
               aria-label="Lightness adjustment for step {index}"
             />

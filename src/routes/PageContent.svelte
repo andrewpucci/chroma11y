@@ -49,6 +49,9 @@
     cvdMode,
     neutralsSimulatedDisplay,
     palettesSimulatedDisplay,
+    referenceConfiguration,
+    comparisonMetric,
+    swatchChangeThreshold,
     updateColorState,
     updateContrastFromNeutrals,
     resetColorState,
@@ -75,6 +78,7 @@
     resolveGeneratedPaletteNames,
     resolveNeutralPaletteName
   } from '$lib/paletteNameUtils';
+  import { generateColorsFromReference } from '$lib/referenceColorGeneration';
   import ColorControls from '$lib/components/ColorControls.svelte';
   import ExportButtons from '$lib/components/ExportButtons.svelte';
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
@@ -90,6 +94,7 @@
   import GettingStartedDialog from '$lib/components/GettingStartedDialog.svelte';
   import GettingStartedCallout from '$lib/components/GettingStartedCallout.svelte';
   import NoticeBanner from '$lib/components/NoticeBanner.svelte';
+  import ReferenceView from '$lib/components/ReferenceView.svelte';
   import type { CvdMode } from '$lib/types';
 
   interface Props {
@@ -152,6 +157,12 @@
   let cvdModeLocal = $derived($cvdMode);
   let neutralsSimulatedDisplayLocal = $derived($neutralsSimulatedDisplay);
   let palettesSimulatedDisplayLocal = $derived($palettesSimulatedDisplay);
+  let referenceConfigurationLocal = $derived($referenceConfiguration);
+  let comparisonMetricLocal = $derived($comparisonMetric);
+  let swatchChangeThresholdLocal = $derived($swatchChangeThreshold);
+
+  // Generated colors from reference configuration (readonly, frozen)
+  let referenceColors = $state<ReturnType<typeof generateColorsFromReference> | null>(null);
 
   const CVD_BANNER_TEXT: Record<Exclude<CvdMode, 'none'>, string> = {
     protanopia: 'Simulating Protanopia (red-blind)',
@@ -386,7 +397,9 @@
         customPaletteNames: storeState.customPaletteNames,
         constraints: structuredClone(storeState.constraints),
         solverAdjustmentSnapshot: structuredClone(storeState.solverAdjustmentSnapshot),
-        constraintSolverSummary: structuredClone(storeState.constraintSolverSummary)
+        constraintSolverSummary: structuredClone(storeState.constraintSolverSummary),
+        comparisonMetric: storeState.comparisonMetric,
+        swatchChangeThreshold: storeState.swatchChangeThreshold
       };
     }
 
@@ -430,7 +443,9 @@
       customPaletteNames: customPaletteNamesLocal,
       constraints: structuredClone(constraintsLocal),
       solverAdjustmentSnapshot: structuredClone(solverAdjustmentSnapshotLocal),
-      constraintSolverSummary: structuredClone(constraintSolverSummaryLocal)
+      constraintSolverSummary: structuredClone(constraintSolverSummaryLocal),
+      comparisonMetric: comparisonMetricLocal,
+      swatchChangeThreshold: swatchChangeThresholdLocal
     };
   }
 
@@ -498,7 +513,9 @@
       customPaletteNames: snapshot.customPaletteNames,
       constraints: snapshot.constraints,
       solverAdjustmentSnapshot: snapshot.solverAdjustmentSnapshot,
-      constraintSolverSummary: snapshot.constraintSolverSummary
+      constraintSolverSummary: snapshot.constraintSolverSummary,
+      comparisonMetric: snapshot.comparisonMetric,
+      swatchChangeThreshold: snapshot.swatchChangeThreshold
     });
 
     void tick().then(() => {
@@ -1093,6 +1110,24 @@
     });
   });
 
+  // Generate reference colors whenever reference configuration changes
+  $effect(() => {
+    if (referenceConfigurationLocal) {
+      try {
+        referenceColors = generateColorsFromReference(
+          referenceConfigurationLocal,
+          cvdModeLocal,
+          currentThemeLocal
+        );
+      } catch (error) {
+        console.error('Error generating reference colors:', error);
+        referenceColors = null;
+      }
+    } else {
+      referenceColors = null;
+    }
+  });
+
   // Update URL and localStorage when state changes (debounced)
   $effect(() => {
     if (!urlStateLoaded) return;
@@ -1511,35 +1546,88 @@
         aria-labelledby="main-heading"
         data-testid="app-content"
       >
-        <div class="content-inner">
-          {#if cvdModeLocal !== 'none'}
-            <NoticeBanner
-              tone="info"
-              title={CVD_BANNER_TEXT[cvdModeLocal]}
-              body="Swatch fills approximate how this palette appears to viewers with this condition. Hex values, contrast badges, and exports remain unchanged."
-            />
-          {/if}
-          {#key `neutral-palette-${historyRestoreRevision}`}
-            <NeutralPalette
-              neutrals={neutralsLocal}
-              neutralsHex={neutralsHexLocal}
-              neutralsDisplay={neutralsSwatchDisplayLocal}
-              neutralsSimulatedDisplay={neutralsSimulatedDisplayLocal}
-              {lightnessNudgerValues}
-              onHistoryCommit={scheduleHistoryCommit}
+        {#if cvdModeLocal !== 'none'}
+          <NoticeBanner
+            tone="info"
+            title={CVD_BANNER_TEXT[cvdModeLocal]}
+            body="Swatch fills approximate how this palette appears to viewers with this condition. Hex values, contrast badges, and exports remain unchanged."
+          />
+        {/if}
+        {#if referenceConfigurationLocal && referenceColors}
+          {#key `reference-view-${historyRestoreRevision}`}
+            <ReferenceView
+              currentNeutrals={neutralsLocal}
+              currentNeutralsHex={neutralsHexLocal}
+              currentNeutralsDisplay={neutralsSwatchDisplayLocal}
+              currentNeutralsSimulatedDisplay={neutralsSimulatedDisplayLocal}
+              currentPalettes={palettesLocal}
+              currentPalettesHex={palettesHexLocal}
+              currentPalettesDisplay={palettesSwatchDisplayLocal}
+              currentPalettesSimulatedDisplay={palettesSimulatedDisplayLocal}
+              currentLightnessNudgers={lightnessNudgerValues}
+              currentHueNudgers={hueNudgerValues}
+              referenceNeutrals={referenceColors.neutrals}
+              referenceNeutralsHex={referenceColors.neutralsHex}
+              referenceNeutralsDisplay={referenceColors.neutralsSwatchDisplay}
+              referenceNeutralsSimulatedDisplay={referenceColors.neutralsSimulatedDisplay}
+              referencePalettes={referenceColors.palettes}
+              referencePalettesHex={referenceColors.palettesHex}
+              referencePalettesDisplay={referenceColors.palettesSwatchDisplay}
+              referencePalettesSimulatedDisplay={referenceColors.palettesSimulatedDisplay}
+              currentConfig={{
+                numColors: numColorsLocal,
+                numPalettes: numPalettesLocal,
+                baseColor: baseColorLocal,
+                warmth: warmthLocal,
+                warmthHue: warmthHueLocal,
+                x1: x1Local,
+                y1: y1Local,
+                x2: x2Local,
+                y2: y2Local,
+                chromaMultiplier: chromaMultiplierLocal,
+                lightnessNudgers: lightnessNudgerValues,
+                hueNudgers: hueNudgerValues,
+                stepSaturationNudgers: stepSaturationNudgerValues,
+                paletteSaturationNudgers: paletteSaturationNudgerValues,
+                paletteChromaNudgers: paletteChromaNudgerValues,
+                contrastMode: contrastModeLocal,
+                lowStep: lowStepLocal,
+                highStep: highStepLocal,
+                lowReference: lowReferenceLocal,
+                highReference: highReferenceLocal,
+                contrast: contrastColorsLocal,
+                contrastAlgorithm: contrastAlgorithmLocal,
+                solveAdjacentStopLows: solveAdjacentStopLowsLocal,
+                customNeutralName: customNeutralNameLocal,
+                customPaletteNames: customPaletteNamesLocal
+              }}
+              onCurrentHistoryCommit={scheduleHistoryCommit}
             />
           {/key}
-          {#key `palette-grid-${historyRestoreRevision}`}
-            <PaletteGrid
-              palettes={palettesLocal}
-              palettesHex={palettesHexLocal}
-              palettesDisplay={palettesSwatchDisplayLocal}
-              palettesSimulatedDisplay={palettesSimulatedDisplayLocal}
-              {hueNudgerValues}
-              onHistoryCommit={scheduleHistoryCommit}
-            />
-          {/key}
-        </div>
+        {:else}
+          <div class="content-inner">
+            {#key `neutral-palette-${historyRestoreRevision}`}
+              <NeutralPalette
+                neutrals={neutralsLocal}
+                neutralsHex={neutralsHexLocal}
+                neutralsDisplay={neutralsSwatchDisplayLocal}
+                neutralsSimulatedDisplay={neutralsSimulatedDisplayLocal}
+                {lightnessNudgerValues}
+                onHistoryCommit={scheduleHistoryCommit}
+              />
+            {/key}
+            {#key `palette-grid-${historyRestoreRevision}`}
+              <PaletteGrid
+                palettes={palettesLocal}
+                palettesHex={palettesHexLocal}
+                palettesDisplay={palettesSwatchDisplayLocal}
+                palettesSimulatedDisplay={palettesSimulatedDisplayLocal}
+                {hueNudgerValues}
+                onHistoryCommit={scheduleHistoryCommit}
+              />
+            {/key}
+          </div>
+        {/if}
       </main>
     </div>
   </div>

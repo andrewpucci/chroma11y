@@ -23,6 +23,7 @@
     palettesSimulatedDisplay?: string[][] | null;
     hueNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
+    readonly?: boolean;
   }
 
   let {
@@ -31,7 +32,8 @@
     palettesDisplay = [],
     palettesSimulatedDisplay = null,
     hueNudgerValues = [],
-    onHistoryCommit
+    onHistoryCommit,
+    readonly = false
   }: Props = $props();
 
   const generatedPaletteNames = $derived(
@@ -169,9 +171,19 @@
                     step="1"
                     value={hueNudgerValues[paletteIndex] ?? 0}
                     data-nonzero={(hueNudgerValues[paletteIndex] ?? 0) !== 0 ? '' : undefined}
-                    oninput={(e) => handleHueNudgerChange(paletteIndex, e)}
-                    onblur={(e) => handleHueNudgerBlur(paletteIndex, e)}
-                    onkeydown={(e) => handleKeyDown(paletteIndex, e)}
+                    disabled={readonly}
+                    oninput={(e) => {
+                      if (readonly) return;
+                      handleHueNudgerChange(paletteIndex, e);
+                    }}
+                    onblur={(e) => {
+                      if (readonly) return;
+                      handleHueNudgerBlur(paletteIndex, e);
+                    }}
+                    onkeydown={(e) => {
+                      if (readonly) return;
+                      handleKeyDown(paletteIndex, e);
+                    }}
                     class="nudger-input input mono hue-input"
                     aria-label="Hue adjustment for {paletteNames[
                       paletteIndex
