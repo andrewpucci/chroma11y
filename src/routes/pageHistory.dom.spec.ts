@@ -5,7 +5,7 @@ import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PageScheduler } from '$lib/pageScheduler';
-import { palettesHex, updateColorState } from '$lib/stores';
+import { palettesHex, referenceConfiguration, updateColorState } from '$lib/stores';
 import PageContent from './PageContent.svelte';
 
 interface HistoryUiState {
@@ -368,6 +368,7 @@ describe('page history integration', () => {
     });
     localStorage.clear();
     window.history.replaceState({}, '', '/');
+    updateColorState({ referenceConfiguration: null });
   });
 
   it('supports button undo/redo and multi-step menu jumps', async () => {
@@ -632,4 +633,62 @@ describe('page history integration', () => {
     expect(getThemeSelect()).toHaveValue('dark');
     expect(getNumColorsInput()).toHaveValue(15);
   }, 10000);
+
+  it('AC1a: pinning a reference persists it to localStorage', async () => {
+    await renderPage({ openOutputAdvanced: false });
+
+    const pinButton = screen.getByRole('button', {
+      name: /pin current palette configuration as reference/i
+    });
+    await fireEvent.click(pinButton);
+    await flushAppState();
+
+    const stored = localStorage.getItem('chroma11y-reference-workspace');
+    expect(stored).not.toBeNull();
+    const parsed = JSON.parse(stored!) as { referenceConfiguration: unknown };
+    expect(parsed.referenceConfiguration).not.toBeNull();
+  }, 20000);
+
+  it('AC1b: a persisted reference workspace is restored when the page loads', async () => {
+    // Seed localStorage with a reference workspace before rendering
+    const seedWorkspace = {
+      referenceConfiguration: { baseColor: '#5EF784', numColors: 11, pinnedAt: Date.now() },
+      viewMode: 'reference',
+      comparisonMetric: 'ok',
+      swatchChangeThreshold: 1
+    };
+    localStorage.setItem('chroma11y-reference-workspace', JSON.stringify(seedWorkspace));
+
+    // Render the page — it should restore the reference from localStorage on mount
+    await renderPage({ openOutputAdvanced: false });
+
+    expect(get(referenceConfiguration)).not.toBeNull();
+  }, 20000);
+
+  it('AC5: pinning a reference commits to history; undoing clears it', async () => {
+    const user = userEvent.setup();
+
+    await renderPage({ openOutputAdvanced: false });
+
+    // Initially no reference
+    expect(get(referenceConfiguration)).toBeNull();
+    expect(getUndoButton()).toBeDisabled();
+
+    // Pin the reference
+    const pinButton = screen.getByRole('button', {
+      name: /pin current palette configuration as reference/i
+    });
+    await fireEvent.click(pinButton);
+    await flushHistoryCommit();
+
+    // Reference should now be set and undo should be available
+    expect(get(referenceConfiguration)).not.toBeNull();
+    expect(getUndoButton()).toBeEnabled();
+
+    // Undo should clear the reference
+    await user.click(getUndoButton());
+    await flushHistoryCommit();
+
+    expect(get(referenceConfiguration)).toBeNull();
+  }, 20000);
 });

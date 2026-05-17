@@ -71,7 +71,19 @@
   import type { ColorGenParams } from '$lib/colorUtils';
   import { clampChromaMultiplier } from '$lib/chromaMultiplier';
   import { evaluateConstraints } from '$lib/constraintUtils';
-  import { createHistoryManager, type HistorySnapshot, type HistoryViewModel } from '$lib/history';
+  import type { HistorySnapshot } from '$lib/history';
+  import {
+    createReferenceHistoryManager,
+    type ReferenceHistorySnapshot,
+    type HistoryViewModel
+  } from '$lib/referenceHistoryManager';
+  import type { ReferenceWorkspaceSnapshot } from '$lib/referenceWorkspace';
+  import {
+    saveReferenceWorkspaceToStorage,
+    loadReferenceWorkspaceFromStorage,
+    clearStoredReferenceWorkspace
+  } from '$lib/referenceWorkspacePersistence';
+  import type { ReferenceConfiguration } from '$lib/referenceConfiguration';
   import { createPageScheduler, type PageScheduler } from '$lib/pageScheduler';
   import {
     DEFAULT_NEUTRAL_PALETTE_NAME,
@@ -224,7 +236,7 @@
   let isDraggingSlider = $state(false);
   let isDeferringBezierStoreSync = $state(false);
   let skipAutoThemeSync = $state(false);
-  let historyManager: ReturnType<typeof createHistoryManager> | null = null;
+  let historyManager: ReturnType<typeof createReferenceHistoryManager> | null = null;
   let historyShortcutResyncRevision = 0;
   let historyRestoreRevision = $state(0);
   let pendingNativeHistoryInput: 'historyUndo' | 'historyRedo' | null = null;
@@ -353,169 +365,189 @@
   );
   const exportCardSummary = 'Share URL, JSON, CSS, SCSS';
 
-  function captureHistorySnapshot(preferStoreState: boolean = false): HistorySnapshot {
-    if (preferStoreState) {
-      const storeState = get(colorStore);
-
-      return {
-        baseColor: storeState.baseColor,
-        warmth: storeState.warmth,
-        warmthHue: storeState.warmthHue,
-        chromaMultiplier: storeState.chromaMultiplier,
-        numColors: storeState.numColors,
-        numPalettes: storeState.numPalettes,
-        x1: storeState.x1,
-        y1: storeState.y1,
-        x2: storeState.x2,
-        y2: storeState.y2,
-        contrastMode: storeState.contrastMode,
-        lowStep: storeState.lowStep,
-        highStep: storeState.highStep,
-        lowReference: structuredClone(storeState.lowReference),
-        highReference: structuredClone(storeState.highReference),
-        contrast: {
-          low: storeState.contrast.low,
-          high: storeState.contrast.high
-        },
-        lightnessNudgers: [...storeState.lightnessNudgers],
-        hueNudgers: [...storeState.hueNudgers],
-        stepSaturationNudgers: [...storeState.stepSaturationNudgers],
-        paletteSaturationNudgers: [...storeState.paletteSaturationNudgers],
-        paletteChromaNudgers: [...storeState.paletteChromaNudgers],
-        currentTheme: storeState.currentTheme,
-        displayColorSpace: storeState.displayColorSpace,
-        gamutSpace: storeState.gamutSpace,
-        themePreference: storeState.themePreference,
-        swatchLabels: storeState.swatchLabels,
-        showSwatchGamutWarnings: storeState.showSwatchGamutWarnings,
-        showSwatchContrastIndicators: storeState.showSwatchContrastIndicators,
-        swatchContrastIndicators: structuredClone(storeState.swatchContrastIndicators),
-        contrastAlgorithm: storeState.contrastAlgorithm,
-        solveAdjacentStopLows: storeState.solveAdjacentStopLows,
-        oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits,
-        customNeutralName: storeState.customNeutralName,
-        customPaletteNames: storeState.customPaletteNames,
-        constraints: structuredClone(storeState.constraints),
-        solverAdjustmentSnapshot: structuredClone(storeState.solverAdjustmentSnapshot),
-        constraintSolverSummary: structuredClone(storeState.constraintSolverSummary),
-        comparisonMetric: storeState.comparisonMetric,
-        swatchChangeThreshold: storeState.swatchChangeThreshold
-      };
-    }
-
+  function captureReferenceWorkspaceSnapshot(): ReferenceWorkspaceSnapshot {
+    const storeState = get(colorStore);
     return {
-      baseColor: baseColorLocal,
-      warmth: warmthLocal,
-      warmthHue: warmthHueLocal,
-      chromaMultiplier: chromaMultiplierLocal,
-      numColors: numColorsLocal,
-      numPalettes: numPalettesLocal,
-      x1: x1Local,
-      y1: y1Local,
-      x2: x2Local,
-      y2: y2Local,
-      contrastMode: contrastModeLocal,
-      lowStep: lowStepLocal,
-      highStep: highStepLocal,
-      lowReference: structuredClone(lowReferenceLocal),
-      highReference: structuredClone(highReferenceLocal),
-      contrast: {
-        low: contrastColorsLocal.low,
-        high: contrastColorsLocal.high
-      },
-      lightnessNudgers: [...lightnessNudgerValues],
-      hueNudgers: [...hueNudgerValues],
-      stepSaturationNudgers: [...stepSaturationNudgerValues],
-      paletteSaturationNudgers: [...paletteSaturationNudgerValues],
-      paletteChromaNudgers: [...paletteChromaNudgerValues],
-      currentTheme: currentThemeLocal,
-      displayColorSpace: displayColorSpaceLocal,
-      gamutSpace: gamutSpaceLocal,
-      themePreference: themePreferenceLocal,
-      swatchLabels: swatchLabelsLocal,
-      showSwatchGamutWarnings: showSwatchGamutWarningsLocal,
-      showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
-      swatchContrastIndicators: structuredClone(swatchContrastIndicatorsLocal),
-      contrastAlgorithm: contrastAlgorithmLocal,
-      solveAdjacentStopLows: solveAdjacentStopLowsLocal,
-      oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
-      customNeutralName: customNeutralNameLocal,
-      customPaletteNames: customPaletteNamesLocal,
-      constraints: structuredClone(constraintsLocal),
-      solverAdjustmentSnapshot: structuredClone(solverAdjustmentSnapshotLocal),
-      constraintSolverSummary: structuredClone(constraintSolverSummaryLocal),
+      referenceConfiguration: storeState.referenceConfiguration as Record<string, unknown> | null,
+      viewMode: storeState.referenceConfiguration ? 'reference' : 'default',
       comparisonMetric: comparisonMetricLocal,
       swatchChangeThreshold: swatchChangeThresholdLocal
     };
   }
 
-  function applyHistorySnapshot(snapshot: HistorySnapshot): void {
+  function captureHistorySnapshot(preferStoreState: boolean = false): ReferenceHistorySnapshot {
+    if (preferStoreState) {
+      const storeState = get(colorStore);
+
+      return {
+        palette: {
+          baseColor: storeState.baseColor,
+          warmth: storeState.warmth,
+          warmthHue: storeState.warmthHue,
+          chromaMultiplier: storeState.chromaMultiplier,
+          numColors: storeState.numColors,
+          numPalettes: storeState.numPalettes,
+          x1: storeState.x1,
+          y1: storeState.y1,
+          x2: storeState.x2,
+          y2: storeState.y2,
+          contrastMode: storeState.contrastMode,
+          lowStep: storeState.lowStep,
+          highStep: storeState.highStep,
+          lowReference: structuredClone(storeState.lowReference),
+          highReference: structuredClone(storeState.highReference),
+          contrast: {
+            low: storeState.contrast.low,
+            high: storeState.contrast.high
+          },
+          lightnessNudgers: [...storeState.lightnessNudgers],
+          hueNudgers: [...storeState.hueNudgers],
+          stepSaturationNudgers: [...storeState.stepSaturationNudgers],
+          paletteSaturationNudgers: [...storeState.paletteSaturationNudgers],
+          paletteChromaNudgers: [...storeState.paletteChromaNudgers],
+          currentTheme: storeState.currentTheme,
+          displayColorSpace: storeState.displayColorSpace,
+          gamutSpace: storeState.gamutSpace,
+          themePreference: storeState.themePreference,
+          swatchLabels: storeState.swatchLabels,
+          showSwatchGamutWarnings: storeState.showSwatchGamutWarnings,
+          showSwatchContrastIndicators: storeState.showSwatchContrastIndicators,
+          swatchContrastIndicators: structuredClone(storeState.swatchContrastIndicators),
+          contrastAlgorithm: storeState.contrastAlgorithm,
+          solveAdjacentStopLows: storeState.solveAdjacentStopLows,
+          oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits,
+          customNeutralName: storeState.customNeutralName,
+          customPaletteNames: storeState.customPaletteNames,
+          constraints: structuredClone(storeState.constraints),
+          solverAdjustmentSnapshot: structuredClone(storeState.solverAdjustmentSnapshot),
+          constraintSolverSummary: structuredClone(storeState.constraintSolverSummary),
+          comparisonMetric: storeState.comparisonMetric,
+          swatchChangeThreshold: storeState.swatchChangeThreshold
+        },
+        reference: captureReferenceWorkspaceSnapshot()
+      };
+    }
+
+    return {
+      palette: {
+        baseColor: baseColorLocal,
+        warmth: warmthLocal,
+        warmthHue: warmthHueLocal,
+        chromaMultiplier: chromaMultiplierLocal,
+        numColors: numColorsLocal,
+        numPalettes: numPalettesLocal,
+        x1: x1Local,
+        y1: y1Local,
+        x2: x2Local,
+        y2: y2Local,
+        contrastMode: contrastModeLocal,
+        lowStep: lowStepLocal,
+        highStep: highStepLocal,
+        lowReference: structuredClone(lowReferenceLocal),
+        highReference: structuredClone(highReferenceLocal),
+        contrast: {
+          low: contrastColorsLocal.low,
+          high: contrastColorsLocal.high
+        },
+        lightnessNudgers: [...lightnessNudgerValues],
+        hueNudgers: [...hueNudgerValues],
+        stepSaturationNudgers: [...stepSaturationNudgerValues],
+        paletteSaturationNudgers: [...paletteSaturationNudgerValues],
+        paletteChromaNudgers: [...paletteChromaNudgerValues],
+        currentTheme: currentThemeLocal,
+        displayColorSpace: displayColorSpaceLocal,
+        gamutSpace: gamutSpaceLocal,
+        themePreference: themePreferenceLocal,
+        swatchLabels: swatchLabelsLocal,
+        showSwatchGamutWarnings: showSwatchGamutWarningsLocal,
+        showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
+        swatchContrastIndicators: structuredClone(swatchContrastIndicatorsLocal),
+        contrastAlgorithm: contrastAlgorithmLocal,
+        solveAdjacentStopLows: solveAdjacentStopLowsLocal,
+        oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
+        customNeutralName: customNeutralNameLocal,
+        customPaletteNames: customPaletteNamesLocal,
+        constraints: structuredClone(constraintsLocal),
+        solverAdjustmentSnapshot: structuredClone(solverAdjustmentSnapshotLocal),
+        constraintSolverSummary: structuredClone(constraintSolverSummaryLocal),
+        comparisonMetric: comparisonMetricLocal,
+        swatchChangeThreshold: swatchChangeThresholdLocal
+      },
+      reference: captureReferenceWorkspaceSnapshot()
+    };
+  }
+
+  function applyHistorySnapshot(snapshot: ReferenceHistorySnapshot): void {
+    const palette = snapshot.palette;
+    const reference = snapshot.reference;
+
     skipAutoThemeSync = true;
     isApplyingHistorySnapshot = true;
     pendingHistoryGeneratorSnapshot = {
-      baseColor: snapshot.baseColor,
-      warmth: snapshot.warmth,
-      warmthHue: snapshot.warmthHue,
-      chromaMultiplier: snapshot.chromaMultiplier,
-      numColors: snapshot.numColors,
-      numPalettes: snapshot.numPalettes,
-      x1: snapshot.x1,
-      y1: snapshot.y1,
-      x2: snapshot.x2,
-      y2: snapshot.y2
+      baseColor: palette.baseColor,
+      warmth: palette.warmth,
+      warmthHue: palette.warmthHue,
+      chromaMultiplier: palette.chromaMultiplier,
+      numColors: palette.numColors,
+      numPalettes: palette.numPalettes,
+      x1: palette.x1,
+      y1: palette.y1,
+      x2: palette.x2,
+      y2: palette.y2
     };
     historyRestoreRevision += 1;
-    baseColorLocal = snapshot.baseColor;
-    warmthLocal = snapshot.warmth;
-    warmthHueLocal = snapshot.warmthHue;
-    chromaMultiplierLocal = snapshot.chromaMultiplier;
-    numColorsLocal = snapshot.numColors;
-    numPalettesLocal = snapshot.numPalettes;
-    x1Local = snapshot.x1;
-    y1Local = snapshot.y1;
-    x2Local = snapshot.x2;
-    y2Local = snapshot.y2;
+    baseColorLocal = palette.baseColor;
+    warmthLocal = palette.warmth;
+    warmthHueLocal = palette.warmthHue;
+    chromaMultiplierLocal = palette.chromaMultiplier;
+    numColorsLocal = palette.numColors;
+    numPalettesLocal = palette.numPalettes;
+    x1Local = palette.x1;
+    y1Local = palette.y1;
+    x2Local = palette.x2;
+    y2Local = palette.y2;
 
     updateColorState({
-      baseColor: snapshot.baseColor,
-      warmth: snapshot.warmth,
-      warmthHue: snapshot.warmthHue,
-      chromaMultiplier: snapshot.chromaMultiplier,
-      numColors: snapshot.numColors,
-      numPalettes: snapshot.numPalettes,
-      x1: snapshot.x1,
-      y1: snapshot.y1,
-      x2: snapshot.x2,
-      y2: snapshot.y2,
-      contrastMode: snapshot.contrastMode,
-      lowStep: snapshot.lowStep,
-      highStep: snapshot.highStep,
-      lowReference: snapshot.lowReference,
-      highReference: snapshot.highReference,
-      contrast: snapshot.contrast,
-      lightnessNudgers: snapshot.lightnessNudgers,
-      hueNudgers: snapshot.hueNudgers,
-      stepSaturationNudgers: snapshot.stepSaturationNudgers,
-      paletteSaturationNudgers: snapshot.paletteSaturationNudgers,
-      paletteChromaNudgers: snapshot.paletteChromaNudgers,
-      currentTheme: snapshot.currentTheme,
-      displayColorSpace: snapshot.displayColorSpace,
-      gamutSpace: snapshot.gamutSpace,
-      themePreference: snapshot.themePreference,
-      swatchLabels: snapshot.swatchLabels,
-      showSwatchGamutWarnings: snapshot.showSwatchGamutWarnings,
-      showSwatchContrastIndicators: snapshot.showSwatchContrastIndicators,
-      swatchContrastIndicators: snapshot.swatchContrastIndicators,
-      contrastAlgorithm: snapshot.contrastAlgorithm,
-      solveAdjacentStopLows: snapshot.solveAdjacentStopLows,
-      oklchDisplaySignificantDigits: snapshot.oklchDisplaySignificantDigits,
-      customNeutralName: snapshot.customNeutralName,
-      customPaletteNames: snapshot.customPaletteNames,
-      constraints: snapshot.constraints,
-      solverAdjustmentSnapshot: snapshot.solverAdjustmentSnapshot,
-      constraintSolverSummary: snapshot.constraintSolverSummary,
-      comparisonMetric: snapshot.comparisonMetric,
-      swatchChangeThreshold: snapshot.swatchChangeThreshold
+      baseColor: palette.baseColor,
+      warmth: palette.warmth,
+      warmthHue: palette.warmthHue,
+      chromaMultiplier: palette.chromaMultiplier,
+      numColors: palette.numColors,
+      numPalettes: palette.numPalettes,
+      x1: palette.x1,
+      y1: palette.y1,
+      x2: palette.x2,
+      y2: palette.y2,
+      contrastMode: palette.contrastMode,
+      lowStep: palette.lowStep,
+      highStep: palette.highStep,
+      lowReference: palette.lowReference,
+      highReference: palette.highReference,
+      contrast: palette.contrast,
+      lightnessNudgers: palette.lightnessNudgers,
+      hueNudgers: palette.hueNudgers,
+      stepSaturationNudgers: palette.stepSaturationNudgers,
+      paletteSaturationNudgers: palette.paletteSaturationNudgers,
+      paletteChromaNudgers: palette.paletteChromaNudgers,
+      currentTheme: palette.currentTheme,
+      displayColorSpace: palette.displayColorSpace,
+      gamutSpace: palette.gamutSpace,
+      themePreference: palette.themePreference,
+      swatchLabels: palette.swatchLabels,
+      showSwatchGamutWarnings: palette.showSwatchGamutWarnings,
+      showSwatchContrastIndicators: palette.showSwatchContrastIndicators,
+      swatchContrastIndicators: palette.swatchContrastIndicators,
+      contrastAlgorithm: palette.contrastAlgorithm,
+      solveAdjacentStopLows: palette.solveAdjacentStopLows,
+      oklchDisplaySignificantDigits: palette.oklchDisplaySignificantDigits,
+      customNeutralName: palette.customNeutralName,
+      customPaletteNames: palette.customPaletteNames,
+      constraints: palette.constraints,
+      solverAdjustmentSnapshot: palette.solverAdjustmentSnapshot,
+      constraintSolverSummary: palette.constraintSolverSummary,
+      comparisonMetric: palette.comparisonMetric,
+      swatchChangeThreshold: palette.swatchChangeThreshold,
+      referenceConfiguration: reference.referenceConfiguration as ReferenceConfiguration | null
     });
 
     void tick().then(() => {
@@ -525,7 +557,9 @@
   }
 
   function initializeHistory(preferStoreGeneratorState: boolean = false): void {
-    historyManager = createHistoryManager(captureHistorySnapshot(preferStoreGeneratorState));
+    historyManager = createReferenceHistoryManager(
+      captureHistorySnapshot(preferStoreGeneratorState)
+    );
     refreshHistoryView();
   }
 
@@ -913,6 +947,15 @@
       setThemePreference(storedState.themePreference);
     }
 
+    // Load persisted reference workspace (AC1)
+    const storedReferenceWorkspace = loadReferenceWorkspaceFromStorage();
+    if (storedReferenceWorkspace?.referenceConfiguration) {
+      updateColorState({
+        referenceConfiguration:
+          storedReferenceWorkspace.referenceConfiguration as ReferenceConfiguration
+      });
+    }
+
     // Set up matchMedia listener for auto theme preference
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
     const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
@@ -1192,6 +1235,25 @@
     saveUiPreferencesToStorage(getUiPreferencesSnapshot());
   });
 
+  // Persist reference workspace to localStorage whenever reference configuration changes (AC1)
+  $effect(() => {
+    if (!urlStateLoaded) {
+      return;
+    }
+
+    const refConfig = referenceConfigurationLocal;
+    if (refConfig) {
+      saveReferenceWorkspaceToStorage({
+        referenceConfiguration: refConfig as Record<string, unknown>,
+        viewMode: 'reference',
+        comparisonMetric: comparisonMetricLocal,
+        swatchChangeThreshold: swatchChangeThresholdLocal
+      });
+    } else {
+      clearStoredReferenceWorkspace();
+    }
+  });
+
   function applyUrlState(urlState: UrlColorState) {
     const stateUpdate: Record<string, unknown> = {};
 
@@ -1345,6 +1407,7 @@
     onReset={handleResetToDefaults}
     onUndoJump={handleHistoryJump}
     onRedoJump={handleHistoryJump}
+    onReferenceHistoryCommit={scheduleHistoryCommit}
   />
   <GettingStartedDialog />
 
