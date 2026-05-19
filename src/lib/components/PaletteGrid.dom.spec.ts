@@ -151,6 +151,41 @@ describe('PaletteGrid', () => {
     expect(headings).toHaveLength(1);
   });
 
+  it('renders a placeholder palette block when palettesHex contains a null entry', () => {
+    render(PaletteGrid, {
+      props: {
+        palettesHex: [null, ['#e6f0ff', '#0066ff']] as ((string | null)[] | null)[],
+        hueNudgerValues: [0, 0]
+      }
+    });
+
+    expect(screen.getAllByTestId('palette-placeholder')).toHaveLength(1);
+    const headings = screen.getAllByRole('heading', { level: 3 });
+    expect(headings).toHaveLength(1);
+  });
+
+  it('renders a placeholder swatch when an inner entry is null', () => {
+    render(PaletteGrid, {
+      props: {
+        palettesHex: [['#e6f0ff', null, '#0066ff'] as (string | null)[]],
+        hueNudgerValues: [0]
+      }
+    });
+
+    expect(screen.getAllByTestId('swatch-placeholder')).toHaveLength(1);
+  });
+
+  it('renders multiple placeholder palettes for each null outer entry', () => {
+    render(PaletteGrid, {
+      props: {
+        palettesHex: [null, ['#fff'], null] as ((string | null)[] | null)[],
+        hueNudgerValues: [0, 0, 0]
+      }
+    });
+
+    expect(screen.getAllByTestId('palette-placeholder')).toHaveLength(2);
+  });
+
   it('supports renaming generated palettes inline', async () => {
     const user = userEvent.setup();
     const palettesHex = [['#e6f0ff', '#0066ff']];

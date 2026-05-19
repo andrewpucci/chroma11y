@@ -3,6 +3,7 @@
   import PaletteGrid from './PaletteGrid.svelte';
   import ComparisonControls from './ComparisonControls.svelte';
   import ConfigurationDiffDisplay from './ConfigurationDiffDisplay.svelte';
+  import { deriveNeutralAlignment, derivePaletteAlignment } from '$lib/referenceViewAlignment';
   import type Color from 'colorjs.io';
 
   interface Props {
@@ -52,6 +53,14 @@
     currentConfig = {},
     onCurrentHistoryCommit = () => {}
   }: Props = $props();
+
+  const neutralAlignment = $derived(
+    deriveNeutralAlignment(currentNeutralsHex, referenceNeutralsHex)
+  );
+
+  const paletteAlignment = $derived(
+    derivePaletteAlignment(currentPalettesHex, referencePalettesHex)
+  );
 </script>
 
 <div class="comparison-layout">
@@ -62,13 +71,36 @@
     <ConfigurationDiffDisplay {currentConfig} />
   </div>
   <div class="reference-view-container">
+    <div class="current-column">
+      <div class="column-label">Current</div>
+      <div class="column-content">
+        <div class="palettes">
+          <NeutralPalette
+            neutrals={currentNeutrals}
+            neutralsHex={neutralAlignment.currentHex}
+            neutralsDisplay={currentNeutralsDisplay}
+            neutralsSimulatedDisplay={currentNeutralsSimulatedDisplay}
+            lightnessNudgerValues={currentLightnessNudgers}
+            onHistoryCommit={onCurrentHistoryCommit}
+          />
+          <PaletteGrid
+            palettes={currentPalettes}
+            palettesHex={paletteAlignment.currentHex}
+            palettesDisplay={currentPalettesDisplay}
+            palettesSimulatedDisplay={currentPalettesSimulatedDisplay}
+            hueNudgerValues={currentHueNudgers}
+            onHistoryCommit={onCurrentHistoryCommit}
+          />
+        </div>
+      </div>
+    </div>
     <div class="reference-column">
       <div class="column-label">Reference</div>
       <div class="column-content">
         <div class="palettes">
           <NeutralPalette
             neutrals={referenceNeutrals}
-            neutralsHex={referenceNeutralsHex}
+            neutralsHex={neutralAlignment.referenceHex}
             neutralsDisplay={referenceNeutralsDisplay}
             neutralsSimulatedDisplay={referenceNeutralsSimulatedDisplay}
             lightnessNudgerValues={[]}
@@ -77,35 +109,12 @@
           />
           <PaletteGrid
             palettes={referencePalettes}
-            palettesHex={referencePalettesHex}
+            palettesHex={paletteAlignment.referenceHex}
             palettesDisplay={referencePalettesDisplay}
             palettesSimulatedDisplay={referencePalettesSimulatedDisplay}
             hueNudgerValues={[]}
             readonly={true}
             contrastColorsOverride={referenceContrastColors}
-          />
-        </div>
-      </div>
-    </div>
-    <div class="current-column">
-      <div class="column-label">Current</div>
-      <div class="column-content">
-        <div class="palettes">
-          <NeutralPalette
-            neutrals={currentNeutrals}
-            neutralsHex={currentNeutralsHex}
-            neutralsDisplay={currentNeutralsDisplay}
-            neutralsSimulatedDisplay={currentNeutralsSimulatedDisplay}
-            lightnessNudgerValues={currentLightnessNudgers}
-            onHistoryCommit={onCurrentHistoryCommit}
-          />
-          <PaletteGrid
-            palettes={currentPalettes}
-            palettesHex={currentPalettesHex}
-            palettesDisplay={currentPalettesDisplay}
-            palettesSimulatedDisplay={currentPalettesSimulatedDisplay}
-            hueNudgerValues={currentHueNudgers}
-            onHistoryCommit={onCurrentHistoryCommit}
           />
         </div>
       </div>

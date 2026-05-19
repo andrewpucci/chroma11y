@@ -14,13 +14,14 @@
   import Icon from './Icon.svelte';
   import { openExportPreview } from '$lib/help/exportPreviewStore';
   import '$lib/styles/nudger.css';
+  import { SvelteMap } from 'svelte/reactivity';
   import type Color from 'colorjs.io';
 
   interface Props {
-    palettes?: Color[][];
-    palettesHex?: string[][];
-    palettesDisplay?: string[][];
-    palettesSimulatedDisplay?: string[][] | null;
+    palettes?: (Color[] | null)[];
+    palettesHex?: ((string | null)[] | null)[];
+    palettesDisplay?: ((string | null)[] | null)[];
+    palettesSimulatedDisplay?: ((string | null)[] | null)[] | null;
     hueNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
     readonly?: boolean;
@@ -40,14 +41,33 @@
 
   const effectiveContrastLow = $derived(contrastColorsOverride?.low ?? $contrastColors.low);
 
+  const nonNullPalettesHex = $derived(
+    palettesHex
+      .filter((p): p is string[] => p !== null)
+      .map((p) => p.filter((s): s is string => s !== null))
+  );
+
   const generatedPaletteNames = $derived(
-    palettesHex.length === 0 ? [] : resolveGeneratedPaletteNames(palettesHex, effectiveContrastLow)
+    nonNullPalettesHex.length === 0
+      ? []
+      : resolveGeneratedPaletteNames(nonNullPalettesHex, effectiveContrastLow)
   );
   const paletteNames = $derived(
-    palettesHex.length === 0
+    nonNullPalettesHex.length === 0
       ? []
-      : resolveGeneratedPaletteNames(palettesHex, effectiveContrastLow, $customPaletteNames)
+      : resolveGeneratedPaletteNames(nonNullPalettesHex, effectiveContrastLow, $customPaletteNames)
   );
+
+  let nonNullPaletteNameIndex = $derived.by(() => {
+    const map = new SvelteMap<number, number>();
+    let nameIdx = 0;
+    for (let i = 0; i < palettesHex.length; i++) {
+      if (palettesHex[i] !== null) {
+        map.set(i, nameIdx++);
+      }
+    }
+    return map;
+  });
 
   let inputEls: HTMLInputElement[] = $state([]);
 
@@ -150,78 +170,95 @@
   <div class="color-display">
     {#if palettesHex.length > 0}
       {#each palettesHex as palette, paletteIndex (paletteIndex)}
-        <div class="palette-block">
-          <div class="palette-header">
-            <h3 class="palette-title">
-              <PaletteNameEditor
-                value={$customPaletteNames?.[paletteIndex]}
-                fallbackValue={generatedPaletteNames[paletteIndex]}
-                editButtonAriaLabel={`Edit name for palette ${paletteIndex + 1}`}
-                inputAriaLabel={`Palette ${paletteIndex + 1} name`}
-                data-testid={`generated-palette-name-${paletteIndex}`}
-                onCommit={(value) => handlePaletteNameCommit(paletteIndex, value)}
-              />
-            </h3>
-            <div class="palette-header-controls">
-              <div class="hue-nudger">
-                <label class="hue-nudger-label" for="hue-nudger-{paletteIndex}">Hue</label>
-                <div class="nudger-container">
-                  <input
-                    bind:this={inputEls[paletteIndex]}
-                    id="hue-nudger-{paletteIndex}"
-                    type="number"
-                    min="-180"
-                    max="180"
-                    step="1"
-                    value={hueNudgerValues[paletteIndex] ?? 0}
-                    data-nonzero={(hueNudgerValues[paletteIndex] ?? 0) !== 0 ? '' : undefined}
-                    disabled={readonly}
-                    oninput={(e) => {
-                      if (readonly) return;
-                      handleHueNudgerChange(paletteIndex, e);
-                    }}
-                    onblur={(e) => {
-                      if (readonly) return;
-                      handleHueNudgerBlur(paletteIndex, e);
-                    }}
-                    onkeydown={(e) => {
-                      if (readonly) return;
-                      handleKeyDown(paletteIndex, e);
-                    }}
-                    class="nudger-input input mono hue-input"
-                    aria-label="Hue adjustment for {paletteNames[
-                      paletteIndex
-                    ]} palette, -180 to 180 degrees"
-                  />
+        {#if palette === null}
+          <div
+            class="palette-block palette-placeholder"
+            data-testid="palette-placeholder"
+            aria-hidden="true"
+          ></div>
+        {:else}
+          {@const nameIndex = nonNullPaletteNameIndex.get(paletteIndex) ?? paletteIndex}
+          <div class="palette-block">
+            <div class="palette-header">
+              <h3 class="palette-title">
+                <PaletteNameEditor
+                  value={$customPaletteNames?.[nameIndex]}
+                  fallbackValue={generatedPaletteNames[nameIndex]}
+                  editButtonAriaLabel={`Edit name for palette ${nameIndex + 1}`}
+                  inputAriaLabel={`Palette ${nameIndex + 1} name`}
+                  data-testid={`generated-palette-name-${paletteIndex}`}
+                  onCommit={(value) => handlePaletteNameCommit(nameIndex, value)}
+                />
+              </h3>
+              <div class="palette-header-controls">
+                <div class="hue-nudger">
+                  <label class="hue-nudger-label" for="hue-nudger-{paletteIndex}">Hue</label>
+                  <div class="nudger-container">
+                    <input
+                      bind:this={inputEls[paletteIndex]}
+                      id="hue-nudger-{paletteIndex}"
+                      type="number"
+                      min="-180"
+                      max="180"
+                      step="1"
+                      value={hueNudgerValues[paletteIndex] ?? 0}
+                      data-nonzero={(hueNudgerValues[paletteIndex] ?? 0) !== 0 ? '' : undefined}
+                      disabled={readonly}
+                      oninput={(e) => {
+                        if (readonly) return;
+                        handleHueNudgerChange(paletteIndex, e);
+                      }}
+                      onblur={(e) => {
+                        if (readonly) return;
+                        handleHueNudgerBlur(paletteIndex, e);
+                      }}
+                      onkeydown={(e) => {
+                        if (readonly) return;
+                        handleKeyDown(paletteIndex, e);
+                      }}
+                      class="nudger-input input mono hue-input"
+                      aria-label="Hue adjustment for {paletteNames[
+                        nameIndex
+                      ]} palette, -180 to 180 degrees"
+                    />
+                  </div>
                 </div>
+                <Button
+                  ariaLabel={`Copy ${paletteNames[nameIndex]} palette`}
+                  data-testid={`copy-palette-${paletteIndex}`}
+                  onclick={(e) => handleCopyClick(nameIndex, e)}
+                >
+                  <Icon name="copy" />
+                  <span>Copy</span>
+                </Button>
               </div>
-              <Button
-                ariaLabel={`Copy ${paletteNames[paletteIndex]} palette`}
-                data-testid={`copy-palette-${paletteIndex}`}
-                onclick={(e) => handleCopyClick(paletteIndex, e)}
-              >
-                <Icon name="copy" />
-                <span>Copy</span>
-              </Button>
+            </div>
+            <div class="swatches">
+              {#each palette as color, index (`${paletteIndex}-${index}`)}
+                {#if color === null}
+                  <div
+                    class="swatch-placeholder"
+                    data-testid="swatch-placeholder"
+                    aria-hidden="true"
+                  ></div>
+                {:else}
+                  <ColorSwatch
+                    {color}
+                    displayValue={palettesDisplay[paletteIndex]?.[index] ?? color}
+                    simulatedColor={palettesSimulatedDisplay?.[paletteIndex]?.[index] ?? ''}
+                    label={String(index * 10)}
+                    oklchColor={palettes[paletteIndex]?.[index] ?? null}
+                    paletteName={paletteNames[nameIndex]}
+                    stepIndex={index}
+                    {paletteIndex}
+                    {onHistoryCommit}
+                    {contrastColorsOverride}
+                  />
+                {/if}
+              {/each}
             </div>
           </div>
-          <div class="swatches">
-            {#each palette as color, index (`${paletteIndex}-${index}`)}
-              <ColorSwatch
-                {color}
-                displayValue={palettesDisplay[paletteIndex]?.[index] ?? color}
-                simulatedColor={palettesSimulatedDisplay?.[paletteIndex]?.[index] ?? ''}
-                label={String(index * 10)}
-                oklchColor={palettes[paletteIndex]?.[index] ?? null}
-                paletteName={paletteNames[paletteIndex]}
-                stepIndex={index}
-                {paletteIndex}
-                {onHistoryCommit}
-                {contrastColorsOverride}
-              />
-            {/each}
-          </div>
-        </div>
+        {/if}
       {/each}
     {:else}
       <p class="no-colors">No color palettes generated yet. Adjust the controls above.</p>
@@ -325,6 +362,34 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-sm);
+  }
+
+  .palette-placeholder {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--bg-tertiary),
+      var(--bg-tertiary) 4px,
+      transparent 4px,
+      transparent 10px
+    );
+    border-radius: var(--radius-md);
+    opacity: 0.4;
+    min-height: 80px;
+  }
+
+  .swatch-placeholder {
+    width: 72px;
+    height: 72px;
+    background: repeating-linear-gradient(
+      45deg,
+      var(--bg-tertiary),
+      var(--bg-tertiary) 4px,
+      transparent 4px,
+      transparent 10px
+    );
+    border-radius: var(--radius-sm);
+    opacity: 0.4;
+    flex-shrink: 0;
   }
 
   .no-colors {
