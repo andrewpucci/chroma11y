@@ -5,11 +5,14 @@ import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PageScheduler } from '$lib/pageScheduler';
+import { createReferenceConfiguration } from '$lib/referenceConfiguration';
 import {
+  colorStore,
   palettesHex,
   referenceConfiguration,
   comparisonMetric,
   swatchChangeThreshold,
+  resetColorState,
   updateColorState
 } from '$lib/stores';
 import PageContent from './PageContent.svelte';
@@ -142,6 +145,14 @@ function getUndoButton(): HTMLButtonElement {
 
 function getRedoButton(): HTMLButtonElement {
   return screen.getByRole('button', { name: /redo last change/i }) as HTMLButtonElement;
+}
+
+function getViewTab(name: 'Reference View' | 'Comparison View'): HTMLButtonElement {
+  return screen.getByRole('tab', { name }) as HTMLButtonElement;
+}
+
+function getReferenceViewPanel(): HTMLElement {
+  return screen.getByRole('tabpanel') as HTMLElement;
 }
 
 function getUndoHistoryButton(): HTMLButtonElement {
@@ -711,5 +722,89 @@ describe('page history integration', () => {
 
     expect(get(comparisonMetric)).toBe('2000');
     expect(get(swatchChangeThreshold)).toBe(42);
+  }, 20000);
+
+  it('AC201-1: a restored reference workspace exposes explicit reference and comparison view tabs', async () => {
+    resetColorState('light');
+    const validReferenceConfiguration = createReferenceConfiguration(get(colorStore));
+    const seedWorkspace = {
+      referenceConfiguration: validReferenceConfiguration,
+      viewMode: 'reference',
+      comparisonMetric: 'ok',
+      swatchChangeThreshold: 1
+    };
+    localStorage.setItem('chroma11y-reference-workspace', JSON.stringify(seedWorkspace));
+
+    await renderPage({ openOutputAdvanced: false });
+
+    expect(getViewTab('Reference View')).toHaveAttribute('aria-selected', 'true');
+    expect(getViewTab('Comparison View')).toHaveAttribute('aria-selected', 'false');
+  }, 20000);
+
+  it('AC201-2: switching to Comparison View persists locally and participates in undo/redo', async () => {
+    const user = userEvent.setup();
+
+    await renderPage({ openOutputAdvanced: false });
+
+    const pinButton = screen.getByRole('button', {
+      name: /pin current palette configuration as reference/i
+    });
+    await fireEvent.click(pinButton);
+    await flushHistoryCommit();
+
+    await user.click(getViewTab('Comparison View'));
+    await flushHistoryCommit();
+
+    expect(getViewTab('Comparison View')).toHaveAttribute('aria-selected', 'true');
+    expect(JSON.parse(localStorage.getItem('chroma11y-reference-workspace') ?? '{}')).toMatchObject(
+      {
+        viewMode: 'comparison'
+      }
+    );
+
+    await user.click(getUndoButton());
+    await flushHistoryCommit();
+    expect(getViewTab('Reference View')).toHaveAttribute('aria-selected', 'true');
+
+    await user.click(getRedoButton());
+    await flushHistoryCommit();
+    expect(getViewTab('Comparison View')).toHaveAttribute('aria-selected', 'true');
+  }, 20000);
+
+  it('AC201-3: the reference view mode switch follows the tab interaction pattern', async () => {
+    const user = userEvent.setup();
+
+    await renderPage({ openOutputAdvanced: false });
+
+    const pinButton = screen.getByRole('button', {
+      name: /pin current palette configuration as reference/i
+    });
+    await fireEvent.click(pinButton);
+    await flushHistoryCommit();
+
+    const referenceTab = getViewTab('Reference View');
+    const comparisonTab = getViewTab('Comparison View');
+    const panel = getReferenceViewPanel();
+
+    expect(referenceTab).toHaveAttribute('aria-controls', 'reference-view-panel');
+    expect(panel).toHaveAttribute('id', 'reference-view-panel');
+    expect(panel).toHaveAttribute('aria-labelledby', 'reference-view-tab-reference');
+
+    referenceTab.focus();
+    expect(referenceTab).toHaveFocus();
+
+    await user.keyboard('{End}');
+    await flushHistoryCommit();
+
+    expect(comparisonTab).toHaveFocus();
+    expect(comparisonTab).toHaveAttribute('aria-selected', 'true');
+    expect(panel).toHaveAttribute('aria-labelledby', 'reference-view-tab-comparison');
+
+    await user.keyboard('{Home}');
+    await flushHistoryCommit();
+
+    expect(referenceTab).toHaveFocus();
+    expect(referenceTab).toHaveAttribute('aria-selected', 'true');
+    expect(panel).toHaveAttribute('aria-labelledby', 'reference-view-tab-reference');
   }, 20000);
 });

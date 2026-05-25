@@ -16,16 +16,24 @@
   import '$lib/styles/nudger.css';
   import { SvelteMap } from 'svelte/reactivity';
   import type Color from 'colorjs.io';
+  import type { ComparisonAnnotation } from '$lib/comparisonViewAnnotations';
+  import type { ContrastAlgorithm } from '$lib/types';
 
   interface Props {
-    palettes?: (Color[] | null)[];
+    palettes?: ((Color | null)[] | null)[];
     palettesHex?: ((string | null)[] | null)[];
     palettesDisplay?: ((string | null)[] | null)[];
     palettesSimulatedDisplay?: ((string | null)[] | null)[] | null;
+    palettePlaceholderLabels?: (string | null)[];
+    swatchPlaceholderLabels?: ((string | null)[] | null)[];
+    comparisonAnnotations?: ((ComparisonAnnotation | null)[] | null)[];
+    paletteSourceIndices?: (number | null)[];
+    swatchStepIndices?: ((number | null)[] | null)[];
     hueNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
     readonly?: boolean;
     contrastColorsOverride?: { low: string; high: string };
+    contrastAlgorithmOverride?: ContrastAlgorithm;
   }
 
   let {
@@ -33,10 +41,16 @@
     palettesHex = [],
     palettesDisplay = [],
     palettesSimulatedDisplay = null,
+    palettePlaceholderLabels = [],
+    swatchPlaceholderLabels = [],
+    comparisonAnnotations = [],
+    paletteSourceIndices = [],
+    swatchStepIndices = [],
     hueNudgerValues = [],
     onHistoryCommit,
     readonly = false,
-    contrastColorsOverride = undefined
+    contrastColorsOverride = undefined,
+    contrastAlgorithmOverride = undefined
   }: Props = $props();
 
   const effectiveContrastLow = $derived(contrastColorsOverride?.low ?? $contrastColors.low);
@@ -174,10 +188,16 @@
           <div
             class="palette-block palette-placeholder"
             data-testid="palette-placeholder"
-            aria-hidden="true"
-          ></div>
+            aria-label={palettePlaceholderLabels[paletteIndex] ?? undefined}
+            aria-hidden={palettePlaceholderLabels[paletteIndex] ? undefined : 'true'}
+          >
+            {#if palettePlaceholderLabels[paletteIndex]}
+              <span class="placeholder-label">{palettePlaceholderLabels[paletteIndex]}</span>
+            {/if}
+          </div>
         {:else}
           {@const nameIndex = nonNullPaletteNameIndex.get(paletteIndex) ?? paletteIndex}
+          {@const sourcePaletteIndex = paletteSourceIndices[paletteIndex] ?? nameIndex}
           <div class="palette-block">
             <div class="palette-header">
               <h3 class="palette-title">
@@ -201,20 +221,22 @@
                       min="-180"
                       max="180"
                       step="1"
-                      value={hueNudgerValues[paletteIndex] ?? 0}
-                      data-nonzero={(hueNudgerValues[paletteIndex] ?? 0) !== 0 ? '' : undefined}
+                      value={hueNudgerValues[sourcePaletteIndex] ?? 0}
+                      data-nonzero={(hueNudgerValues[sourcePaletteIndex] ?? 0) !== 0
+                        ? ''
+                        : undefined}
                       disabled={readonly}
                       oninput={(e) => {
                         if (readonly) return;
-                        handleHueNudgerChange(paletteIndex, e);
+                        handleHueNudgerChange(sourcePaletteIndex, e);
                       }}
                       onblur={(e) => {
                         if (readonly) return;
-                        handleHueNudgerBlur(paletteIndex, e);
+                        handleHueNudgerBlur(sourcePaletteIndex, e);
                       }}
                       onkeydown={(e) => {
                         if (readonly) return;
-                        handleKeyDown(paletteIndex, e);
+                        handleKeyDown(sourcePaletteIndex, e);
                       }}
                       class="nudger-input input mono hue-input"
                       aria-label="Hue adjustment for {paletteNames[
@@ -239,20 +261,33 @@
                   <div
                     class="swatch-placeholder"
                     data-testid="swatch-placeholder"
-                    aria-hidden="true"
-                  ></div>
+                    aria-label={swatchPlaceholderLabels[paletteIndex]?.[index] ?? undefined}
+                    aria-hidden={swatchPlaceholderLabels[paletteIndex]?.[index]
+                      ? undefined
+                      : 'true'}
+                  >
+                    {#if swatchPlaceholderLabels[paletteIndex]?.[index]}
+                      <span class="placeholder-label">
+                        {swatchPlaceholderLabels[paletteIndex]?.[index]}
+                      </span>
+                    {/if}
+                  </div>
                 {:else}
+                  {@const sourceStepIndex = swatchStepIndices[paletteIndex]?.[index] ?? index}
                   <ColorSwatch
                     {color}
                     displayValue={palettesDisplay[paletteIndex]?.[index] ?? color}
                     simulatedColor={palettesSimulatedDisplay?.[paletteIndex]?.[index] ?? ''}
-                    label={String(index * 10)}
+                    label={String(sourceStepIndex * 10)}
                     oklchColor={palettes[paletteIndex]?.[index] ?? null}
                     paletteName={paletteNames[nameIndex]}
-                    stepIndex={index}
+                    stepIndex={sourceStepIndex}
                     {paletteIndex}
                     {onHistoryCommit}
                     {contrastColorsOverride}
+                    {contrastAlgorithmOverride}
+                    comparisonChip={comparisonAnnotations[paletteIndex]?.[index]?.chip ?? null}
+                    quiet={comparisonAnnotations[paletteIndex]?.[index]?.quiet ?? false}
                   />
                 {/if}
               {/each}
@@ -365,6 +400,8 @@
   }
 
   .palette-placeholder {
+    display: grid;
+    place-items: center;
     background: repeating-linear-gradient(
       45deg,
       var(--bg-tertiary),
@@ -378,6 +415,8 @@
   }
 
   .swatch-placeholder {
+    display: grid;
+    place-items: center;
     width: 72px;
     height: 72px;
     background: repeating-linear-gradient(
@@ -390,6 +429,22 @@
     border-radius: var(--radius-sm);
     opacity: 0.4;
     flex-shrink: 0;
+  }
+
+  .placeholder-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target-min);
+    padding: var(--space-xs) var(--space-sm);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 72%, transparent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklab, var(--bg-primary) 86%, transparent);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
   }
 
   .no-colors {

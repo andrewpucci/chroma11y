@@ -228,11 +228,13 @@
   let generationAdvancedOpen = $state(false);
   let outputAdvancedOpen = $state(false);
   let uiPreferencesLoaded = $state(false);
+  let referenceViewMode = $state<ReferenceWorkspaceSnapshot['viewMode']>('default');
 
   let urlStateLoaded = $state(false);
   let appShellEl: HTMLDivElement | undefined = $state();
   let layoutEl: HTMLElement | undefined = $state();
   let topbarInnerEl: HTMLElement | undefined = $state();
+  let referenceViewTabsEl: HTMLDivElement | null = $state(null);
   let isDraggingSlider = $state(false);
   let isDeferringBezierStoreSync = $state(false);
   let skipAutoThemeSync = $state(false);
@@ -364,15 +366,109 @@
     )}, ${formatSwatchLabels(swatchLabelsLocal)}`
   );
   const exportCardSummary = 'Share URL, JSON, CSS, SCSS';
+  const referenceViewData = $derived.by(() => {
+    if (!referenceConfigurationLocal || !referenceColors) {
+      return null;
+    }
+
+    return {
+      configuration: referenceConfigurationLocal,
+      colors: referenceColors,
+      viewMode: referenceViewMode === 'comparison' ? 'comparison' : 'reference'
+    } as const;
+  });
+  const hasReferenceView = $derived(referenceViewData !== null);
+  const activeReferenceViewMode = $derived(
+    referenceViewData ? referenceViewData.viewMode : 'default'
+  );
 
   function captureReferenceWorkspaceSnapshot(): ReferenceWorkspaceSnapshot {
     const storeState = get(colorStore);
+    const viewMode =
+      storeState.referenceConfiguration === null
+        ? 'default'
+        : referenceViewMode === 'comparison'
+          ? 'comparison'
+          : 'reference';
+
     return {
       referenceConfiguration: storeState.referenceConfiguration as Record<string, unknown> | null,
-      viewMode: storeState.referenceConfiguration ? 'reference' : 'default',
+      viewMode,
       comparisonMetric: comparisonMetricLocal,
       swatchChangeThreshold: swatchChangeThresholdLocal
     };
+  }
+
+  function getReferenceViewAnnouncement(
+    previousMode: ReferenceWorkspaceSnapshot['viewMode'],
+    nextMode: ReferenceWorkspaceSnapshot['viewMode']
+  ): string | null {
+    if (nextMode === previousMode) {
+      return null;
+    }
+
+    if (nextMode === 'comparison') {
+      return 'Comparison View';
+    }
+
+    if (nextMode === 'reference' && previousMode === 'comparison') {
+      return 'Reference View';
+    }
+
+    return null;
+  }
+
+  function setReferenceViewMode(
+    nextMode: Extract<ReferenceWorkspaceSnapshot['viewMode'], 'reference' | 'comparison'>
+  ): void {
+    if (!hasReferenceView) {
+      return;
+    }
+
+    const previousMode = activeReferenceViewMode;
+    if (previousMode === nextMode) {
+      return;
+    }
+
+    referenceViewMode = nextMode;
+    announce(getReferenceViewAnnouncement(previousMode, nextMode) ?? nextMode);
+    scheduleHistoryCommit(
+      nextMode === 'comparison' ? 'Comparison View opened' : 'Reference View opened'
+    );
+  }
+
+  function handleReferenceViewModeKeydown(event: KeyboardEvent, index: number): void {
+    if (!hasReferenceView) {
+      return;
+    }
+
+    const modes: Array<
+      Extract<ReferenceWorkspaceSnapshot['viewMode'], 'reference' | 'comparison'>
+    > = ['reference', 'comparison'];
+    let nextIndex: number | null = null;
+
+    if (event.key === 'ArrowRight') {
+      nextIndex = (index + 1) % modes.length;
+    } else if (event.key === 'ArrowLeft') {
+      nextIndex = (index - 1 + modes.length) % modes.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = modes.length - 1;
+    }
+
+    if (nextIndex === null) {
+      return;
+    }
+
+    event.preventDefault();
+    setReferenceViewMode(modes[nextIndex]);
+    focusReferenceViewModeTab(nextIndex);
+  }
+
+  function focusReferenceViewModeTab(index: number): void {
+    const tabs = referenceViewTabsEl?.querySelectorAll<HTMLElement>('[role="tab"]');
+    tabs?.[index]?.focus({ preventScroll: true });
   }
 
   function captureHistorySnapshot(preferStoreState: boolean = false): ReferenceHistorySnapshot {
@@ -506,6 +602,7 @@
     y1Local = palette.y1;
     x2Local = palette.x2;
     y2Local = palette.y2;
+    referenceViewMode = reference.viewMode;
 
     updateColorState({
       baseColor: palette.baseColor,
@@ -950,6 +1047,7 @@
     // Load persisted reference workspace (AC1)
     const storedReferenceWorkspace = loadReferenceWorkspaceFromStorage();
     if (storedReferenceWorkspace) {
+      referenceViewMode = storedReferenceWorkspace.viewMode;
       updateColorState({
         ...(storedReferenceWorkspace.referenceConfiguration && {
           referenceConfiguration:
@@ -1249,11 +1347,12 @@
     if (refConfig) {
       saveReferenceWorkspaceToStorage({
         referenceConfiguration: refConfig as unknown as Record<string, unknown>,
-        viewMode: 'reference',
+        viewMode: activeReferenceViewMode,
         comparisonMetric: comparisonMetricLocal,
         swatchChangeThreshold: swatchChangeThresholdLocal
       });
     } else {
+      referenceViewMode = 'default';
       clearStoredReferenceWorkspace();
     }
   });
@@ -1620,57 +1719,81 @@
             body="Swatch fills approximate how this palette appears to viewers with this condition. Hex values, contrast badges, and exports remain unchanged."
           />
         {/if}
-        {#if referenceConfigurationLocal && referenceColors}
+        {#if referenceViewData}
           {#key `reference-view-${historyRestoreRevision}`}
-            <ReferenceView
-              currentNeutrals={neutralsLocal}
-              currentNeutralsHex={neutralsHexLocal}
-              currentNeutralsDisplay={neutralsSwatchDisplayLocal}
-              currentNeutralsSimulatedDisplay={neutralsSimulatedDisplayLocal}
-              currentPalettes={palettesLocal}
-              currentPalettesHex={palettesHexLocal}
-              currentPalettesDisplay={palettesSwatchDisplayLocal}
-              currentPalettesSimulatedDisplay={palettesSimulatedDisplayLocal}
-              currentLightnessNudgers={lightnessNudgerValues}
-              currentHueNudgers={hueNudgerValues}
-              referenceNeutrals={referenceColors.neutrals}
-              referenceNeutralsHex={referenceColors.neutralsHex}
-              referenceNeutralsDisplay={referenceColors.neutralsSwatchDisplay}
-              referenceNeutralsSimulatedDisplay={referenceColors.neutralsSimulatedDisplay}
-              referencePalettes={referenceColors.palettes}
-              referencePalettesHex={referenceColors.palettesHex}
-              referencePalettesDisplay={referenceColors.palettesSwatchDisplay}
-              referencePalettesSimulatedDisplay={referenceColors.palettesSimulatedDisplay}
-              referenceContrastColors={referenceConfigurationLocal.contrast}
-              currentConfig={{
-                numColors: numColorsLocal,
-                numPalettes: numPalettesLocal,
-                baseColor: baseColorLocal,
-                warmth: warmthLocal,
-                warmthHue: warmthHueLocal,
-                x1: x1Local,
-                y1: y1Local,
-                x2: x2Local,
-                y2: y2Local,
-                chromaMultiplier: chromaMultiplierLocal,
-                lightnessNudgers: lightnessNudgerValues,
-                hueNudgers: hueNudgerValues,
-                stepSaturationNudgers: stepSaturationNudgerValues,
-                paletteSaturationNudgers: paletteSaturationNudgerValues,
-                paletteChromaNudgers: paletteChromaNudgerValues,
-                contrastMode: contrastModeLocal,
-                lowStep: lowStepLocal,
-                highStep: highStepLocal,
-                lowReference: lowReferenceLocal,
-                highReference: highReferenceLocal,
-                contrast: contrastColorsLocal,
-                contrastAlgorithm: contrastAlgorithmLocal,
-                solveAdjacentStopLows: solveAdjacentStopLowsLocal,
-                customNeutralName: customNeutralNameLocal,
-                customPaletteNames: customPaletteNamesLocal
-              }}
-              onCurrentHistoryCommit={scheduleHistoryCommit}
-            />
+            {@const activeReferenceView = referenceViewData}
+            <div class="reference-view-shell">
+              <div
+                bind:this={referenceViewTabsEl}
+                class="reference-view-tabs"
+                role="tablist"
+                aria-label="Reference view mode"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  id="reference-view-tab-reference"
+                  aria-controls="reference-view-panel"
+                  class="reference-view-tab"
+                  class:reference-view-tab--active={activeReferenceViewMode === 'reference'}
+                  aria-selected={activeReferenceViewMode === 'reference'}
+                  tabindex={activeReferenceViewMode === 'reference' ? 0 : -1}
+                  onclick={() => setReferenceViewMode('reference')}
+                  onkeydown={(event) => handleReferenceViewModeKeydown(event, 0)}
+                >
+                  Reference View
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="reference-view-tab-comparison"
+                  aria-controls="reference-view-panel"
+                  class="reference-view-tab"
+                  class:reference-view-tab--active={activeReferenceViewMode === 'comparison'}
+                  aria-selected={activeReferenceViewMode === 'comparison'}
+                  tabindex={activeReferenceViewMode === 'comparison' ? 0 : -1}
+                  onclick={() => setReferenceViewMode('comparison')}
+                  onkeydown={(event) => handleReferenceViewModeKeydown(event, 1)}
+                >
+                  Comparison View
+                </button>
+              </div>
+              <div
+                id="reference-view-panel"
+                role="tabpanel"
+                aria-labelledby={activeReferenceViewMode === 'comparison'
+                  ? 'reference-view-tab-comparison'
+                  : 'reference-view-tab-reference'}
+              >
+                <ReferenceView
+                  viewMode={activeReferenceView.viewMode}
+                  currentNeutrals={neutralsLocal}
+                  currentNeutralsHex={neutralsHexLocal}
+                  currentNeutralsDisplay={neutralsSwatchDisplayLocal}
+                  currentNeutralsSimulatedDisplay={neutralsSimulatedDisplayLocal}
+                  currentPalettes={palettesLocal}
+                  currentPalettesHex={palettesHexLocal}
+                  currentPalettesDisplay={palettesSwatchDisplayLocal}
+                  currentPalettesSimulatedDisplay={palettesSimulatedDisplayLocal}
+                  currentLightnessNudgers={lightnessNudgerValues}
+                  currentHueNudgers={hueNudgerValues}
+                  referenceNeutrals={activeReferenceView.colors.neutrals}
+                  referenceNeutralsHex={activeReferenceView.colors.neutralsHex}
+                  referenceNeutralsDisplay={activeReferenceView.colors.neutralsSwatchDisplay}
+                  referenceNeutralsSimulatedDisplay={activeReferenceView.colors
+                    .neutralsSimulatedDisplay}
+                  referencePalettes={activeReferenceView.colors.palettes}
+                  referencePalettesHex={activeReferenceView.colors.palettesHex}
+                  referencePalettesDisplay={activeReferenceView.colors.palettesSwatchDisplay}
+                  referencePalettesSimulatedDisplay={activeReferenceView.colors
+                    .palettesSimulatedDisplay}
+                  referenceContrastColors={activeReferenceView.configuration.contrast}
+                  referenceContrastAlgorithm={activeReferenceView.configuration.contrastAlgorithm}
+                  referenceGamutSpace={activeReferenceView.configuration.gamutSpace}
+                  onCurrentHistoryCommit={scheduleHistoryCommit}
+                />
+              </div>
+            </div>
           {/key}
         {:else}
           <div class="content-inner">
@@ -1747,11 +1870,70 @@
     min-height: 0;
   }
 
+  .reference-view-shell {
+    display: grid;
+    gap: var(--space-md);
+    min-height: 0;
+  }
+
+  .reference-view-tabs {
+    display: inline-flex;
+    gap: var(--space-xs);
+    align-self: start;
+    padding: var(--space-xs);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 62%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in oklab, var(--bg-secondary) 92%, transparent);
+  }
+
+  .reference-view-tab {
+    appearance: none;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-weight: var(--font-weight-medium);
+    min-height: var(--touch-target-comfortable);
+    padding: var(--space-sm) var(--space-md);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  .reference-view-tab:hover {
+    color: var(--text-primary);
+  }
+
+  .reference-view-tab:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-inside);
+    box-shadow: 0 0 0 var(--focus-outline-offset) var(--focus-outline-outside);
+  }
+
+  .reference-view-tab--active {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    box-shadow: inset 0 0 0 var(--border-width-thin)
+      color-mix(in oklab, var(--border) 80%, transparent);
+  }
+
   @container (max-width: 980px) {
     .layout {
       grid-template-columns: 1fr;
       padding: var(--space-lg) var(--space-sm) var(--space-xl) var(--space-sm);
       max-width: none;
+    }
+
+    .reference-view-tabs {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .reference-view-tab {
+      justify-content: center;
+      text-align: center;
     }
   }
 </style>

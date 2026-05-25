@@ -15,16 +15,22 @@
   import { openExportPreview } from '$lib/help/exportPreviewStore';
   import '$lib/styles/nudger.css';
   import type Color from 'colorjs.io';
+  import type { ComparisonAnnotation } from '$lib/comparisonViewAnnotations';
+  import type { ContrastAlgorithm } from '$lib/types';
 
   interface Props {
     neutrals?: (Color | null)[];
     neutralsHex?: (string | null)[];
     neutralsDisplay?: (string | null)[];
     neutralsSimulatedDisplay?: (string | null)[] | null;
+    placeholderLabels?: (string | null)[];
+    comparisonAnnotations?: (ComparisonAnnotation | null)[];
+    neutralStepIndices?: (number | null)[];
     lightnessNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
     readonly?: boolean;
     contrastColorsOverride?: { low: string; high: string };
+    contrastAlgorithmOverride?: ContrastAlgorithm;
   }
 
   let {
@@ -32,10 +38,14 @@
     neutralsHex = [],
     neutralsDisplay = [],
     neutralsSimulatedDisplay = null,
+    placeholderLabels = [],
+    comparisonAnnotations = [],
+    neutralStepIndices = [],
     lightnessNudgerValues = [],
     onHistoryCommit,
     readonly = false,
-    contrastColorsOverride = undefined
+    contrastColorsOverride = undefined,
+    contrastAlgorithmOverride = undefined
   }: Props = $props();
 
   const effectiveContrastLow = $derived(contrastColorsOverride?.low ?? $contrastColors.low);
@@ -141,9 +151,15 @@
           <div
             class="neutral-item neutral-placeholder"
             data-testid="neutral-placeholder"
-            aria-hidden="true"
-          ></div>
+            aria-label={placeholderLabels[index] ?? undefined}
+            aria-hidden={placeholderLabels[index] ? undefined : 'true'}
+          >
+            {#if placeholderLabels[index]}
+              <span class="placeholder-label">{placeholderLabels[index]}</span>
+            {/if}
+          </div>
         {:else}
+          {@const sourceStepIndex = neutralStepIndices[index] ?? index}
           <div
             class="neutral-item"
             style="--swatch-width: 100%; --swatch-flex: 0 0 auto; --swatch-border-bottom-left-radius: 0; --swatch-border-bottom-right-radius: 0; --swatch-border-bottom: none;"
@@ -152,17 +168,20 @@
               {color}
               displayValue={neutralsDisplay[index] ?? color}
               simulatedColor={neutralsSimulatedDisplay?.[index] ?? ''}
-              label={String(index * 10)}
+              label={String(sourceStepIndex * 10)}
               oklchColor={neutrals[index] ?? null}
               paletteName={neutralName}
               isNeutral={true}
-              stepIndex={index}
+              stepIndex={sourceStepIndex}
               {onHistoryCommit}
               {contrastColorsOverride}
+              {contrastAlgorithmOverride}
+              comparisonChip={comparisonAnnotations[index]?.chip ?? null}
+              quiet={comparisonAnnotations[index]?.quiet ?? false}
             />
             <div class="nudger-container">
               <label for="lightness-nudger-{index}" class="visually-hidden"
-                >Lightness adjustment for step {index}</label
+                >Lightness adjustment for step {sourceStepIndex}</label
               >
               <input
                 bind:this={inputEls[index]}
@@ -171,8 +190,8 @@
                 min="-0.5"
                 max="0.5"
                 step="0.01"
-                value={lightnessNudgerValues[index] ?? 0}
-                data-nonzero={(lightnessNudgerValues[index] ?? 0) !== 0 ? '' : undefined}
+                value={lightnessNudgerValues[sourceStepIndex] ?? 0}
+                data-nonzero={(lightnessNudgerValues[sourceStepIndex] ?? 0) !== 0 ? '' : undefined}
                 disabled={readonly}
                 oninput={(e) => {
                   if (readonly || !e || !e.target) return;
@@ -183,7 +202,7 @@
                   const newValue = parseFloat(inputValue);
                   if (!isNaN(newValue) && isFinite(newValue)) {
                     const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
-                    updateLightnessNudger(index, clampedValue);
+                    updateLightnessNudger(sourceStepIndex, clampedValue);
                   }
                 }}
                 onblur={(e) => {
@@ -192,7 +211,7 @@
                   const newValue = parseFloat(inputValue);
                   if (isNaN(newValue) || !isFinite(newValue)) {
                     (e.target as HTMLInputElement).value = '0';
-                    updateLightnessNudger(index, 0);
+                    updateLightnessNudger(sourceStepIndex, 0);
                     onHistoryCommit?.('Neutral lightness adjusted');
                   } else {
                     onHistoryCommit?.('Neutral lightness adjusted');
@@ -200,10 +219,10 @@
                 }}
                 onkeydown={(e) => {
                   if (readonly) return;
-                  handleKeyDown(index, e);
+                  handleKeyDown(sourceStepIndex, e);
                 }}
                 class="nudger-input"
-                aria-label="Lightness adjustment for step {index}"
+                aria-label="Lightness adjustment for step {sourceStepIndex}"
               />
             </div>
           </div>
@@ -267,6 +286,8 @@
   }
 
   .neutral-placeholder {
+    display: grid;
+    place-items: center;
     background: repeating-linear-gradient(
       45deg,
       var(--bg-tertiary),
@@ -277,6 +298,22 @@
     border-radius: var(--radius-md);
     opacity: 0.4;
     min-height: 80px;
+  }
+
+  .placeholder-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target-min);
+    padding: var(--space-xs) var(--space-sm);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 72%, transparent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklab, var(--bg-primary) 86%, transparent);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
   }
 
   .no-colors {

@@ -168,7 +168,7 @@ const DEFAULT_STATE = {
   constraintSolverSummary: null as ConstraintSolverSummary | null,
   referenceConfiguration: null as ReferenceConfiguration | null,
   comparisonMetric: 'ok' as ColorDifferenceMetric,
-  swatchChangeThreshold: 1
+  swatchChangeThreshold: 0.02
 };
 
 function normalizeDisplayState(state: ColorState): ColorState {
@@ -772,7 +772,7 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
       constraintSolverSummary: null,
       referenceConfiguration: null,
       comparisonMetric: 'ok' as ColorDifferenceMetric,
-      swatchChangeThreshold: 1,
+      swatchChangeThreshold: 0.02,
       _lastUpdated: Date.now()
     } as ColorState);
   });
