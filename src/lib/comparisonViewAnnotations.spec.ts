@@ -39,6 +39,25 @@ describe('comparisonViewAnnotations', () => {
     ).toBe('Changed');
   });
 
+  it('emits a Changed chip when the color difference equals the threshold', () => {
+    const currentColor = new Color('oklch', [0.7, 0.12, 210]);
+    const referenceColor = new Color('oklch', [0.7, 0.1, 210]);
+    const threshold = currentColor.deltaEOK(referenceColor);
+
+    expect(
+      buildComparisonAnnotation({
+        currentHex: '#58b6d8',
+        referenceHex: '#5cb2cd',
+        currentColor,
+        referenceColor,
+        metric: 'ok',
+        threshold,
+        currentStatusConfig: baseConfig,
+        referenceStatusConfig: baseConfig
+      }).chip?.label
+    ).toBe('Changed');
+  });
+
   it('detects wide-gamut color-only differences even when sRGB hex matches', () => {
     expect(
       buildComparisonAnnotation({

@@ -52,11 +52,14 @@
     referenceConfiguration,
     comparisonMetric,
     swatchChangeThreshold,
+    autoThemeRestoreLock,
     updateColorState,
     updateContrastFromNeutrals,
     resetColorState,
     setTheme,
-    setThemePreference
+    setThemePreference,
+    setAutoThemeRestoreLock,
+    clearAutoThemeRestoreLock
   } from '$lib/stores';
   import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
   import {
@@ -80,8 +83,7 @@
   import type { ReferenceWorkspaceSnapshot } from '$lib/referenceWorkspace';
   import {
     saveReferenceWorkspaceToStorage,
-    loadReferenceWorkspaceFromStorage,
-    clearStoredReferenceWorkspace
+    loadReferenceWorkspaceFromStorage
   } from '$lib/referenceWorkspacePersistence';
   import type { ReferenceConfiguration } from '$lib/referenceConfiguration';
   import { createPageScheduler, type PageScheduler } from '$lib/pageScheduler';
@@ -107,6 +109,8 @@
   import GettingStartedCallout from '$lib/components/GettingStartedCallout.svelte';
   import NoticeBanner from '$lib/components/NoticeBanner.svelte';
   import ReferenceView from '$lib/components/ReferenceView.svelte';
+  import ComparisonControls from '$lib/components/ComparisonControls.svelte';
+  import ConfigurationDiffDisplay from '$lib/components/ConfigurationDiffDisplay.svelte';
   import type { CvdMode } from '$lib/types';
 
   interface Props {
@@ -169,9 +173,17 @@
   let cvdModeLocal = $derived($cvdMode);
   let neutralsSimulatedDisplayLocal = $derived($neutralsSimulatedDisplay);
   let palettesSimulatedDisplayLocal = $derived($palettesSimulatedDisplay);
+  let currentColorStateLocal = $derived($colorStore);
+  let currentComparisonConfig = $derived(
+    currentColorStateLocal as unknown as Record<string, unknown>
+  );
   let referenceConfigurationLocal = $derived($referenceConfiguration);
+  let referenceComparisonConfig = $derived(
+    referenceConfigurationLocal as Record<string, unknown> | null
+  );
   let comparisonMetricLocal = $derived($comparisonMetric);
   let swatchChangeThresholdLocal = $derived($swatchChangeThreshold);
+  let autoThemeRestoreLockLocal = $derived($autoThemeRestoreLock);
 
   // Generated colors from reference configuration (readonly, frozen)
   let referenceColors = $state<ReturnType<typeof generateColorsFromReference> | null>(null);
@@ -322,6 +334,18 @@
     return value === 'WCAG' ? 'WCAG 2.2' : 'APCA';
   }
 
+  function formatResolvedTheme(value: 'light' | 'dark'): string {
+    return value === 'light' ? 'Light' : 'Dark';
+  }
+
+  function getSystemResolvedTheme(): 'light' | 'dark' {
+    if (typeof window === 'undefined') {
+      return 'light';
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
   function formatContrastStepLabel(value: number): string {
     return `${value * 10}`;
   }
@@ -381,6 +405,24 @@
   const activeReferenceViewMode = $derived(
     referenceViewData ? referenceViewData.viewMode : 'default'
   );
+  const resolvedThemeDriftNotice = $derived.by(() => {
+    if (activeReferenceViewMode !== 'comparison' || !referenceConfigurationLocal) {
+      return null;
+    }
+
+    if (
+      themePreferenceLocal !== 'auto' ||
+      referenceConfigurationLocal.themePreference !== 'auto' ||
+      currentThemeLocal === referenceConfigurationLocal.resolvedTheme
+    ) {
+      return null;
+    }
+
+    return {
+      title: `Auto theme currently resolves to ${formatResolvedTheme(currentThemeLocal)}`,
+      body: `The pinned reference was generated in ${formatResolvedTheme(referenceConfigurationLocal.resolvedTheme)}.`
+    };
+  });
 
   function captureReferenceWorkspaceSnapshot(): ReferenceWorkspaceSnapshot {
     const storeState = get(colorStore);
@@ -395,7 +437,8 @@
       referenceConfiguration: storeState.referenceConfiguration as Record<string, unknown> | null,
       viewMode,
       comparisonMetric: comparisonMetricLocal,
-      swatchChangeThreshold: swatchChangeThresholdLocal
+      swatchChangeThreshold: swatchChangeThresholdLocal,
+      swatchChangeThresholdsByMetric: structuredClone(storeState.swatchChangeThresholdsByMetric)
     };
   }
 
@@ -518,7 +561,8 @@
           solverAdjustmentSnapshot: structuredClone(storeState.solverAdjustmentSnapshot),
           constraintSolverSummary: structuredClone(storeState.constraintSolverSummary),
           comparisonMetric: storeState.comparisonMetric,
-          swatchChangeThreshold: storeState.swatchChangeThreshold
+          swatchChangeThreshold: storeState.swatchChangeThreshold,
+          swatchChangeThresholdsByMetric: structuredClone(storeState.swatchChangeThresholdsByMetric)
         },
         reference: captureReferenceWorkspaceSnapshot()
       };
@@ -567,7 +611,10 @@
         solverAdjustmentSnapshot: structuredClone(solverAdjustmentSnapshotLocal),
         constraintSolverSummary: structuredClone(constraintSolverSummaryLocal),
         comparisonMetric: comparisonMetricLocal,
-        swatchChangeThreshold: swatchChangeThresholdLocal
+        swatchChangeThreshold: swatchChangeThresholdLocal,
+        swatchChangeThresholdsByMetric: structuredClone(
+          get(colorStore).swatchChangeThresholdsByMetric
+        )
       },
       reference: captureReferenceWorkspaceSnapshot()
     };
@@ -576,9 +623,23 @@
   function applyHistorySnapshot(snapshot: ReferenceHistorySnapshot): void {
     const palette = snapshot.palette;
     const reference = snapshot.reference;
+    const nextThresholdsByMetric = palette.swatchChangeThresholdsByMetric
+      ? {
+          ...get(colorStore).swatchChangeThresholdsByMetric,
+          ...palette.swatchChangeThresholdsByMetric
+        }
+      : undefined;
 
     skipAutoThemeSync = true;
     isApplyingHistorySnapshot = true;
+    if (palette.themePreference === 'auto' && typeof window !== 'undefined') {
+      const systemResolvedTheme = getSystemResolvedTheme();
+      setAutoThemeRestoreLock(
+        palette.currentTheme !== systemResolvedTheme ? palette.currentTheme : null
+      );
+    } else {
+      clearAutoThemeRestoreLock();
+    }
     pendingHistoryGeneratorSnapshot = {
       baseColor: palette.baseColor,
       warmth: palette.warmth,
@@ -644,6 +705,9 @@
       constraintSolverSummary: palette.constraintSolverSummary,
       comparisonMetric: palette.comparisonMetric,
       swatchChangeThreshold: palette.swatchChangeThreshold,
+      ...(nextThresholdsByMetric && {
+        swatchChangeThresholdsByMetric: nextThresholdsByMetric
+      }),
       referenceConfiguration: reference.referenceConfiguration as ReferenceConfiguration | null
     });
 
@@ -1048,13 +1112,22 @@
     const storedReferenceWorkspace = loadReferenceWorkspaceFromStorage();
     if (storedReferenceWorkspace) {
       referenceViewMode = storedReferenceWorkspace.viewMode;
+      const nextThresholdsByMetric = storedReferenceWorkspace.swatchChangeThresholdsByMetric
+        ? {
+            ...get(colorStore).swatchChangeThresholdsByMetric,
+            ...storedReferenceWorkspace.swatchChangeThresholdsByMetric
+          }
+        : undefined;
       updateColorState({
         ...(storedReferenceWorkspace.referenceConfiguration && {
           referenceConfiguration:
             storedReferenceWorkspace.referenceConfiguration as unknown as ReferenceConfiguration
         }),
         comparisonMetric: storedReferenceWorkspace.comparisonMetric,
-        swatchChangeThreshold: storedReferenceWorkspace.swatchChangeThreshold
+        swatchChangeThreshold: storedReferenceWorkspace.swatchChangeThreshold,
+        ...(nextThresholdsByMetric && {
+          swatchChangeThresholdsByMetric: nextThresholdsByMetric
+        })
       });
     }
 
@@ -1063,7 +1136,15 @@
     const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
       if ($themePreference === 'auto') {
         const resolvedTheme = e.matches ? 'dark' : 'light';
-        if ($currentTheme !== resolvedTheme) {
+
+        if (autoThemeRestoreLockLocal) {
+          if (resolvedTheme === currentThemeLocal) {
+            clearAutoThemeRestoreLock();
+          }
+          return;
+        }
+
+        if (currentThemeLocal !== resolvedTheme) {
           setTheme(resolvedTheme);
         }
       }
@@ -1100,9 +1181,14 @@
   // React to themePreference changes to apply auto theme
   $effect(() => {
     if (!skipAutoThemeSync && themePreferenceLocal === 'auto' && typeof window !== 'undefined') {
-      const resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
+      const resolvedTheme = getSystemResolvedTheme();
+
+      if (autoThemeRestoreLockLocal) {
+        if (resolvedTheme === currentThemeLocal) {
+          clearAutoThemeRestoreLock();
+        }
+        return;
+      }
 
       if (currentThemeLocal !== resolvedTheme) {
         setTheme(resolvedTheme);
@@ -1259,11 +1345,11 @@
   $effect(() => {
     if (referenceConfigurationLocal) {
       try {
-        referenceColors = generateColorsFromReference(
-          referenceConfigurationLocal,
-          cvdModeLocal,
-          currentThemeLocal
-        );
+        referenceColors = generateColorsFromReference(referenceConfigurationLocal, {
+          cvdMode: cvdModeLocal,
+          displayColorSpace: displayColorSpaceLocal,
+          gamutSpace: gamutSpaceLocal
+        });
       } catch (error) {
         console.error('Error generating reference colors:', error);
         referenceColors = null;
@@ -1343,18 +1429,19 @@
       return;
     }
 
-    const refConfig = referenceConfigurationLocal;
-    if (refConfig) {
-      saveReferenceWorkspaceToStorage({
-        referenceConfiguration: refConfig as unknown as Record<string, unknown>,
-        viewMode: activeReferenceViewMode,
-        comparisonMetric: comparisonMetricLocal,
-        swatchChangeThreshold: swatchChangeThresholdLocal
-      });
-    } else {
+    if (!referenceConfigurationLocal) {
       referenceViewMode = 'default';
-      clearStoredReferenceWorkspace();
     }
+
+    saveReferenceWorkspaceToStorage({
+      referenceConfiguration: referenceConfigurationLocal as Record<string, unknown> | null,
+      viewMode: referenceConfigurationLocal ? activeReferenceViewMode : 'default',
+      comparisonMetric: comparisonMetricLocal,
+      swatchChangeThreshold: swatchChangeThresholdLocal,
+      swatchChangeThresholdsByMetric: structuredClone(
+        get(colorStore).swatchChangeThresholdsByMetric
+      )
+    });
   });
 
   function applyUrlState(urlState: UrlColorState) {
@@ -1588,6 +1675,21 @@
             {/key}
           </Card>
 
+          {#if activeReferenceViewMode === 'comparison'}
+            <Card
+              title="Comparison"
+              subtitle="Difference interpretation"
+              summary={`${comparisonMetricLocal === 'ok' ? 'Delta E OK' : 'Delta E 2000'} · ${swatchChangeThresholdLocal}`}
+              collapsible
+              open={true}
+              data-testid="comparison-controls-card"
+            >
+              {#key `comparison-${historyRestoreRevision}`}
+                <ComparisonControls onHistoryCommit={scheduleHistoryCommit} />
+              {/key}
+            </Card>
+          {/if}
+
           <Card
             title="Output"
             subtitle="Formats and labels"
@@ -1682,6 +1784,18 @@
             {/key}
           </Card>
 
+          {#if activeReferenceViewMode === 'comparison'}
+            <Card
+              title="Comparison"
+              subtitle="Difference interpretation"
+              data-testid="comparison-controls-card"
+            >
+              {#key `comparison-${historyRestoreRevision}`}
+                <ComparisonControls onHistoryCommit={scheduleHistoryCommit} />
+              {/key}
+            </Card>
+          {/if}
+
           <Card title="Output" subtitle="Formats and labels" data-testid="output-controls-card">
             {#key `output-${historyRestoreRevision}`}
               <DisplaySettings
@@ -1765,6 +1879,23 @@
                   ? 'reference-view-tab-comparison'
                   : 'reference-view-tab-reference'}
               >
+                {#if activeReferenceViewMode === 'comparison'}
+                  <div class="comparison-explanations">
+                    {#if resolvedThemeDriftNotice}
+                      <NoticeBanner
+                        tone="info"
+                        title={resolvedThemeDriftNotice.title}
+                        body={resolvedThemeDriftNotice.body}
+                      />
+                    {/if}
+
+                    <ConfigurationDiffDisplay
+                      currentConfig={currentComparisonConfig}
+                      referenceConfig={referenceComparisonConfig}
+                    />
+                  </div>
+                {/if}
+
                 <ReferenceView
                   viewMode={activeReferenceView.viewMode}
                   currentNeutrals={neutralsLocal}
@@ -1787,9 +1918,9 @@
                   referencePalettesDisplay={activeReferenceView.colors.palettesSwatchDisplay}
                   referencePalettesSimulatedDisplay={activeReferenceView.colors
                     .palettesSimulatedDisplay}
+                  referenceCustomNeutralName={activeReferenceView.configuration.customNeutralName}
+                  referenceCustomPaletteNames={activeReferenceView.configuration.customPaletteNames}
                   referenceContrastColors={activeReferenceView.configuration.contrast}
-                  referenceContrastAlgorithm={activeReferenceView.configuration.contrastAlgorithm}
-                  referenceGamutSpace={activeReferenceView.configuration.gamutSpace}
                   onCurrentHistoryCommit={scheduleHistoryCommit}
                 />
               </div>
@@ -1874,6 +2005,11 @@
     display: grid;
     gap: var(--space-md);
     min-height: 0;
+  }
+
+  .comparison-explanations {
+    display: grid;
+    gap: var(--space-md);
   }
 
   .reference-view-tabs {

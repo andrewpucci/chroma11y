@@ -3,7 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('$lib/announce', () => ({
+  announce: vi.fn()
+}));
+
 import ReferenceControls from '$lib/components/ReferenceControls.svelte';
+import { announce } from '$lib/announce';
 import {
   colorStore,
   pinReferenceConfiguration,
@@ -33,6 +38,21 @@ describe('ReferenceControls', () => {
       expect(
         screen.queryByRole('button', { name: /restore reference configuration/i })
       ).not.toBeInTheDocument();
+    });
+
+    it('announces when the current palette is pinned as the reference configuration', async () => {
+      expect.assertions(1);
+      const user = userEvent.setup();
+
+      render(ReferenceControls);
+
+      await user.click(
+        screen.getByRole('button', {
+          name: /pin current palette configuration as reference for side-by-side comparison/i
+        })
+      );
+
+      expect(announce).toHaveBeenCalledWith('Reference configuration pinned');
     });
   });
 
@@ -168,6 +188,34 @@ describe('ReferenceControls', () => {
       );
 
       expect(get(referenceConfiguration)).not.toBeNull();
+    });
+
+    it('announces replace, restore, and clear reference actions', async () => {
+      expect.assertions(3);
+      const user = userEvent.setup();
+
+      render(ReferenceControls);
+
+      await user.click(
+        screen.getByRole('button', {
+          name: /replace reference configuration with current palette/i
+        })
+      );
+      expect(announce).toHaveBeenCalledWith('Reference configuration replaced');
+
+      await user.click(
+        screen.getByRole('button', {
+          name: /restore reference configuration into current palette/i
+        })
+      );
+      expect(announce).toHaveBeenCalledWith('Reference configuration restored');
+
+      await user.click(
+        screen.getByRole('button', {
+          name: /clear reference configuration and return to default view/i
+        })
+      );
+      expect(announce).toHaveBeenCalledWith('Reference configuration cleared');
     });
   });
 });

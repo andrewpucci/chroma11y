@@ -12,6 +12,9 @@ import {
   referenceConfiguration,
   comparisonMetric,
   swatchChangeThreshold,
+  currentTheme,
+  themePreference,
+  setComparisonMetric,
   resetColorState,
   updateColorState
 } from '$lib/stores';
@@ -155,6 +158,22 @@ function getReferenceViewPanel(): HTMLElement {
   return screen.getByRole('tabpanel') as HTMLElement;
 }
 
+function getComparisonControlsCard(): HTMLElement | null {
+  return screen.queryByTestId('comparison-controls-card');
+}
+
+function getComparisonMetricSelect(): HTMLSelectElement {
+  return screen.getByRole('combobox', {
+    name: /select comparison metric for swatch color changes/i
+  }) as HTMLSelectElement;
+}
+
+function getSwatchChangeThresholdInput(): HTMLInputElement {
+  return screen.getByRole('spinbutton', {
+    name: /swatch change threshold value/i
+  }) as HTMLInputElement;
+}
+
 function getUndoHistoryButton(): HTMLButtonElement {
   return screen.getByRole('button', { name: /show undo history/i }) as HTMLButtonElement;
 }
@@ -229,13 +248,13 @@ interface RenderPageOptions {
   openOutputAdvanced?: boolean;
 }
 
-async function renderPage(options: RenderPageOptions = {}): Promise<void> {
+async function renderPage(options: RenderPageOptions = {}) {
   const {
     scheduler = createImmediatePageScheduler(),
     openOutputAdvanced: shouldOpenOutputAdvanced = true
   } = options;
 
-  render(PageContent, { props: { scheduler } });
+  const renderResult = render(PageContent, { props: { scheduler } });
   await flushAppState();
 
   if (shouldOpenOutputAdvanced) {
@@ -244,6 +263,8 @@ async function renderPage(options: RenderPageOptions = {}): Promise<void> {
 
   expect(getUndoButton()).toBeDisabled();
   expect(getRedoButton()).toBeDisabled();
+
+  return renderResult;
 }
 
 async function openFirstConstraintEditor(): Promise<void> {
@@ -385,7 +406,8 @@ describe('page history integration', () => {
     });
     localStorage.clear();
     window.history.replaceState({}, '', '/');
-    updateColorState({ referenceConfiguration: null });
+    resetColorState('light');
+    updateColorState({ themePreference: 'auto', currentTheme: 'light' });
   });
 
   it('supports button undo/redo and multi-step menu jumps', async () => {
@@ -667,9 +689,11 @@ describe('page history integration', () => {
   }, 20000);
 
   it('AC1b: a persisted reference workspace is restored when the page loads', async () => {
+    const validReferenceConfiguration = createReferenceConfiguration(get(colorStore));
+
     // Seed localStorage with a reference workspace before rendering
     const seedWorkspace = {
-      referenceConfiguration: { baseColor: '#5EF784', numColors: 11, pinnedAt: Date.now() },
+      referenceConfiguration: validReferenceConfiguration,
       viewMode: 'reference',
       comparisonMetric: 'ok',
       swatchChangeThreshold: 1
@@ -709,7 +733,7 @@ describe('page history integration', () => {
     expect(get(referenceConfiguration)).toBeNull();
   }, 20000);
 
-  it('AC1c: persisted comparisonMetric and swatchChangeThreshold are restored when the page loads', async () => {
+  it('falls back to per-metric defaults when loading a legacy persisted comparison threshold', async () => {
     const seedWorkspace = {
       referenceConfiguration: { baseColor: '#5EF784', numColors: 11, pinnedAt: Date.now() },
       viewMode: 'reference',
@@ -721,7 +745,79 @@ describe('page history integration', () => {
     await renderPage({ openOutputAdvanced: false });
 
     expect(get(comparisonMetric)).toBe('2000');
-    expect(get(swatchChangeThreshold)).toBe(42);
+    expect(get(swatchChangeThreshold)).toBe(2);
+  }, 20000);
+
+  it('restores remembered thresholds for both comparison metrics when the page loads', async () => {
+    localStorage.setItem(
+      'chroma11y-reference-workspace',
+      JSON.stringify({
+        referenceConfiguration: null,
+        viewMode: 'default',
+        comparisonMetric: 'ok',
+        swatchChangeThreshold: 0.04,
+        swatchChangeThresholdsByMetric: {
+          ok: 0.04,
+          '2000': 3
+        }
+      })
+    );
+
+    await renderPage({ openOutputAdvanced: false });
+
+    expect(get(comparisonMetric)).toBe('ok');
+    expect(get(swatchChangeThreshold)).toBe(0.04);
+
+    setComparisonMetric('2000');
+
+    expect(get(swatchChangeThreshold)).toBe(3);
+  }, 20000);
+
+  it('keeps comparison settings persisted after clearing the reference and reloads them later', async () => {
+    resetColorState('light');
+    const validReferenceConfiguration = createReferenceConfiguration(get(colorStore));
+    localStorage.setItem(
+      'chroma11y-reference-workspace',
+      JSON.stringify({
+        referenceConfiguration: validReferenceConfiguration,
+        viewMode: 'reference',
+        comparisonMetric: '2000',
+        swatchChangeThreshold: 3,
+        swatchChangeThresholdsByMetric: {
+          ok: 0.02,
+          '2000': 3
+        }
+      })
+    );
+
+    const firstRender = await renderPage({ openOutputAdvanced: false });
+
+    await fireEvent.click(
+      screen.getByRole('button', {
+        name: /clear reference configuration and return to default view/i
+      })
+    );
+    await flushAppState();
+
+    expect(JSON.parse(localStorage.getItem('chroma11y-reference-workspace') ?? 'null')).toEqual({
+      referenceConfiguration: null,
+      viewMode: 'default',
+      comparisonMetric: '2000',
+      swatchChangeThreshold: 3,
+      swatchChangeThresholdsByMetric: {
+        ok: 0.02,
+        '2000': 3
+      }
+    });
+
+    firstRender.unmount();
+
+    await renderPage({ openOutputAdvanced: false });
+
+    expect(get(referenceConfiguration)).toBeNull();
+    expect(get(comparisonMetric)).toBe('2000');
+    expect(get(swatchChangeThreshold)).toBe(3);
+    expect(localStorage.getItem('chroma11y-reference-workspace')).not.toBeNull();
   }, 20000);
 
   it('AC201-1: a restored reference workspace exposes explicit reference and comparison view tabs', async () => {
@@ -806,5 +902,198 @@ describe('page history integration', () => {
     expect(referenceTab).toHaveFocus();
     expect(referenceTab).toHaveAttribute('aria-selected', 'true');
     expect(panel).toHaveAttribute('aria-labelledby', 'reference-view-tab-reference');
+  }, 20000);
+
+  it('shows comparison controls only in Comparison View with raw Delta E OK defaults', async () => {
+    const user = userEvent.setup();
+
+    await renderPage({ openOutputAdvanced: false });
+
+    const pinButton = screen.getByRole('button', {
+      name: /pin current palette configuration as reference/i
+    });
+    await fireEvent.click(pinButton);
+    await flushHistoryCommit();
+
+    expect(getComparisonControlsCard()).toBeNull();
+
+    await user.click(getViewTab('Comparison View'));
+    await flushHistoryCommit();
+
+    expect(getComparisonControlsCard()).toBeInTheDocument();
+    expect(getComparisonMetricSelect()).toHaveValue('ok');
+    expect(getSwatchChangeThresholdInput()).toHaveValue(0.02);
+    expect(getSwatchChangeThresholdInput()).toHaveAttribute('min', '0');
+    expect(getSwatchChangeThresholdInput()).toHaveAttribute('max', '0.1');
+    expect(getSwatchChangeThresholdInput()).toHaveAttribute('step', '0.005');
+
+    await user.click(getViewTab('Reference View'));
+    await flushHistoryCommit();
+
+    expect(getComparisonControlsCard()).toBeNull();
+  }, 20000);
+
+  it('restores per-metric comparison thresholds and undoes a metric switch as one step', async () => {
+    const user = userEvent.setup();
+
+    await renderPage({ openOutputAdvanced: false });
+
+    const pinButton = screen.getByRole('button', {
+      name: /pin current palette configuration as reference/i
+    });
+    await fireEvent.click(pinButton);
+    await flushHistoryCommit();
+
+    await user.click(getViewTab('Comparison View'));
+    await flushHistoryCommit();
+
+    const okThresholdInput = getSwatchChangeThresholdInput();
+    okThresholdInput.value = '0.05';
+    await fireEvent.input(okThresholdInput);
+    await fireEvent.change(okThresholdInput);
+    await flushHistoryCommit();
+    expect(getSwatchChangeThresholdInput()).toHaveValue(0.05);
+
+    await fireEvent.change(getComparisonMetricSelect(), { target: { value: '2000' } });
+    await flushHistoryCommit();
+
+    expect(getComparisonMetricSelect()).toHaveValue('2000');
+    expect(getSwatchChangeThresholdInput()).toHaveValue(2);
+
+    const deltaE2000ThresholdInput = getSwatchChangeThresholdInput();
+    deltaE2000ThresholdInput.value = '4';
+    await fireEvent.input(deltaE2000ThresholdInput);
+    await fireEvent.change(deltaE2000ThresholdInput);
+    await flushHistoryCommit();
+    expect(getSwatchChangeThresholdInput()).toHaveValue(4);
+
+    await fireEvent.change(getComparisonMetricSelect(), { target: { value: 'ok' } });
+    await flushHistoryCommit();
+
+    expect(getComparisonMetricSelect()).toHaveValue('ok');
+    expect(getSwatchChangeThresholdInput()).toHaveValue(0.05);
+
+    await user.click(getUndoButton());
+    await flushHistoryCommit();
+
+    expect(getComparisonMetricSelect()).toHaveValue('2000');
+    expect(getSwatchChangeThresholdInput()).toHaveValue(4);
+  }, 20000);
+
+  it('shows resolved theme drift above a no-configuration-changes state in Comparison View', async () => {
+    resetColorState('light');
+    const user = userEvent.setup();
+    let prefersDark = false;
+    const prefersColorSchemeListeners = new Set<(event: MediaQueryListEvent) => void>();
+
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches:
+          query === '(prefers-color-scheme: dark)'
+            ? prefersDark
+            : query === '(max-width: 980px)'
+              ? false
+              : false,
+        addEventListener: vi.fn((event: string, listener: (next: MediaQueryListEvent) => void) => {
+          if (query === '(prefers-color-scheme: dark)' && event === 'change') {
+            prefersColorSchemeListeners.add(listener);
+          }
+        }),
+        removeEventListener: vi.fn(
+          (event: string, listener: (next: MediaQueryListEvent) => void) => {
+            if (query === '(prefers-color-scheme: dark)' && event === 'change') {
+              prefersColorSchemeListeners.delete(listener);
+            }
+          }
+        )
+      }))
+    });
+
+    await renderPage({ openOutputAdvanced: false });
+
+    const pinButton = screen.getByRole('button', {
+      name: /pin current palette configuration as reference/i
+    });
+    await fireEvent.click(pinButton);
+    await flushHistoryCommit();
+
+    prefersDark = true;
+    for (const listener of prefersColorSchemeListeners) {
+      listener({ matches: true } as MediaQueryListEvent);
+    }
+    await flushAppState();
+
+    expect(get(themePreference)).toBe('auto');
+    expect(get(currentTheme)).toBe('dark');
+    expect(get(referenceConfiguration)?.resolvedTheme).toBe('light');
+
+    await user.click(getViewTab('Comparison View'));
+    await flushHistoryCommit();
+
+    const driftNote = await screen.findByText(/the pinned reference was generated in light/i);
+    const noChangesState = await screen.findByText('No configuration changes');
+
+    expect(driftNote).toBeInTheDocument();
+    expect(noChangesState).toBeInTheDocument();
+    expect(
+      driftNote.compareDocumentPosition(noChangesState) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  }, 20000);
+
+  it('restores the pinned resolved theme exactly when the reference was pinned under auto theme', async () => {
+    resetColorState('light');
+    let prefersDark = false;
+    const prefersColorSchemeListeners = new Set<(event: MediaQueryListEvent) => void>();
+
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches:
+          query === '(prefers-color-scheme: dark)'
+            ? prefersDark
+            : query === '(max-width: 980px)'
+              ? false
+              : false,
+        addEventListener: vi.fn((event: string, listener: (next: MediaQueryListEvent) => void) => {
+          if (query === '(prefers-color-scheme: dark)' && event === 'change') {
+            prefersColorSchemeListeners.add(listener);
+          }
+        }),
+        removeEventListener: vi.fn(
+          (event: string, listener: (next: MediaQueryListEvent) => void) => {
+            if (query === '(prefers-color-scheme: dark)' && event === 'change') {
+              prefersColorSchemeListeners.delete(listener);
+            }
+          }
+        )
+      }))
+    });
+
+    await renderPage({ openOutputAdvanced: false });
+
+    const pinButton = screen.getByRole('button', {
+      name: /pin current palette configuration as reference/i
+    });
+    await fireEvent.click(pinButton);
+    await flushHistoryCommit();
+
+    prefersDark = true;
+    for (const listener of prefersColorSchemeListeners) {
+      listener({ matches: true } as MediaQueryListEvent);
+    }
+    await flushAppState();
+
+    expect(get(currentTheme)).toBe('dark');
+    expect(get(referenceConfiguration)?.resolvedTheme).toBe('light');
+
+    const restoreButton = screen.getByRole('button', {
+      name: /restore reference configuration into current palette/i
+    });
+    await fireEvent.click(restoreButton);
+    await flushHistoryCommit();
+
+    expect(get(themePreference)).toBe('auto');
+    expect(get(currentTheme)).toBe('light');
   }, 20000);
 });

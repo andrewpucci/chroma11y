@@ -1,11 +1,17 @@
+import { get } from 'svelte/store';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
+import {
+  createReferenceConfiguration,
+  type ReferenceConfiguration
+} from './referenceConfiguration';
 import {
   saveReferenceWorkspaceToStorage,
   loadReferenceWorkspaceFromStorage,
   clearStoredReferenceWorkspace
 } from './referenceWorkspacePersistence';
 import type { StoredReferenceWorkspace } from './referenceWorkspacePersistence';
+import { colorStore, resetColorState } from './stores';
 
 const STORAGE_KEY = 'chroma11y-reference-workspace';
 
@@ -17,6 +23,16 @@ function createWorkspaceState(
     viewMode: 'default',
     comparisonMetric: 'ok',
     swatchChangeThreshold: 1,
+    ...overrides
+  };
+}
+
+function createStoredReferenceConfiguration(
+  overrides: Partial<ReferenceConfiguration> = {}
+): ReferenceConfiguration {
+  resetColorState('light');
+  return {
+    ...createReferenceConfiguration(get(colorStore)),
     ...overrides
   };
 }
@@ -35,7 +51,10 @@ describe('referenceWorkspacePersistence', () => {
       expect.assertions(1);
 
       const state = createWorkspaceState({
-        referenceConfiguration: { baseColor: '#5EF784', numColors: 11 },
+        referenceConfiguration: createStoredReferenceConfiguration() as unknown as Record<
+          string,
+          unknown
+        >,
         viewMode: 'reference'
       });
 
@@ -68,7 +87,10 @@ describe('referenceWorkspacePersistence', () => {
       expect.assertions(2);
 
       const state = createWorkspaceState({
-        referenceConfiguration: { baseColor: '#5EF784', numColors: 11 },
+        referenceConfiguration: createStoredReferenceConfiguration() as unknown as Record<
+          string,
+          unknown
+        >,
         viewMode: 'reference',
         comparisonMetric: '2000',
         swatchChangeThreshold: 5
@@ -77,8 +99,62 @@ describe('referenceWorkspacePersistence', () => {
 
       const result = loadReferenceWorkspaceFromStorage();
 
-      expect(result?.referenceConfiguration).toEqual({ baseColor: '#5EF784', numColors: 11 });
+      expect(result?.referenceConfiguration).toEqual(state.referenceConfiguration);
       expect(result?.viewMode).toBe('reference');
+    });
+
+    it('drops legacy reference configurations that are missing required frozen-theme fields', () => {
+      expect.assertions(4);
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          ...createWorkspaceState({
+            referenceConfiguration: { baseColor: '#5EF784', numColors: 11 },
+            viewMode: 'comparison',
+            comparisonMetric: '2000',
+            swatchChangeThreshold: 3
+          }),
+          swatchChangeThresholdsByMetric: {
+            ok: 0.04,
+            '2000': 3
+          }
+        })
+      );
+
+      const result = loadReferenceWorkspaceFromStorage();
+
+      expect(result?.referenceConfiguration).toBeNull();
+      expect(result?.viewMode).toBe('default');
+      expect(result?.comparisonMetric).toBe('2000');
+      expect(result?.swatchChangeThreshold).toBe(3);
+    });
+
+    it('restores remembered swatch thresholds for each comparison metric', () => {
+      expect.assertions(1);
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          ...createWorkspaceState({
+            comparisonMetric: 'ok',
+            swatchChangeThreshold: 0.04
+          }),
+          swatchChangeThresholdsByMetric: {
+            ok: 0.04,
+            '2000': 3
+          }
+        })
+      );
+
+      const result = loadReferenceWorkspaceFromStorage();
+
+      expect(result).toMatchObject({
+        swatchChangeThresholdsByMetric: {
+          ok: 0.04,
+          '2000': 3
+        }
+      });
     });
 
     it('returns null when nothing is stored', () => {

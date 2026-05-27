@@ -6,7 +6,8 @@
  */
 
 import type { ReferenceWorkspaceSnapshot } from './referenceWorkspace';
-import type { ColorDifferenceMetric } from './types';
+import type { ReferenceConfiguration } from './referenceConfiguration';
+import type { ColorDifferenceMetric, ContrastReference } from './types';
 
 export type StoredReferenceWorkspace = ReferenceWorkspaceSnapshot;
 
@@ -18,12 +19,113 @@ const VALID_VIEW_MODES: Array<'default' | 'reference' | 'comparison'> = [
   'comparison'
 ];
 const VALID_COMPARISON_METRICS: ColorDifferenceMetric[] = ['ok', '2000'];
+const DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC: Record<ColorDifferenceMetric, number> = {
+  ok: 0.02,
+  '2000': 2
+};
 
 /**
  * Type guard for validating ColorDifferenceMetric
  */
 function isValidComparisonMetric(value: unknown): value is ColorDifferenceMetric {
   return VALID_COMPARISON_METRICS.includes(value as ColorDifferenceMetric);
+}
+
+function isValidThresholdsByMetric(
+  value: unknown
+): value is Partial<Record<ColorDifferenceMetric, number>> {
+  if (value === undefined) return true;
+  if (typeof value !== 'object' || value === null) return false;
+
+  const candidate = value as Record<string, unknown>;
+  for (const metric of VALID_COMPARISON_METRICS) {
+    if (candidate[metric] !== undefined && typeof candidate[metric] !== 'number') {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isValidThemePreference(value: unknown): value is 'auto' | 'light' | 'dark' {
+  return value === 'auto' || value === 'light' || value === 'dark';
+}
+
+function isValidResolvedTheme(value: unknown): value is 'light' | 'dark' {
+  return value === 'light' || value === 'dark';
+}
+
+function isValidNumberArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'number');
+}
+
+function isValidStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
+function isValidContrastReference(value: unknown): value is ContrastReference {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (candidate.kind !== 'neutral' && candidate.kind !== 'palette') {
+    return false;
+  }
+
+  if (typeof candidate.stepIndex !== 'number') {
+    return false;
+  }
+
+  if (candidate.kind === 'palette' && typeof candidate.paletteIndex !== 'number') {
+    return false;
+  }
+
+  return true;
+}
+
+function isValidReferenceConfiguration(value: unknown): value is ReferenceConfiguration {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  return (
+    typeof candidate.pinnedAt === 'number' &&
+    typeof candidate.baseColor === 'string' &&
+    typeof candidate.warmth === 'number' &&
+    (candidate.warmthHue === undefined || typeof candidate.warmthHue === 'number') &&
+    typeof candidate.chromaMultiplier === 'number' &&
+    typeof candidate.numColors === 'number' &&
+    typeof candidate.numPalettes === 'number' &&
+    typeof candidate.x1 === 'number' &&
+    typeof candidate.y1 === 'number' &&
+    typeof candidate.x2 === 'number' &&
+    typeof candidate.y2 === 'number' &&
+    isValidNumberArray(candidate.lightnessNudgers) &&
+    isValidNumberArray(candidate.hueNudgers) &&
+    isValidNumberArray(candidate.stepSaturationNudgers) &&
+    isValidNumberArray(candidate.paletteSaturationNudgers) &&
+    isValidNumberArray(candidate.paletteChromaNudgers) &&
+    (candidate.contrastMode === 'auto' || candidate.contrastMode === 'manual') &&
+    typeof candidate.lowStep === 'number' &&
+    typeof candidate.highStep === 'number' &&
+    isValidContrastReference(candidate.lowReference) &&
+    isValidContrastReference(candidate.highReference) &&
+    typeof candidate.contrast === 'object' &&
+    candidate.contrast !== null &&
+    typeof (candidate.contrast as Record<string, unknown>).low === 'string' &&
+    typeof (candidate.contrast as Record<string, unknown>).high === 'string' &&
+    typeof candidate.solveAdjacentStopLows === 'boolean' &&
+    isValidThemePreference(candidate.themePreference) &&
+    isValidResolvedTheme(candidate.resolvedTheme) &&
+    (candidate.customNeutralName === undefined ||
+      typeof candidate.customNeutralName === 'string') &&
+    (candidate.customPaletteNames === undefined ||
+      isValidStringArray(candidate.customPaletteNames)) &&
+    Array.isArray(candidate.constraints)
+  );
 }
 
 /**
@@ -66,7 +168,40 @@ function isValidStoredReferenceWorkspace(value: unknown): value is StoredReferen
     return false;
   }
 
+  if (!isValidThresholdsByMetric(candidate.swatchChangeThresholdsByMetric)) {
+    return false;
+  }
+
   return true;
+}
+
+function migrateStoredReferenceWorkspace(
+  value: StoredReferenceWorkspace
+): StoredReferenceWorkspace {
+  const referenceConfiguration = isValidReferenceConfiguration(value.referenceConfiguration)
+    ? value.referenceConfiguration
+    : null;
+  const swatchChangeThresholdsByMetric = value.swatchChangeThresholdsByMetric
+    ? {
+        ok: Math.max(
+          0,
+          value.swatchChangeThresholdsByMetric.ok ?? DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC.ok
+        ),
+        '2000': Math.max(
+          0,
+          value.swatchChangeThresholdsByMetric['2000'] ??
+            DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC['2000']
+        )
+      }
+    : { ...DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC };
+
+  return {
+    referenceConfiguration,
+    viewMode: referenceConfiguration ? value.viewMode : 'default',
+    comparisonMetric: value.comparisonMetric,
+    swatchChangeThreshold: swatchChangeThresholdsByMetric[value.comparisonMetric],
+    swatchChangeThresholdsByMetric
+  };
 }
 
 /**
@@ -98,7 +233,7 @@ export function loadReferenceWorkspaceFromStorage(): StoredReferenceWorkspace | 
       return null;
     }
 
-    return parsed;
+    return migrateStoredReferenceWorkspace(parsed);
   } catch (error) {
     console.warn('Failed to load reference workspace from localStorage:', error);
     return null;
