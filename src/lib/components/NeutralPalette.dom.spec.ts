@@ -139,6 +139,44 @@ describe('NeutralPalette', () => {
     expect(swatches).toHaveLength(2);
   });
 
+  it('renders a placeholder slot when neutralsHex contains a null entry', () => {
+    render(NeutralPalette, {
+      props: {
+        neutralsHex: ['#ffffff', null, '#000000'] as (string | null)[],
+        lightnessNudgerValues: [0, 0, 0]
+      }
+    });
+
+    expect(screen.getAllByTestId('neutral-placeholder')).toHaveLength(1);
+    const swatches = screen.getAllByRole('button', {
+      name: /(view color details|copy to clipboard)/i
+    });
+    expect(swatches).toHaveLength(2);
+  });
+
+  it('renders a placeholder slot for each null in neutralsHex', () => {
+    render(NeutralPalette, {
+      props: {
+        neutralsHex: [null, '#ffffff', null] as (string | null)[],
+        lightnessNudgerValues: [0, 0, 0]
+      }
+    });
+
+    expect(screen.getAllByTestId('neutral-placeholder')).toHaveLength(2);
+  });
+
+  it('placeholder slots do not show nudger inputs', () => {
+    render(NeutralPalette, {
+      props: {
+        neutralsHex: ['#ffffff', null] as (string | null)[],
+        lightnessNudgerValues: [0, 0]
+      }
+    });
+
+    const nudgerInputs = screen.getAllByLabelText(/lightness adjustment for step/i);
+    expect(nudgerInputs).toHaveLength(1);
+  });
+
   it('supports renaming the neutral palette inline', async () => {
     const user = userEvent.setup();
     const neutralsHex = ['#ffffff', '#000000'];

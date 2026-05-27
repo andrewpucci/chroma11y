@@ -15,16 +15,25 @@
   import { openExportPreview } from '$lib/help/exportPreviewStore';
   import '$lib/styles/nudger.css';
   import type Color from 'colorjs.io';
+  import type { ComparisonAnnotation } from '$lib/comparisonViewAnnotations';
+  import type { ContrastAlgorithm } from '$lib/types';
 
   interface Props {
-    neutrals?: Color[];
-    neutralsHex?: string[];
-    neutralsDisplay?: string[];
-    neutralsSimulatedDisplay?: string[] | null;
+    neutrals?: (Color | null)[];
+    neutralsHex?: (string | null)[];
+    neutralsDisplay?: (string | null)[];
+    neutralsSimulatedDisplay?: (string | null)[] | null;
+    placeholderLabels?: (string | null)[];
+    comparisonAnnotations?: (ComparisonAnnotation | null)[];
+    neutralStepIndices?: (number | null)[];
     lightnessNudgerValues?: number[];
     onHistoryCommit?: (label: string) => void;
     readonly?: boolean;
     contrastColorsOverride?: { low: string; high: string };
+    contrastAlgorithmOverride?: ContrastAlgorithm;
+    customNeutralNameOverride?: string;
+    exportNeutralsHex?: string[];
+    exportNeutralsDisplay?: string[];
   }
 
   let {
@@ -32,20 +41,32 @@
     neutralsHex = [],
     neutralsDisplay = [],
     neutralsSimulatedDisplay = null,
+    placeholderLabels = [],
+    comparisonAnnotations = [],
+    neutralStepIndices = [],
     lightnessNudgerValues = [],
     onHistoryCommit,
     readonly = false,
-    contrastColorsOverride = undefined
+    contrastColorsOverride = undefined,
+    contrastAlgorithmOverride = undefined,
+    customNeutralNameOverride = undefined,
+    exportNeutralsHex = undefined,
+    exportNeutralsDisplay = undefined
   }: Props = $props();
 
   const effectiveContrastLow = $derived(contrastColorsOverride?.low ?? $contrastColors.low);
+  const activeCustomNeutralName = $derived(customNeutralNameOverride ?? $customNeutralName);
+
+  const nonNullNeutralsHex = $derived(neutralsHex.filter((h): h is string => h !== null));
 
   const generatedNeutralName = $derived(
-    neutralsHex.length > 0 ? resolveNeutralPaletteName(neutralsHex, effectiveContrastLow) : 'Gray'
+    nonNullNeutralsHex.length > 0
+      ? resolveNeutralPaletteName(nonNullNeutralsHex, effectiveContrastLow)
+      : 'Gray'
   );
   const neutralName = $derived(
-    neutralsHex.length > 0
-      ? resolveNeutralPaletteName(neutralsHex, effectiveContrastLow, $customNeutralName)
+    nonNullNeutralsHex.length > 0
+      ? resolveNeutralPaletteName(nonNullNeutralsHex, effectiveContrastLow, activeCustomNeutralName)
       : 'Gray'
   );
 
@@ -88,6 +109,18 @@
 
   function handleCopyClick(event: MouseEvent): void {
     const opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    if (exportNeutralsHex) {
+      openExportPreview('neutral', 'list', opener, {
+        neutrals: exportNeutralsHex,
+        palettes: [],
+        lowContrastColor: effectiveContrastLow,
+        displayNeutrals: exportNeutralsDisplay ?? exportNeutralsHex,
+        displayPalettes: [],
+        customNeutralName: customNeutralNameOverride
+      });
+      return;
+    }
+
     openExportPreview('neutral', 'list', opener);
   }
 
@@ -113,14 +146,18 @@
   {#if neutralsHex.length > 0}
     <div class="neutral-header">
       <h3 class="neutral-name-heading">
-        <PaletteNameEditor
-          value={$customNeutralName}
-          fallbackValue={generatedNeutralName}
-          editButtonAriaLabel="Edit name for neutral palette"
-          inputAriaLabel="Neutral palette name"
-          data-testid="neutral-palette-name"
-          onCommit={handleNeutralNameCommit}
-        />
+        {#if readonly}
+          <span data-testid="neutral-palette-name">{neutralName}</span>
+        {:else}
+          <PaletteNameEditor
+            value={$customNeutralName}
+            fallbackValue={generatedNeutralName}
+            editButtonAriaLabel="Edit name for neutral palette"
+            inputAriaLabel="Neutral palette name"
+            data-testid="neutral-palette-name"
+            onCommit={handleNeutralNameCommit}
+          />
+        {/if}
       </h3>
       <Button
         ariaLabel={`Copy ${neutralName} palette`}
@@ -133,75 +170,86 @@
     </div>
     <div class="neutral-grid">
       {#each neutralsHex as color, index (index)}
-        <div
-          class="neutral-item"
-          style="--swatch-width: 100%; --swatch-flex: 0 0 auto; --swatch-border-bottom-left-radius: 0; --swatch-border-bottom-right-radius: 0; --swatch-border-bottom: none;"
-        >
-          <ColorSwatch
-            {color}
-            displayValue={neutralsDisplay[index] ?? color}
-            simulatedColor={neutralsSimulatedDisplay?.[index] ?? ''}
-            label={String(index * 10)}
-            oklchColor={neutrals[index] ?? null}
-            paletteName={neutralName}
-            isNeutral={true}
-            stepIndex={index}
-            {onHistoryCommit}
-            {contrastColorsOverride}
-          />
-          <div class="nudger-container">
-            <label for="lightness-nudger-{index}" class="visually-hidden"
-              >Lightness adjustment for step {index}</label
-            >
-            <input
-              bind:this={inputEls[index]}
-              id="lightness-nudger-{index}"
-              type="number"
-              min="-0.5"
-              max="0.5"
-              step="0.01"
-              value={lightnessNudgerValues[index] ?? 0}
-              data-nonzero={(lightnessNudgerValues[index] ?? 0) !== 0 ? '' : undefined}
-              disabled={readonly}
-              oninput={(e) => {
-                if (readonly || !e || !e.target) return;
-                const inputValue = (e.target as HTMLInputElement).value;
-                // Allow empty string, "-", "." while typing (don't reset to 0)
-                if (inputValue === '' || inputValue === '-' || inputValue === '.') {
-                  return;
-                }
-                const newValue = parseFloat(inputValue);
-                // Validate before updating to prevent NaN propagation
-                if (!isNaN(newValue) && isFinite(newValue)) {
-                  // Clamp to valid range
-                  const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
-                  // Only update the store, let the parent handle reactivity
-                  updateLightnessNudger(index, clampedValue);
-                }
-                // Don't reset on invalid - let the user continue typing
-              }}
-              onblur={(e) => {
-                if (readonly || !e || !e.target) return;
-                // On blur, reset invalid values to 0
-                const inputValue = (e.target as HTMLInputElement).value;
-                const newValue = parseFloat(inputValue);
-                if (isNaN(newValue) || !isFinite(newValue)) {
-                  (e.target as HTMLInputElement).value = '0';
-                  updateLightnessNudger(index, 0);
-                  onHistoryCommit?.('Neutral lightness adjusted');
-                } else {
-                  onHistoryCommit?.('Neutral lightness adjusted');
-                }
-              }}
-              onkeydown={(e) => {
-                if (readonly) return;
-                handleKeyDown(index, e);
-              }}
-              class="nudger-input"
-              aria-label="Lightness adjustment for step {index}"
-            />
+        {#if color === null}
+          <div
+            class="neutral-item neutral-placeholder"
+            data-testid="neutral-placeholder"
+            aria-label={placeholderLabels[index] ?? undefined}
+            aria-hidden={placeholderLabels[index] ? undefined : 'true'}
+          >
+            {#if placeholderLabels[index]}
+              <span class="placeholder-label">{placeholderLabels[index]}</span>
+            {/if}
           </div>
-        </div>
+        {:else}
+          {@const sourceStepIndex = neutralStepIndices[index] ?? index}
+          <div
+            class="neutral-item"
+            style="--swatch-width: 100%; --swatch-flex: 0 0 auto; --swatch-border-bottom-left-radius: 0; --swatch-border-bottom-right-radius: 0; --swatch-border-bottom: none;"
+          >
+            <ColorSwatch
+              {color}
+              displayValue={neutralsDisplay[index] ?? color}
+              simulatedColor={neutralsSimulatedDisplay?.[index] ?? ''}
+              label={String(sourceStepIndex * 10)}
+              oklchColor={neutrals[index] ?? null}
+              paletteName={neutralName}
+              isNeutral={true}
+              stepIndex={sourceStepIndex}
+              {onHistoryCommit}
+              {contrastColorsOverride}
+              {contrastAlgorithmOverride}
+              comparisonChip={comparisonAnnotations[index]?.chip ?? null}
+              quiet={comparisonAnnotations[index]?.quiet ?? false}
+            />
+            <div class="nudger-container">
+              <label for="lightness-nudger-{index}" class="visually-hidden"
+                >Lightness adjustment for step {sourceStepIndex}</label
+              >
+              <input
+                bind:this={inputEls[index]}
+                id="lightness-nudger-{index}"
+                type="number"
+                min="-0.5"
+                max="0.5"
+                step="0.01"
+                value={lightnessNudgerValues[sourceStepIndex] ?? 0}
+                data-nonzero={(lightnessNudgerValues[sourceStepIndex] ?? 0) !== 0 ? '' : undefined}
+                disabled={readonly}
+                oninput={(e) => {
+                  if (readonly || !e || !e.target) return;
+                  const inputValue = (e.target as HTMLInputElement).value;
+                  if (inputValue === '' || inputValue === '-' || inputValue === '.') {
+                    return;
+                  }
+                  const newValue = parseFloat(inputValue);
+                  if (!isNaN(newValue) && isFinite(newValue)) {
+                    const clampedValue = Math.max(-0.5, Math.min(0.5, newValue));
+                    updateLightnessNudger(sourceStepIndex, clampedValue);
+                  }
+                }}
+                onblur={(e) => {
+                  if (readonly || !e || !e.target) return;
+                  const inputValue = (e.target as HTMLInputElement).value;
+                  const newValue = parseFloat(inputValue);
+                  if (isNaN(newValue) || !isFinite(newValue)) {
+                    (e.target as HTMLInputElement).value = '0';
+                    updateLightnessNudger(sourceStepIndex, 0);
+                    onHistoryCommit?.('Neutral lightness adjusted');
+                  } else {
+                    onHistoryCommit?.('Neutral lightness adjusted');
+                  }
+                }}
+                onkeydown={(e) => {
+                  if (readonly) return;
+                  handleKeyDown(sourceStepIndex, e);
+                }}
+                class="nudger-input"
+                aria-label="Lightness adjustment for step {sourceStepIndex}"
+              />
+            </div>
+          </div>
+        {/if}
       {/each}
     </div>
   {:else}
@@ -258,6 +306,37 @@
     display: flex;
     flex-direction: column;
     width: var(--neutral-item-width, 148px);
+  }
+
+  .neutral-placeholder {
+    display: grid;
+    place-items: center;
+    background: repeating-linear-gradient(
+      45deg,
+      var(--bg-tertiary),
+      var(--bg-tertiary) 4px,
+      transparent 4px,
+      transparent 10px
+    );
+    border-radius: var(--radius-md);
+    opacity: 0.4;
+    min-height: 80px;
+  }
+
+  .placeholder-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target-min);
+    padding: var(--space-xs) var(--space-sm);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 72%, transparent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklab, var(--bg-primary) 86%, transparent);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    text-transform: uppercase;
   }
 
   .no-colors {

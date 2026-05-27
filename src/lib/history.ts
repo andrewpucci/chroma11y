@@ -65,6 +65,7 @@ export interface HistorySnapshot {
   constraintSolverSummary?: ConstraintSolverSummary | null;
   comparisonMetric?: ColorDifferenceMetric;
   swatchChangeThreshold?: number;
+  swatchChangeThresholdsByMetric?: Partial<Record<ColorDifferenceMetric, number>>;
 }
 
 export interface HistoryEntryMeta {
