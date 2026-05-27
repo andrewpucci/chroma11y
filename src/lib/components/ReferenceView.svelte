@@ -41,6 +41,8 @@
     referencePalettesHex: string[][];
     referencePalettesDisplay: string[][];
     referencePalettesSimulatedDisplay: string[][] | null;
+    referenceCustomNeutralName?: string;
+    referenceCustomPaletteNames?: string[];
     referenceContrastColors?: { low: string; high: string };
     referenceContrastAlgorithm?: ContrastAlgorithm;
     referenceGamutSpace?: GamutSpace;
@@ -67,9 +69,11 @@
     referencePalettesHex,
     referencePalettesDisplay,
     referencePalettesSimulatedDisplay,
+    referenceCustomNeutralName = undefined,
+    referenceCustomPaletteNames = undefined,
     referenceContrastColors = undefined,
-    referenceContrastAlgorithm = 'WCAG',
-    referenceGamutSpace = 'srgb',
+    referenceContrastAlgorithm = undefined,
+    referenceGamutSpace = undefined,
     onCurrentHistoryCommit = () => {}
   }: Props = $props();
 
@@ -87,8 +91,8 @@
 
   const referenceStatusConfig = $derived<ComparisonStatusConfig>({
     contrast: referenceContrastColors ?? currentContrastColors,
-    contrastAlgorithm: referenceContrastAlgorithm,
-    gamutSpace: referenceGamutSpace
+    contrastAlgorithm: referenceContrastAlgorithm ?? currentContrastAlgorithm,
+    gamutSpace: referenceGamutSpace ?? currentGamutSpace
   });
 
   const neutralAlignment = $derived(
@@ -452,6 +456,9 @@
             readonly={true}
             contrastColorsOverride={referenceContrastColors}
             contrastAlgorithmOverride={referenceContrastAlgorithm}
+            customNeutralNameOverride={referenceCustomNeutralName}
+            exportNeutralsHex={referenceNeutralsHex}
+            exportNeutralsDisplay={referenceNeutralsDisplay}
           />
           <PaletteGrid
             palettes={referencePaletteColors}
@@ -466,6 +473,9 @@
             readonly={true}
             contrastColorsOverride={referenceContrastColors}
             contrastAlgorithmOverride={referenceContrastAlgorithm}
+            customPaletteNamesOverride={referenceCustomPaletteNames}
+            exportPalettesHex={referencePalettesHex}
+            exportPalettesDisplay={referencePalettesDisplay}
           />
         </div>
       </div>

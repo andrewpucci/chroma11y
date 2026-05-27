@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { announce } from '$lib/announce';
   import { referenceConfiguration } from '$lib/stores';
   import {
     pinReferenceConfiguration,
@@ -19,21 +20,25 @@
 
   function handlePin(): void {
     pinReferenceConfiguration();
+    announce('Reference configuration pinned');
     onHistoryCommit('Reference pinned');
   }
 
   function handleClear(): void {
     clearReferenceConfiguration();
+    announce('Reference configuration cleared');
     onHistoryCommit('Reference cleared');
   }
 
   function handleReplace(): void {
     replaceReferenceConfiguration();
+    announce('Reference configuration replaced');
     onHistoryCommit('Reference replaced');
   }
 
   function handleRestore(): void {
     restoreReferenceConfiguration();
+    announce('Reference configuration restored');
     onHistoryCommit('Reference restored');
   }
 </script>

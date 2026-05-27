@@ -31,6 +31,9 @@
     readonly?: boolean;
     contrastColorsOverride?: { low: string; high: string };
     contrastAlgorithmOverride?: ContrastAlgorithm;
+    customNeutralNameOverride?: string;
+    exportNeutralsHex?: string[];
+    exportNeutralsDisplay?: string[];
   }
 
   let {
@@ -45,10 +48,14 @@
     onHistoryCommit,
     readonly = false,
     contrastColorsOverride = undefined,
-    contrastAlgorithmOverride = undefined
+    contrastAlgorithmOverride = undefined,
+    customNeutralNameOverride = undefined,
+    exportNeutralsHex = undefined,
+    exportNeutralsDisplay = undefined
   }: Props = $props();
 
   const effectiveContrastLow = $derived(contrastColorsOverride?.low ?? $contrastColors.low);
+  const activeCustomNeutralName = $derived(customNeutralNameOverride ?? $customNeutralName);
 
   const nonNullNeutralsHex = $derived(neutralsHex.filter((h): h is string => h !== null));
 
@@ -59,7 +66,7 @@
   );
   const neutralName = $derived(
     nonNullNeutralsHex.length > 0
-      ? resolveNeutralPaletteName(nonNullNeutralsHex, effectiveContrastLow, $customNeutralName)
+      ? resolveNeutralPaletteName(nonNullNeutralsHex, effectiveContrastLow, activeCustomNeutralName)
       : 'Gray'
   );
 
@@ -102,6 +109,18 @@
 
   function handleCopyClick(event: MouseEvent): void {
     const opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    if (exportNeutralsHex) {
+      openExportPreview('neutral', 'list', opener, {
+        neutrals: exportNeutralsHex,
+        palettes: [],
+        lowContrastColor: effectiveContrastLow,
+        displayNeutrals: exportNeutralsDisplay ?? exportNeutralsHex,
+        displayPalettes: [],
+        customNeutralName: customNeutralNameOverride
+      });
+      return;
+    }
+
     openExportPreview('neutral', 'list', opener);
   }
 
@@ -127,14 +146,18 @@
   {#if neutralsHex.length > 0}
     <div class="neutral-header">
       <h3 class="neutral-name-heading">
-        <PaletteNameEditor
-          value={$customNeutralName}
-          fallbackValue={generatedNeutralName}
-          editButtonAriaLabel="Edit name for neutral palette"
-          inputAriaLabel="Neutral palette name"
-          data-testid="neutral-palette-name"
-          onCommit={handleNeutralNameCommit}
-        />
+        {#if readonly}
+          <span data-testid="neutral-palette-name">{neutralName}</span>
+        {:else}
+          <PaletteNameEditor
+            value={$customNeutralName}
+            fallbackValue={generatedNeutralName}
+            editButtonAriaLabel="Edit name for neutral palette"
+            inputAriaLabel="Neutral palette name"
+            data-testid="neutral-palette-name"
+            onCommit={handleNeutralNameCommit}
+          />
+        {/if}
       </h3>
       <Button
         ariaLabel={`Copy ${neutralName} palette`}

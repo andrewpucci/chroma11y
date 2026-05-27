@@ -34,6 +34,9 @@
     readonly?: boolean;
     contrastColorsOverride?: { low: string; high: string };
     contrastAlgorithmOverride?: ContrastAlgorithm;
+    customPaletteNamesOverride?: string[];
+    exportPalettesHex?: string[][];
+    exportPalettesDisplay?: string[][];
   }
 
   let {
@@ -50,10 +53,14 @@
     onHistoryCommit,
     readonly = false,
     contrastColorsOverride = undefined,
-    contrastAlgorithmOverride = undefined
+    contrastAlgorithmOverride = undefined,
+    customPaletteNamesOverride = undefined,
+    exportPalettesHex = undefined,
+    exportPalettesDisplay = undefined
   }: Props = $props();
 
   const effectiveContrastLow = $derived(contrastColorsOverride?.low ?? $contrastColors.low);
+  const activeCustomPaletteNames = $derived(customPaletteNamesOverride ?? $customPaletteNames);
 
   const nonNullPalettesHex = $derived(
     palettesHex
@@ -69,7 +76,11 @@
   const paletteNames = $derived(
     nonNullPalettesHex.length === 0
       ? []
-      : resolveGeneratedPaletteNames(nonNullPalettesHex, effectiveContrastLow, $customPaletteNames)
+      : resolveGeneratedPaletteNames(
+          nonNullPalettesHex,
+          effectiveContrastLow,
+          activeCustomPaletteNames
+        )
   );
 
   let nonNullPaletteNameIndex = $derived.by(() => {
@@ -151,6 +162,18 @@
 
   function handleCopyClick(paletteIndex: number, event: MouseEvent): void {
     const opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    if (exportPalettesHex) {
+      openExportPreview({ paletteIndex }, 'list', opener, {
+        neutrals: [],
+        palettes: exportPalettesHex,
+        lowContrastColor: effectiveContrastLow,
+        displayNeutrals: [],
+        displayPalettes: exportPalettesDisplay ?? exportPalettesHex,
+        customPaletteNames: customPaletteNamesOverride
+      });
+      return;
+    }
+
     openExportPreview({ paletteIndex }, 'list', opener);
   }
 
@@ -201,14 +224,20 @@
           <div class="palette-block">
             <div class="palette-header">
               <h3 class="palette-title">
-                <PaletteNameEditor
-                  value={$customPaletteNames?.[nameIndex]}
-                  fallbackValue={generatedPaletteNames[nameIndex]}
-                  editButtonAriaLabel={`Edit name for palette ${nameIndex + 1}`}
-                  inputAriaLabel={`Palette ${nameIndex + 1} name`}
-                  data-testid={`generated-palette-name-${paletteIndex}`}
-                  onCommit={(value) => handlePaletteNameCommit(nameIndex, value)}
-                />
+                {#if readonly}
+                  <span data-testid={`generated-palette-name-${paletteIndex}`}>
+                    {paletteNames[nameIndex]}
+                  </span>
+                {:else}
+                  <PaletteNameEditor
+                    value={activeCustomPaletteNames?.[nameIndex]}
+                    fallbackValue={generatedPaletteNames[nameIndex]}
+                    editButtonAriaLabel={`Edit name for palette ${nameIndex + 1}`}
+                    inputAriaLabel={`Palette ${nameIndex + 1} name`}
+                    data-testid={`generated-palette-name-${paletteIndex}`}
+                    onCommit={(value) => handlePaletteNameCommit(nameIndex, value)}
+                  />
+                {/if}
               </h3>
               <div class="palette-header-controls">
                 <div class="hue-nudger">
@@ -248,7 +277,7 @@
                 <Button
                   ariaLabel={`Copy ${paletteNames[nameIndex]} palette`}
                   data-testid={`copy-palette-${paletteIndex}`}
-                  onclick={(e) => handleCopyClick(nameIndex, e)}
+                  onclick={(e) => handleCopyClick(sourcePaletteIndex, e)}
                 >
                   <Icon name="copy" />
                   <span>Copy</span>

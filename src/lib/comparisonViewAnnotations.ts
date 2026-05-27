@@ -233,7 +233,7 @@ export function buildComparisonAnnotation(params: {
     referenceStatusConfig.gamutSpace,
     metric
   );
-  if (colorDifference > threshold) {
+  if (colorDifference >= threshold) {
     return {
       chip: {
         label: 'Changed',
