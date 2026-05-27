@@ -5,4 +5,5 @@ export interface ReferenceWorkspaceSnapshot {
   viewMode: 'default' | 'reference' | 'comparison';
   comparisonMetric: ColorDifferenceMetric;
   swatchChangeThreshold: number;
+  swatchChangeThresholdsByMetric?: Partial<Record<ColorDifferenceMetric, number>>;
 }

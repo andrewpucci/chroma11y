@@ -1,5 +1,5 @@
 import type { ColorState } from './stores';
-import type { ContrastReference } from './types';
+import type { Constraint, ContrastReference, ThemePreference } from './types';
 
 export interface ReferenceConfiguration {
   pinnedAt: number;
@@ -28,17 +28,12 @@ export interface ReferenceConfiguration {
   highReference: ContrastReference;
   contrast: { low: string; high: string };
   solveAdjacentStopLows: boolean;
-
-  displayColorSpace: ColorState['displayColorSpace'];
-  gamutSpace: ColorState['gamutSpace'];
-  swatchLabels: ColorState['swatchLabels'];
-  showSwatchGamutWarnings: boolean;
-  showSwatchContrastIndicators: boolean;
-  swatchContrastIndicators: ColorState['swatchContrastIndicators'];
-  contrastAlgorithm: ColorState['contrastAlgorithm'];
+  themePreference: ThemePreference;
+  resolvedTheme: ColorState['currentTheme'];
 
   customNeutralName?: string;
   customPaletteNames?: string[];
+  constraints: Constraint[];
 }
 
 export function createReferenceConfiguration(colorState: ColorState): ReferenceConfiguration {
@@ -66,16 +61,12 @@ export function createReferenceConfiguration(colorState: ColorState): ReferenceC
     highReference: structuredClone(colorState.highReference),
     contrast: { low: colorState.contrast.low, high: colorState.contrast.high },
     solveAdjacentStopLows: colorState.solveAdjacentStopLows,
-    displayColorSpace: colorState.displayColorSpace,
-    gamutSpace: colorState.gamutSpace,
-    swatchLabels: colorState.swatchLabels,
-    showSwatchGamutWarnings: colorState.showSwatchGamutWarnings,
-    showSwatchContrastIndicators: colorState.showSwatchContrastIndicators,
-    swatchContrastIndicators: structuredClone(colorState.swatchContrastIndicators),
-    contrastAlgorithm: colorState.contrastAlgorithm,
+    themePreference: colorState.themePreference,
+    resolvedTheme: colorState.currentTheme,
     customNeutralName: colorState.customNeutralName,
     customPaletteNames: colorState.customPaletteNames
       ? [...colorState.customPaletteNames]
-      : undefined
+      : undefined,
+    constraints: structuredClone(colorState.constraints)
   };
 }

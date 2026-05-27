@@ -47,9 +47,13 @@ import {
   neutralsSwatchDisplay,
   palettesSwatchDisplay,
   referenceConfiguration,
+  comparisonMetric,
+  swatchChangeThreshold,
   updateColorState,
   setTheme,
   setThemePreference,
+  setComparisonMetric,
+  setSwatchChangeThreshold,
   updateLightnessNudger,
   updateHueNudger,
   updateContrastFromNeutrals,
@@ -219,6 +223,32 @@ describe('stores', () => {
       expect(get(constraints)).toEqual([]);
       expect(get(solverAdjustmentSnapshot)).toBeNull();
       expect(get(constraintSolverSummary)).toBeNull();
+    });
+
+    it('comparison settings default to Delta E OK with its default threshold', () => {
+      expect.assertions(2);
+      expect(get(comparisonMetric)).toBe('ok');
+      expect(get(swatchChangeThreshold)).toBe(0.02);
+    });
+  });
+
+  describe('comparison settings', () => {
+    it('restores the remembered swatch change threshold for each comparison metric', () => {
+      expect.assertions(5);
+
+      setSwatchChangeThreshold(0.04);
+      expect(get(swatchChangeThreshold)).toBe(0.04);
+
+      setComparisonMetric('2000');
+      expect(get(comparisonMetric)).toBe('2000');
+      expect(get(swatchChangeThreshold)).toBe(2);
+
+      setSwatchChangeThreshold(3);
+      setComparisonMetric('ok');
+      expect(get(swatchChangeThreshold)).toBe(0.04);
+
+      setComparisonMetric('2000');
+      expect(get(swatchChangeThreshold)).toBe(3);
     });
   });
 
@@ -716,7 +746,7 @@ describe('stores', () => {
     });
 
     it('pinReferenceConfiguration captures all core parameters', () => {
-      expect.assertions(8);
+      expect.assertions(6);
       updateColorState({
         baseColor: '#FF0000',
         warmth: 5,
@@ -733,9 +763,49 @@ describe('stores', () => {
       expect(ref?.chromaMultiplier).toBe(0.8);
       expect(ref?.numColors).toBe(9);
       expect(ref?.numPalettes).toBe(6);
-      expect(ref?.displayColorSpace).toBeDefined();
-      expect(ref?.gamutSpace).toBeDefined();
       expect(ref?.pinnedAt).toBeDefined();
+    });
+
+    it('pinReferenceConfiguration captures authored theme and constraints but excludes shared inspection settings', () => {
+      expect.assertions(8);
+
+      updateColorState({
+        themePreference: 'auto',
+        currentTheme: 'dark',
+        displayColorSpace: 'oklch',
+        gamutSpace: 'p3',
+        contrastAlgorithm: 'APCA',
+        swatchLabels: 'none',
+        constraints: [
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784',
+            metric: 'ok'
+          }
+        ]
+      });
+
+      pinReferenceConfiguration();
+
+      const ref = get(referenceConfiguration);
+      expect(ref?.themePreference).toBe('auto');
+      expect(ref?.resolvedTheme).toBe('dark');
+      expect(ref?.constraints).toEqual([
+        {
+          id: 'constraint-1',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784',
+          metric: 'ok'
+        }
+      ]);
+      expect('displayColorSpace' in (ref ?? {})).toBe(false);
+      expect('gamutSpace' in (ref ?? {})).toBe(false);
+      expect('swatchLabels' in (ref ?? {})).toBe(false);
+      expect('showSwatchGamutWarnings' in (ref ?? {})).toBe(false);
+      expect('contrastAlgorithm' in (ref ?? {})).toBe(false);
     });
 
     it('clearReferenceConfiguration sets it to null', () => {
@@ -807,6 +877,39 @@ describe('stores', () => {
       expect(colorState.baseColor).toBe('#FF0000');
       expect(colorState.numColors).toBe(9);
       expect(get(referenceConfiguration)).not.toBeNull();
+    });
+
+    it('restoreReferenceConfiguration reproduces the pinned theme while preserving shared inspection settings', () => {
+      expect.assertions(6);
+
+      updateColorState({
+        themePreference: 'auto',
+        currentTheme: 'light',
+        displayColorSpace: 'hex',
+        gamutSpace: 'srgb',
+        swatchLabels: 'both',
+        contrastAlgorithm: 'WCAG'
+      });
+      pinReferenceConfiguration();
+
+      updateColorState({
+        themePreference: 'dark',
+        currentTheme: 'dark',
+        displayColorSpace: 'oklch',
+        gamutSpace: 'p3',
+        swatchLabels: 'none',
+        contrastAlgorithm: 'APCA'
+      });
+
+      restoreReferenceConfiguration();
+
+      const colorState = get(colorStore);
+      expect(colorState.themePreference).toBe('auto');
+      expect(colorState.currentTheme).toBe('light');
+      expect(colorState.displayColorSpace).toBe('oklch');
+      expect(colorState.gamutSpace).toBe('p3');
+      expect(colorState.swatchLabels).toBe('none');
+      expect(colorState.contrastAlgorithm).toBe('APCA');
     });
 
     it('restoreReferenceConfiguration is a no-op when no reference is pinned', () => {
