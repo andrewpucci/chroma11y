@@ -52,11 +52,14 @@
     referenceConfiguration,
     comparisonMetric,
     swatchChangeThreshold,
+    autoThemeRestoreLock,
     updateColorState,
     updateContrastFromNeutrals,
     resetColorState,
     setTheme,
-    setThemePreference
+    setThemePreference,
+    setAutoThemeRestoreLock,
+    clearAutoThemeRestoreLock
   } from '$lib/stores';
   import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
   import {
@@ -71,7 +74,18 @@
   import type { ColorGenParams } from '$lib/colorUtils';
   import { clampChromaMultiplier } from '$lib/chromaMultiplier';
   import { evaluateConstraints } from '$lib/constraintUtils';
-  import { createHistoryManager, type HistorySnapshot, type HistoryViewModel } from '$lib/history';
+  import type { HistorySnapshot } from '$lib/history';
+  import {
+    createReferenceHistoryManager,
+    type ReferenceHistorySnapshot,
+    type HistoryViewModel
+  } from '$lib/referenceHistoryManager';
+  import type { ReferenceWorkspaceSnapshot } from '$lib/referenceWorkspace';
+  import {
+    saveReferenceWorkspaceToStorage,
+    loadReferenceWorkspaceFromStorage
+  } from '$lib/referenceWorkspacePersistence';
+  import type { ReferenceConfiguration } from '$lib/referenceConfiguration';
   import { createPageScheduler, type PageScheduler } from '$lib/pageScheduler';
   import {
     DEFAULT_NEUTRAL_PALETTE_NAME,
@@ -95,6 +109,8 @@
   import GettingStartedCallout from '$lib/components/GettingStartedCallout.svelte';
   import NoticeBanner from '$lib/components/NoticeBanner.svelte';
   import ReferenceView from '$lib/components/ReferenceView.svelte';
+  import ComparisonControls from '$lib/components/ComparisonControls.svelte';
+  import ConfigurationDiffDisplay from '$lib/components/ConfigurationDiffDisplay.svelte';
   import type { CvdMode } from '$lib/types';
 
   interface Props {
@@ -157,9 +173,17 @@
   let cvdModeLocal = $derived($cvdMode);
   let neutralsSimulatedDisplayLocal = $derived($neutralsSimulatedDisplay);
   let palettesSimulatedDisplayLocal = $derived($palettesSimulatedDisplay);
+  let currentColorStateLocal = $derived($colorStore);
+  let currentComparisonConfig = $derived(
+    currentColorStateLocal as unknown as Record<string, unknown>
+  );
   let referenceConfigurationLocal = $derived($referenceConfiguration);
+  let referenceComparisonConfig = $derived(
+    referenceConfigurationLocal as Record<string, unknown> | null
+  );
   let comparisonMetricLocal = $derived($comparisonMetric);
   let swatchChangeThresholdLocal = $derived($swatchChangeThreshold);
+  let autoThemeRestoreLockLocal = $derived($autoThemeRestoreLock);
 
   // Generated colors from reference configuration (readonly, frozen)
   let referenceColors = $state<ReturnType<typeof generateColorsFromReference> | null>(null);
@@ -216,15 +240,17 @@
   let generationAdvancedOpen = $state(false);
   let outputAdvancedOpen = $state(false);
   let uiPreferencesLoaded = $state(false);
+  let referenceViewMode = $state<ReferenceWorkspaceSnapshot['viewMode']>('default');
 
   let urlStateLoaded = $state(false);
   let appShellEl: HTMLDivElement | undefined = $state();
   let layoutEl: HTMLElement | undefined = $state();
   let topbarInnerEl: HTMLElement | undefined = $state();
+  let referenceViewTabsEl: HTMLDivElement | null = $state(null);
   let isDraggingSlider = $state(false);
   let isDeferringBezierStoreSync = $state(false);
   let skipAutoThemeSync = $state(false);
-  let historyManager: ReturnType<typeof createHistoryManager> | null = null;
+  let historyManager: ReturnType<typeof createReferenceHistoryManager> | null = null;
   let historyShortcutResyncRevision = 0;
   let historyRestoreRevision = $state(0);
   let pendingNativeHistoryInput: 'historyUndo' | 'historyRedo' | null = null;
@@ -308,6 +334,18 @@
     return value === 'WCAG' ? 'WCAG 2.2' : 'APCA';
   }
 
+  function formatResolvedTheme(value: 'light' | 'dark'): string {
+    return value === 'light' ? 'Light' : 'Dark';
+  }
+
+  function getSystemResolvedTheme(): 'light' | 'dark' {
+    if (typeof window === 'undefined') {
+      return 'light';
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
   function formatContrastStepLabel(value: number): string {
     return `${value * 10}`;
   }
@@ -352,170 +390,325 @@
     )}, ${formatSwatchLabels(swatchLabelsLocal)}`
   );
   const exportCardSummary = 'Share URL, JSON, CSS, SCSS';
+  const referenceViewData = $derived.by(() => {
+    if (!referenceConfigurationLocal || !referenceColors) {
+      return null;
+    }
 
-  function captureHistorySnapshot(preferStoreState: boolean = false): HistorySnapshot {
+    return {
+      configuration: referenceConfigurationLocal,
+      colors: referenceColors,
+      viewMode: referenceViewMode === 'comparison' ? 'comparison' : 'reference'
+    } as const;
+  });
+  const hasReferenceView = $derived(referenceViewData !== null);
+  const activeReferenceViewMode = $derived(
+    referenceViewData ? referenceViewData.viewMode : 'default'
+  );
+  const resolvedThemeDriftNotice = $derived.by(() => {
+    if (activeReferenceViewMode !== 'comparison' || !referenceConfigurationLocal) {
+      return null;
+    }
+
+    if (
+      themePreferenceLocal !== 'auto' ||
+      referenceConfigurationLocal.themePreference !== 'auto' ||
+      currentThemeLocal === referenceConfigurationLocal.resolvedTheme
+    ) {
+      return null;
+    }
+
+    return {
+      title: `Auto theme currently resolves to ${formatResolvedTheme(currentThemeLocal)}`,
+      body: `The pinned reference was generated in ${formatResolvedTheme(referenceConfigurationLocal.resolvedTheme)}.`
+    };
+  });
+
+  function captureReferenceWorkspaceSnapshot(): ReferenceWorkspaceSnapshot {
+    const storeState = get(colorStore);
+    const viewMode =
+      storeState.referenceConfiguration === null
+        ? 'default'
+        : referenceViewMode === 'comparison'
+          ? 'comparison'
+          : 'reference';
+
+    return {
+      referenceConfiguration: storeState.referenceConfiguration as Record<string, unknown> | null,
+      viewMode,
+      comparisonMetric: comparisonMetricLocal,
+      swatchChangeThreshold: swatchChangeThresholdLocal,
+      swatchChangeThresholdsByMetric: structuredClone(storeState.swatchChangeThresholdsByMetric)
+    };
+  }
+
+  function getReferenceViewAnnouncement(
+    previousMode: ReferenceWorkspaceSnapshot['viewMode'],
+    nextMode: ReferenceWorkspaceSnapshot['viewMode']
+  ): string | null {
+    if (nextMode === previousMode) {
+      return null;
+    }
+
+    if (nextMode === 'comparison') {
+      return 'Comparison View';
+    }
+
+    if (nextMode === 'reference' && previousMode === 'comparison') {
+      return 'Reference View';
+    }
+
+    return null;
+  }
+
+  function setReferenceViewMode(
+    nextMode: Extract<ReferenceWorkspaceSnapshot['viewMode'], 'reference' | 'comparison'>
+  ): void {
+    if (!hasReferenceView) {
+      return;
+    }
+
+    const previousMode = activeReferenceViewMode;
+    if (previousMode === nextMode) {
+      return;
+    }
+
+    referenceViewMode = nextMode;
+    announce(getReferenceViewAnnouncement(previousMode, nextMode) ?? nextMode);
+    scheduleHistoryCommit(
+      nextMode === 'comparison' ? 'Comparison View opened' : 'Reference View opened'
+    );
+  }
+
+  function handleReferenceViewModeKeydown(event: KeyboardEvent, index: number): void {
+    if (!hasReferenceView) {
+      return;
+    }
+
+    const modes: Array<
+      Extract<ReferenceWorkspaceSnapshot['viewMode'], 'reference' | 'comparison'>
+    > = ['reference', 'comparison'];
+    let nextIndex: number | null = null;
+
+    if (event.key === 'ArrowRight') {
+      nextIndex = (index + 1) % modes.length;
+    } else if (event.key === 'ArrowLeft') {
+      nextIndex = (index - 1 + modes.length) % modes.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = modes.length - 1;
+    }
+
+    if (nextIndex === null) {
+      return;
+    }
+
+    event.preventDefault();
+    setReferenceViewMode(modes[nextIndex]);
+    focusReferenceViewModeTab(nextIndex);
+  }
+
+  function focusReferenceViewModeTab(index: number): void {
+    const tabs = referenceViewTabsEl?.querySelectorAll<HTMLElement>('[role="tab"]');
+    tabs?.[index]?.focus({ preventScroll: true });
+  }
+
+  function captureHistorySnapshot(preferStoreState: boolean = false): ReferenceHistorySnapshot {
     if (preferStoreState) {
       const storeState = get(colorStore);
 
       return {
-        baseColor: storeState.baseColor,
-        warmth: storeState.warmth,
-        warmthHue: storeState.warmthHue,
-        chromaMultiplier: storeState.chromaMultiplier,
-        numColors: storeState.numColors,
-        numPalettes: storeState.numPalettes,
-        x1: storeState.x1,
-        y1: storeState.y1,
-        x2: storeState.x2,
-        y2: storeState.y2,
-        contrastMode: storeState.contrastMode,
-        lowStep: storeState.lowStep,
-        highStep: storeState.highStep,
-        lowReference: structuredClone(storeState.lowReference),
-        highReference: structuredClone(storeState.highReference),
-        contrast: {
-          low: storeState.contrast.low,
-          high: storeState.contrast.high
+        palette: {
+          baseColor: storeState.baseColor,
+          warmth: storeState.warmth,
+          warmthHue: storeState.warmthHue,
+          chromaMultiplier: storeState.chromaMultiplier,
+          numColors: storeState.numColors,
+          numPalettes: storeState.numPalettes,
+          x1: storeState.x1,
+          y1: storeState.y1,
+          x2: storeState.x2,
+          y2: storeState.y2,
+          contrastMode: storeState.contrastMode,
+          lowStep: storeState.lowStep,
+          highStep: storeState.highStep,
+          lowReference: structuredClone(storeState.lowReference),
+          highReference: structuredClone(storeState.highReference),
+          contrast: {
+            low: storeState.contrast.low,
+            high: storeState.contrast.high
+          },
+          lightnessNudgers: [...storeState.lightnessNudgers],
+          hueNudgers: [...storeState.hueNudgers],
+          stepSaturationNudgers: [...storeState.stepSaturationNudgers],
+          paletteSaturationNudgers: [...storeState.paletteSaturationNudgers],
+          paletteChromaNudgers: [...storeState.paletteChromaNudgers],
+          currentTheme: storeState.currentTheme,
+          displayColorSpace: storeState.displayColorSpace,
+          gamutSpace: storeState.gamutSpace,
+          themePreference: storeState.themePreference,
+          swatchLabels: storeState.swatchLabels,
+          showSwatchGamutWarnings: storeState.showSwatchGamutWarnings,
+          showSwatchContrastIndicators: storeState.showSwatchContrastIndicators,
+          swatchContrastIndicators: structuredClone(storeState.swatchContrastIndicators),
+          contrastAlgorithm: storeState.contrastAlgorithm,
+          solveAdjacentStopLows: storeState.solveAdjacentStopLows,
+          oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits,
+          customNeutralName: storeState.customNeutralName,
+          customPaletteNames: storeState.customPaletteNames,
+          constraints: structuredClone(storeState.constraints),
+          solverAdjustmentSnapshot: structuredClone(storeState.solverAdjustmentSnapshot),
+          constraintSolverSummary: structuredClone(storeState.constraintSolverSummary),
+          comparisonMetric: storeState.comparisonMetric,
+          swatchChangeThreshold: storeState.swatchChangeThreshold,
+          swatchChangeThresholdsByMetric: structuredClone(storeState.swatchChangeThresholdsByMetric)
         },
-        lightnessNudgers: [...storeState.lightnessNudgers],
-        hueNudgers: [...storeState.hueNudgers],
-        stepSaturationNudgers: [...storeState.stepSaturationNudgers],
-        paletteSaturationNudgers: [...storeState.paletteSaturationNudgers],
-        paletteChromaNudgers: [...storeState.paletteChromaNudgers],
-        currentTheme: storeState.currentTheme,
-        displayColorSpace: storeState.displayColorSpace,
-        gamutSpace: storeState.gamutSpace,
-        themePreference: storeState.themePreference,
-        swatchLabels: storeState.swatchLabels,
-        showSwatchGamutWarnings: storeState.showSwatchGamutWarnings,
-        showSwatchContrastIndicators: storeState.showSwatchContrastIndicators,
-        swatchContrastIndicators: structuredClone(storeState.swatchContrastIndicators),
-        contrastAlgorithm: storeState.contrastAlgorithm,
-        solveAdjacentStopLows: storeState.solveAdjacentStopLows,
-        oklchDisplaySignificantDigits: storeState.oklchDisplaySignificantDigits,
-        customNeutralName: storeState.customNeutralName,
-        customPaletteNames: storeState.customPaletteNames,
-        constraints: structuredClone(storeState.constraints),
-        solverAdjustmentSnapshot: structuredClone(storeState.solverAdjustmentSnapshot),
-        constraintSolverSummary: structuredClone(storeState.constraintSolverSummary),
-        comparisonMetric: storeState.comparisonMetric,
-        swatchChangeThreshold: storeState.swatchChangeThreshold
+        reference: captureReferenceWorkspaceSnapshot()
       };
     }
 
     return {
-      baseColor: baseColorLocal,
-      warmth: warmthLocal,
-      warmthHue: warmthHueLocal,
-      chromaMultiplier: chromaMultiplierLocal,
-      numColors: numColorsLocal,
-      numPalettes: numPalettesLocal,
-      x1: x1Local,
-      y1: y1Local,
-      x2: x2Local,
-      y2: y2Local,
-      contrastMode: contrastModeLocal,
-      lowStep: lowStepLocal,
-      highStep: highStepLocal,
-      lowReference: structuredClone(lowReferenceLocal),
-      highReference: structuredClone(highReferenceLocal),
-      contrast: {
-        low: contrastColorsLocal.low,
-        high: contrastColorsLocal.high
+      palette: {
+        baseColor: baseColorLocal,
+        warmth: warmthLocal,
+        warmthHue: warmthHueLocal,
+        chromaMultiplier: chromaMultiplierLocal,
+        numColors: numColorsLocal,
+        numPalettes: numPalettesLocal,
+        x1: x1Local,
+        y1: y1Local,
+        x2: x2Local,
+        y2: y2Local,
+        contrastMode: contrastModeLocal,
+        lowStep: lowStepLocal,
+        highStep: highStepLocal,
+        lowReference: structuredClone(lowReferenceLocal),
+        highReference: structuredClone(highReferenceLocal),
+        contrast: {
+          low: contrastColorsLocal.low,
+          high: contrastColorsLocal.high
+        },
+        lightnessNudgers: [...lightnessNudgerValues],
+        hueNudgers: [...hueNudgerValues],
+        stepSaturationNudgers: [...stepSaturationNudgerValues],
+        paletteSaturationNudgers: [...paletteSaturationNudgerValues],
+        paletteChromaNudgers: [...paletteChromaNudgerValues],
+        currentTheme: currentThemeLocal,
+        displayColorSpace: displayColorSpaceLocal,
+        gamutSpace: gamutSpaceLocal,
+        themePreference: themePreferenceLocal,
+        swatchLabels: swatchLabelsLocal,
+        showSwatchGamutWarnings: showSwatchGamutWarningsLocal,
+        showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
+        swatchContrastIndicators: structuredClone(swatchContrastIndicatorsLocal),
+        contrastAlgorithm: contrastAlgorithmLocal,
+        solveAdjacentStopLows: solveAdjacentStopLowsLocal,
+        oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
+        customNeutralName: customNeutralNameLocal,
+        customPaletteNames: customPaletteNamesLocal,
+        constraints: structuredClone(constraintsLocal),
+        solverAdjustmentSnapshot: structuredClone(solverAdjustmentSnapshotLocal),
+        constraintSolverSummary: structuredClone(constraintSolverSummaryLocal),
+        comparisonMetric: comparisonMetricLocal,
+        swatchChangeThreshold: swatchChangeThresholdLocal,
+        swatchChangeThresholdsByMetric: structuredClone(
+          get(colorStore).swatchChangeThresholdsByMetric
+        )
       },
-      lightnessNudgers: [...lightnessNudgerValues],
-      hueNudgers: [...hueNudgerValues],
-      stepSaturationNudgers: [...stepSaturationNudgerValues],
-      paletteSaturationNudgers: [...paletteSaturationNudgerValues],
-      paletteChromaNudgers: [...paletteChromaNudgerValues],
-      currentTheme: currentThemeLocal,
-      displayColorSpace: displayColorSpaceLocal,
-      gamutSpace: gamutSpaceLocal,
-      themePreference: themePreferenceLocal,
-      swatchLabels: swatchLabelsLocal,
-      showSwatchGamutWarnings: showSwatchGamutWarningsLocal,
-      showSwatchContrastIndicators: showSwatchContrastIndicatorsLocal,
-      swatchContrastIndicators: structuredClone(swatchContrastIndicatorsLocal),
-      contrastAlgorithm: contrastAlgorithmLocal,
-      solveAdjacentStopLows: solveAdjacentStopLowsLocal,
-      oklchDisplaySignificantDigits: oklchDisplaySignificantDigitsLocal,
-      customNeutralName: customNeutralNameLocal,
-      customPaletteNames: customPaletteNamesLocal,
-      constraints: structuredClone(constraintsLocal),
-      solverAdjustmentSnapshot: structuredClone(solverAdjustmentSnapshotLocal),
-      constraintSolverSummary: structuredClone(constraintSolverSummaryLocal),
-      comparisonMetric: comparisonMetricLocal,
-      swatchChangeThreshold: swatchChangeThresholdLocal
+      reference: captureReferenceWorkspaceSnapshot()
     };
   }
 
-  function applyHistorySnapshot(snapshot: HistorySnapshot): void {
+  function applyHistorySnapshot(snapshot: ReferenceHistorySnapshot): void {
+    const palette = snapshot.palette;
+    const reference = snapshot.reference;
+    const nextThresholdsByMetric = palette.swatchChangeThresholdsByMetric
+      ? {
+          ...get(colorStore).swatchChangeThresholdsByMetric,
+          ...palette.swatchChangeThresholdsByMetric
+        }
+      : undefined;
+
     skipAutoThemeSync = true;
     isApplyingHistorySnapshot = true;
+    if (palette.themePreference === 'auto' && typeof window !== 'undefined') {
+      const systemResolvedTheme = getSystemResolvedTheme();
+      setAutoThemeRestoreLock(
+        palette.currentTheme !== systemResolvedTheme ? palette.currentTheme : null
+      );
+    } else {
+      clearAutoThemeRestoreLock();
+    }
     pendingHistoryGeneratorSnapshot = {
-      baseColor: snapshot.baseColor,
-      warmth: snapshot.warmth,
-      warmthHue: snapshot.warmthHue,
-      chromaMultiplier: snapshot.chromaMultiplier,
-      numColors: snapshot.numColors,
-      numPalettes: snapshot.numPalettes,
-      x1: snapshot.x1,
-      y1: snapshot.y1,
-      x2: snapshot.x2,
-      y2: snapshot.y2
+      baseColor: palette.baseColor,
+      warmth: palette.warmth,
+      warmthHue: palette.warmthHue,
+      chromaMultiplier: palette.chromaMultiplier,
+      numColors: palette.numColors,
+      numPalettes: palette.numPalettes,
+      x1: palette.x1,
+      y1: palette.y1,
+      x2: palette.x2,
+      y2: palette.y2
     };
     historyRestoreRevision += 1;
-    baseColorLocal = snapshot.baseColor;
-    warmthLocal = snapshot.warmth;
-    warmthHueLocal = snapshot.warmthHue;
-    chromaMultiplierLocal = snapshot.chromaMultiplier;
-    numColorsLocal = snapshot.numColors;
-    numPalettesLocal = snapshot.numPalettes;
-    x1Local = snapshot.x1;
-    y1Local = snapshot.y1;
-    x2Local = snapshot.x2;
-    y2Local = snapshot.y2;
+    baseColorLocal = palette.baseColor;
+    warmthLocal = palette.warmth;
+    warmthHueLocal = palette.warmthHue;
+    chromaMultiplierLocal = palette.chromaMultiplier;
+    numColorsLocal = palette.numColors;
+    numPalettesLocal = palette.numPalettes;
+    x1Local = palette.x1;
+    y1Local = palette.y1;
+    x2Local = palette.x2;
+    y2Local = palette.y2;
+    referenceViewMode = reference.viewMode;
 
     updateColorState({
-      baseColor: snapshot.baseColor,
-      warmth: snapshot.warmth,
-      warmthHue: snapshot.warmthHue,
-      chromaMultiplier: snapshot.chromaMultiplier,
-      numColors: snapshot.numColors,
-      numPalettes: snapshot.numPalettes,
-      x1: snapshot.x1,
-      y1: snapshot.y1,
-      x2: snapshot.x2,
-      y2: snapshot.y2,
-      contrastMode: snapshot.contrastMode,
-      lowStep: snapshot.lowStep,
-      highStep: snapshot.highStep,
-      lowReference: snapshot.lowReference,
-      highReference: snapshot.highReference,
-      contrast: snapshot.contrast,
-      lightnessNudgers: snapshot.lightnessNudgers,
-      hueNudgers: snapshot.hueNudgers,
-      stepSaturationNudgers: snapshot.stepSaturationNudgers,
-      paletteSaturationNudgers: snapshot.paletteSaturationNudgers,
-      paletteChromaNudgers: snapshot.paletteChromaNudgers,
-      currentTheme: snapshot.currentTheme,
-      displayColorSpace: snapshot.displayColorSpace,
-      gamutSpace: snapshot.gamutSpace,
-      themePreference: snapshot.themePreference,
-      swatchLabels: snapshot.swatchLabels,
-      showSwatchGamutWarnings: snapshot.showSwatchGamutWarnings,
-      showSwatchContrastIndicators: snapshot.showSwatchContrastIndicators,
-      swatchContrastIndicators: snapshot.swatchContrastIndicators,
-      contrastAlgorithm: snapshot.contrastAlgorithm,
-      solveAdjacentStopLows: snapshot.solveAdjacentStopLows,
-      oklchDisplaySignificantDigits: snapshot.oklchDisplaySignificantDigits,
-      customNeutralName: snapshot.customNeutralName,
-      customPaletteNames: snapshot.customPaletteNames,
-      constraints: snapshot.constraints,
-      solverAdjustmentSnapshot: snapshot.solverAdjustmentSnapshot,
-      constraintSolverSummary: snapshot.constraintSolverSummary,
-      comparisonMetric: snapshot.comparisonMetric,
-      swatchChangeThreshold: snapshot.swatchChangeThreshold
+      baseColor: palette.baseColor,
+      warmth: palette.warmth,
+      warmthHue: palette.warmthHue,
+      chromaMultiplier: palette.chromaMultiplier,
+      numColors: palette.numColors,
+      numPalettes: palette.numPalettes,
+      x1: palette.x1,
+      y1: palette.y1,
+      x2: palette.x2,
+      y2: palette.y2,
+      contrastMode: palette.contrastMode,
+      lowStep: palette.lowStep,
+      highStep: palette.highStep,
+      lowReference: palette.lowReference,
+      highReference: palette.highReference,
+      contrast: palette.contrast,
+      lightnessNudgers: palette.lightnessNudgers,
+      hueNudgers: palette.hueNudgers,
+      stepSaturationNudgers: palette.stepSaturationNudgers,
+      paletteSaturationNudgers: palette.paletteSaturationNudgers,
+      paletteChromaNudgers: palette.paletteChromaNudgers,
+      currentTheme: palette.currentTheme,
+      displayColorSpace: palette.displayColorSpace,
+      gamutSpace: palette.gamutSpace,
+      themePreference: palette.themePreference,
+      swatchLabels: palette.swatchLabels,
+      showSwatchGamutWarnings: palette.showSwatchGamutWarnings,
+      showSwatchContrastIndicators: palette.showSwatchContrastIndicators,
+      swatchContrastIndicators: palette.swatchContrastIndicators,
+      contrastAlgorithm: palette.contrastAlgorithm,
+      solveAdjacentStopLows: palette.solveAdjacentStopLows,
+      oklchDisplaySignificantDigits: palette.oklchDisplaySignificantDigits,
+      customNeutralName: palette.customNeutralName,
+      customPaletteNames: palette.customPaletteNames,
+      constraints: palette.constraints,
+      solverAdjustmentSnapshot: palette.solverAdjustmentSnapshot,
+      constraintSolverSummary: palette.constraintSolverSummary,
+      comparisonMetric: palette.comparisonMetric,
+      swatchChangeThreshold: palette.swatchChangeThreshold,
+      ...(nextThresholdsByMetric && {
+        swatchChangeThresholdsByMetric: nextThresholdsByMetric
+      }),
+      referenceConfiguration: reference.referenceConfiguration as ReferenceConfiguration | null
     });
 
     void tick().then(() => {
@@ -525,7 +718,9 @@
   }
 
   function initializeHistory(preferStoreGeneratorState: boolean = false): void {
-    historyManager = createHistoryManager(captureHistorySnapshot(preferStoreGeneratorState));
+    historyManager = createReferenceHistoryManager(
+      captureHistorySnapshot(preferStoreGeneratorState)
+    );
     refreshHistoryView();
   }
 
@@ -913,12 +1108,43 @@
       setThemePreference(storedState.themePreference);
     }
 
+    // Load persisted reference workspace (AC1)
+    const storedReferenceWorkspace = loadReferenceWorkspaceFromStorage();
+    if (storedReferenceWorkspace) {
+      referenceViewMode = storedReferenceWorkspace.viewMode;
+      const nextThresholdsByMetric = storedReferenceWorkspace.swatchChangeThresholdsByMetric
+        ? {
+            ...get(colorStore).swatchChangeThresholdsByMetric,
+            ...storedReferenceWorkspace.swatchChangeThresholdsByMetric
+          }
+        : undefined;
+      updateColorState({
+        ...(storedReferenceWorkspace.referenceConfiguration && {
+          referenceConfiguration:
+            storedReferenceWorkspace.referenceConfiguration as unknown as ReferenceConfiguration
+        }),
+        comparisonMetric: storedReferenceWorkspace.comparisonMetric,
+        swatchChangeThreshold: storedReferenceWorkspace.swatchChangeThreshold,
+        ...(nextThresholdsByMetric && {
+          swatchChangeThresholdsByMetric: nextThresholdsByMetric
+        })
+      });
+    }
+
     // Set up matchMedia listener for auto theme preference
     const mql = window.matchMedia('(prefers-color-scheme: dark)');
     const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
       if ($themePreference === 'auto') {
         const resolvedTheme = e.matches ? 'dark' : 'light';
-        if ($currentTheme !== resolvedTheme) {
+
+        if (autoThemeRestoreLockLocal) {
+          if (resolvedTheme === currentThemeLocal) {
+            clearAutoThemeRestoreLock();
+          }
+          return;
+        }
+
+        if (currentThemeLocal !== resolvedTheme) {
           setTheme(resolvedTheme);
         }
       }
@@ -955,9 +1181,14 @@
   // React to themePreference changes to apply auto theme
   $effect(() => {
     if (!skipAutoThemeSync && themePreferenceLocal === 'auto' && typeof window !== 'undefined') {
-      const resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
+      const resolvedTheme = getSystemResolvedTheme();
+
+      if (autoThemeRestoreLockLocal) {
+        if (resolvedTheme === currentThemeLocal) {
+          clearAutoThemeRestoreLock();
+        }
+        return;
+      }
 
       if (currentThemeLocal !== resolvedTheme) {
         setTheme(resolvedTheme);
@@ -1114,11 +1345,11 @@
   $effect(() => {
     if (referenceConfigurationLocal) {
       try {
-        referenceColors = generateColorsFromReference(
-          referenceConfigurationLocal,
-          cvdModeLocal,
-          currentThemeLocal
-        );
+        referenceColors = generateColorsFromReference(referenceConfigurationLocal, {
+          cvdMode: cvdModeLocal,
+          displayColorSpace: displayColorSpaceLocal,
+          gamutSpace: gamutSpaceLocal
+        });
       } catch (error) {
         console.error('Error generating reference colors:', error);
         referenceColors = null;
@@ -1190,6 +1421,27 @@
     }
 
     saveUiPreferencesToStorage(getUiPreferencesSnapshot());
+  });
+
+  // Persist reference workspace to localStorage whenever reference configuration changes (AC1)
+  $effect(() => {
+    if (!urlStateLoaded) {
+      return;
+    }
+
+    if (!referenceConfigurationLocal) {
+      referenceViewMode = 'default';
+    }
+
+    saveReferenceWorkspaceToStorage({
+      referenceConfiguration: referenceConfigurationLocal as Record<string, unknown> | null,
+      viewMode: referenceConfigurationLocal ? activeReferenceViewMode : 'default',
+      comparisonMetric: comparisonMetricLocal,
+      swatchChangeThreshold: swatchChangeThresholdLocal,
+      swatchChangeThresholdsByMetric: structuredClone(
+        get(colorStore).swatchChangeThresholdsByMetric
+      )
+    });
   });
 
   function applyUrlState(urlState: UrlColorState) {
@@ -1345,6 +1597,7 @@
     onReset={handleResetToDefaults}
     onUndoJump={handleHistoryJump}
     onRedoJump={handleHistoryJump}
+    onReferenceHistoryCommit={scheduleHistoryCommit}
   />
   <GettingStartedDialog />
 
@@ -1421,6 +1674,21 @@
               <ContrastControls onHistoryCommit={scheduleHistoryCommit} />
             {/key}
           </Card>
+
+          {#if activeReferenceViewMode === 'comparison'}
+            <Card
+              title="Comparison"
+              subtitle="Difference interpretation"
+              summary={`${comparisonMetricLocal === 'ok' ? 'Delta E OK' : 'Delta E 2000'} · ${swatchChangeThresholdLocal}`}
+              collapsible
+              open={true}
+              data-testid="comparison-controls-card"
+            >
+              {#key `comparison-${historyRestoreRevision}`}
+                <ComparisonControls onHistoryCommit={scheduleHistoryCommit} />
+              {/key}
+            </Card>
+          {/if}
 
           <Card
             title="Output"
@@ -1516,6 +1784,18 @@
             {/key}
           </Card>
 
+          {#if activeReferenceViewMode === 'comparison'}
+            <Card
+              title="Comparison"
+              subtitle="Difference interpretation"
+              data-testid="comparison-controls-card"
+            >
+              {#key `comparison-${historyRestoreRevision}`}
+                <ComparisonControls onHistoryCommit={scheduleHistoryCommit} />
+              {/key}
+            </Card>
+          {/if}
+
           <Card title="Output" subtitle="Formats and labels" data-testid="output-controls-card">
             {#key `output-${historyRestoreRevision}`}
               <DisplaySettings
@@ -1553,56 +1833,98 @@
             body="Swatch fills approximate how this palette appears to viewers with this condition. Hex values, contrast badges, and exports remain unchanged."
           />
         {/if}
-        {#if referenceConfigurationLocal && referenceColors}
+        {#if referenceViewData}
           {#key `reference-view-${historyRestoreRevision}`}
-            <ReferenceView
-              currentNeutrals={neutralsLocal}
-              currentNeutralsHex={neutralsHexLocal}
-              currentNeutralsDisplay={neutralsSwatchDisplayLocal}
-              currentNeutralsSimulatedDisplay={neutralsSimulatedDisplayLocal}
-              currentPalettes={palettesLocal}
-              currentPalettesHex={palettesHexLocal}
-              currentPalettesDisplay={palettesSwatchDisplayLocal}
-              currentPalettesSimulatedDisplay={palettesSimulatedDisplayLocal}
-              currentLightnessNudgers={lightnessNudgerValues}
-              currentHueNudgers={hueNudgerValues}
-              referenceNeutrals={referenceColors.neutrals}
-              referenceNeutralsHex={referenceColors.neutralsHex}
-              referenceNeutralsDisplay={referenceColors.neutralsSwatchDisplay}
-              referenceNeutralsSimulatedDisplay={referenceColors.neutralsSimulatedDisplay}
-              referencePalettes={referenceColors.palettes}
-              referencePalettesHex={referenceColors.palettesHex}
-              referencePalettesDisplay={referenceColors.palettesSwatchDisplay}
-              referencePalettesSimulatedDisplay={referenceColors.palettesSimulatedDisplay}
-              currentConfig={{
-                numColors: numColorsLocal,
-                numPalettes: numPalettesLocal,
-                baseColor: baseColorLocal,
-                warmth: warmthLocal,
-                warmthHue: warmthHueLocal,
-                x1: x1Local,
-                y1: y1Local,
-                x2: x2Local,
-                y2: y2Local,
-                chromaMultiplier: chromaMultiplierLocal,
-                lightnessNudgers: lightnessNudgerValues,
-                hueNudgers: hueNudgerValues,
-                stepSaturationNudgers: stepSaturationNudgerValues,
-                paletteSaturationNudgers: paletteSaturationNudgerValues,
-                paletteChromaNudgers: paletteChromaNudgerValues,
-                contrastMode: contrastModeLocal,
-                lowStep: lowStepLocal,
-                highStep: highStepLocal,
-                lowReference: lowReferenceLocal,
-                highReference: highReferenceLocal,
-                contrast: contrastColorsLocal,
-                contrastAlgorithm: contrastAlgorithmLocal,
-                solveAdjacentStopLows: solveAdjacentStopLowsLocal,
-                customNeutralName: customNeutralNameLocal,
-                customPaletteNames: customPaletteNamesLocal
-              }}
-              onCurrentHistoryCommit={scheduleHistoryCommit}
-            />
+            {@const activeReferenceView = referenceViewData}
+            <div class="reference-view-shell">
+              <div
+                bind:this={referenceViewTabsEl}
+                class="reference-view-tabs"
+                role="tablist"
+                aria-label="Reference view mode"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  id="reference-view-tab-reference"
+                  aria-controls="reference-view-panel"
+                  class="reference-view-tab"
+                  class:reference-view-tab--active={activeReferenceViewMode === 'reference'}
+                  aria-selected={activeReferenceViewMode === 'reference'}
+                  tabindex={activeReferenceViewMode === 'reference' ? 0 : -1}
+                  onclick={() => setReferenceViewMode('reference')}
+                  onkeydown={(event) => handleReferenceViewModeKeydown(event, 0)}
+                >
+                  Reference View
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="reference-view-tab-comparison"
+                  aria-controls="reference-view-panel"
+                  class="reference-view-tab"
+                  class:reference-view-tab--active={activeReferenceViewMode === 'comparison'}
+                  aria-selected={activeReferenceViewMode === 'comparison'}
+                  tabindex={activeReferenceViewMode === 'comparison' ? 0 : -1}
+                  onclick={() => setReferenceViewMode('comparison')}
+                  onkeydown={(event) => handleReferenceViewModeKeydown(event, 1)}
+                >
+                  Comparison View
+                </button>
+              </div>
+              <div
+                id="reference-view-panel"
+                role="tabpanel"
+                aria-labelledby={activeReferenceViewMode === 'comparison'
+                  ? 'reference-view-tab-comparison'
+                  : 'reference-view-tab-reference'}
+              >
+                {#if activeReferenceViewMode === 'comparison'}
+                  <div class="comparison-explanations">
+                    {#if resolvedThemeDriftNotice}
+                      <NoticeBanner
+                        tone="info"
+                        title={resolvedThemeDriftNotice.title}
+                        body={resolvedThemeDriftNotice.body}
+                      />
+                    {/if}
+
+                    <ConfigurationDiffDisplay
+                      currentConfig={currentComparisonConfig}
+                      referenceConfig={referenceComparisonConfig}
+                    />
+                  </div>
+                {/if}
+
+                <ReferenceView
+                  viewMode={activeReferenceView.viewMode}
+                  currentNeutrals={neutralsLocal}
+                  currentNeutralsHex={neutralsHexLocal}
+                  currentNeutralsDisplay={neutralsSwatchDisplayLocal}
+                  currentNeutralsSimulatedDisplay={neutralsSimulatedDisplayLocal}
+                  currentPalettes={palettesLocal}
+                  currentPalettesHex={palettesHexLocal}
+                  currentPalettesDisplay={palettesSwatchDisplayLocal}
+                  currentPalettesSimulatedDisplay={palettesSimulatedDisplayLocal}
+                  currentLightnessNudgers={lightnessNudgerValues}
+                  currentHueNudgers={hueNudgerValues}
+                  referenceNeutrals={activeReferenceView.colors.neutrals}
+                  referenceNeutralsHex={activeReferenceView.colors.neutralsHex}
+                  referenceNeutralsDisplay={activeReferenceView.colors.neutralsSwatchDisplay}
+                  referenceNeutralsSimulatedDisplay={activeReferenceView.colors
+                    .neutralsSimulatedDisplay}
+                  referencePalettes={activeReferenceView.colors.palettes}
+                  referencePalettesHex={activeReferenceView.colors.palettesHex}
+                  referencePalettesDisplay={activeReferenceView.colors.palettesSwatchDisplay}
+                  referencePalettesSimulatedDisplay={activeReferenceView.colors
+                    .palettesSimulatedDisplay}
+                  referenceCustomNeutralName={activeReferenceView.configuration.customNeutralName}
+                  referenceCustomPaletteNames={activeReferenceView.configuration.customPaletteNames}
+                  referenceContrastColors={activeReferenceView.configuration.contrast}
+                  onCurrentHistoryCommit={scheduleHistoryCommit}
+                />
+              </div>
+            </div>
           {/key}
         {:else}
           <div class="content-inner">
@@ -1679,11 +2001,75 @@
     min-height: 0;
   }
 
+  .reference-view-shell {
+    display: grid;
+    gap: var(--space-md);
+    min-height: 0;
+  }
+
+  .comparison-explanations {
+    display: grid;
+    gap: var(--space-md);
+  }
+
+  .reference-view-tabs {
+    display: inline-flex;
+    gap: var(--space-xs);
+    align-self: start;
+    padding: var(--space-xs);
+    border: var(--border-width-thin) solid color-mix(in oklab, var(--border) 62%, transparent);
+    border-radius: var(--radius-lg);
+    background: color-mix(in oklab, var(--bg-secondary) 92%, transparent);
+  }
+
+  .reference-view-tab {
+    appearance: none;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-weight: var(--font-weight-medium);
+    min-height: var(--touch-target-comfortable);
+    padding: var(--space-sm) var(--space-md);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  .reference-view-tab:hover {
+    color: var(--text-primary);
+  }
+
+  .reference-view-tab:focus-visible {
+    outline: var(--focus-outline-width) solid var(--focus-outline-inside);
+    box-shadow: 0 0 0 var(--focus-outline-offset) var(--focus-outline-outside);
+  }
+
+  .reference-view-tab--active {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    box-shadow: inset 0 0 0 var(--border-width-thin)
+      color-mix(in oklab, var(--border) 80%, transparent);
+  }
+
   @container (max-width: 980px) {
     .layout {
       grid-template-columns: 1fr;
       padding: var(--space-lg) var(--space-sm) var(--space-xl) var(--space-sm);
       max-width: none;
+    }
+
+    .reference-view-tabs {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .reference-view-tab {
+      justify-content: center;
+      text-align: center;
     }
   }
 </style>

@@ -18,6 +18,7 @@
     onReset?: () => void;
     onUndoJump?: (position: number) => void;
     onRedoJump?: (position: number) => void;
+    onReferenceHistoryCommit?: (label: string) => void;
   }
 
   let {
@@ -30,7 +31,8 @@
     onRedo = () => {},
     onReset = () => {},
     onUndoJump = () => {},
-    onRedoJump = () => {}
+    onRedoJump = () => {},
+    onReferenceHistoryCommit = () => {}
   }: Props = $props();
 
   let gettingStartedOpen = $derived($gettingStartedDialog.open);
@@ -44,7 +46,7 @@
   <div class="topbar-inner" bind:this={bindInner}>
     <Brand />
     <div class="controls" aria-label="App controls">
-      <ReferenceControls />
+      <ReferenceControls onHistoryCommit={onReferenceHistoryCommit} />
       <div class="history-controls" aria-label="History controls">
         <Button
           onclick={handleHelpOpen}

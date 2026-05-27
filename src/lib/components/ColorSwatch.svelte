@@ -23,10 +23,12 @@
     updateConstraint,
     updateContrastReference
   } from '$lib/stores';
+  import type { ComparisonChip } from '$lib/comparisonViewAnnotations';
   import { openDrawer } from '$lib/drawerStore';
   import { announce } from '$lib/announce';
   import Icon from './Icon.svelte';
   import Color from 'colorjs.io';
+  import type { ContrastAlgorithm } from '$lib/types';
 
   interface Props {
     color: string;
@@ -39,6 +41,10 @@
     stepIndex?: number;
     paletteIndex?: number;
     onHistoryCommit?: (label: string) => void;
+    contrastColorsOverride?: { low: string; high: string };
+    contrastAlgorithmOverride?: ContrastAlgorithm;
+    comparisonChip?: ComparisonChip | null;
+    quiet?: boolean;
   }
 
   let {
@@ -51,17 +57,22 @@
     isNeutral = false,
     stepIndex = undefined,
     paletteIndex = undefined,
-    onHistoryCommit = undefined
+    onHistoryCommit = undefined,
+    contrastColorsOverride = undefined,
+    contrastAlgorithmOverride = undefined,
+    comparisonChip = null,
+    quiet = false
   }: Props = $props();
 
-  const contrastColorsLocal = $derived($contrastColors);
+  const contrastColorsLocal = $derived(contrastColorsOverride ?? $contrastColors);
   const swatchLabelsLocal = $derived($swatchLabels);
   const gamutSpaceLocal = $derived($gamutSpace);
   const showSwatchGamutWarningsLocal = $derived($showSwatchGamutWarnings);
   const showSwatchContrastIndicatorsLocal = $derived($showSwatchContrastIndicators);
   const swatchContrastIndicatorsLocal = $derived($swatchContrastIndicators);
-  const contrastAlgorithmLocal = $derived($contrastAlgorithm);
+  const contrastAlgorithmLocal = $derived(contrastAlgorithmOverride ?? $contrastAlgorithm);
   const activeSwatchPickerLocal = $derived($activeSwatchPicker);
+  const comparisonChipPrefix = $derived(comparisonChip ? `${comparisonChip.ariaLabel}. ` : '');
 
   const renderedColor = $derived(displayValue || color);
   // simulatedColor, if provided, is the CVD-transformed fill; label and interactions use renderedColor
@@ -353,6 +364,8 @@
 <button
   class="color-swatch"
   class:color-swatch--gamut-warning={showGamutWarning}
+  class:color-swatch--quiet={quiet}
+  class:color-swatch--with-comparison-chip={comparisonChip !== null}
   style="background-color: {backgroundColor}; color: {textColor}; --swatch-indicator-tint-alpha: {indicatorTintPercent};"
   onclick={() => {
     if (activeSwatchPickerLocal) {
@@ -374,14 +387,23 @@
       copyToClipboard(shownValue);
     }
   }}
-  title={pickerInstruction ??
+  title={comparisonChip?.ariaLabel ??
+    pickerInstruction ??
     (oklchColor ? `View color details for ${shownValue}` : `Click to copy ${shownValue}`)}
   aria-label={pickerInstruction
-    ? `${label ? `${label} ` : ''}${shownValue} — ${pickerInstruction.toLowerCase()}`
-    : `${label ? `${label} ` : ''}${shownValue}${
+    ? `${comparisonChipPrefix}${label ? `${label} ` : ''}${shownValue} — ${pickerInstruction.toLowerCase()}`
+    : `${comparisonChipPrefix}${label ? `${label} ` : ''}${shownValue}${
         oklchColor ? ' — view color details' : ' — copy to clipboard'
       }`}
 >
+  {#if comparisonChip}
+    <span
+      class="comparison-chip comparison-chip--{comparisonChip.tone}"
+      aria-label={comparisonChip.ariaLabel}
+    >
+      {comparisonChip.label}
+    </span>
+  {/if}
   {#if showGamutWarning}
     <span class="gamut-warning-tag" aria-label={`Gamut mapped to ${gamutWarningLabel}`}>
       {gamutWarningLabel}
@@ -488,11 +510,76 @@
     border-color: color-mix(in oklab, var(--border) 40%, var(--accent));
   }
 
+  .color-swatch--quiet {
+    border-color: color-mix(in oklab, var(--border) 40%, transparent);
+    box-shadow: inset 0 0 0 var(--border-width-thin)
+      color-mix(in oklab, currentColor 10%, transparent);
+  }
+
+  .color-swatch--quiet .step,
+  .color-swatch--quiet .hex,
+  .color-swatch--quiet .contrast-indicators {
+    opacity: 0.76;
+  }
+
+  .color-swatch--with-comparison-chip {
+    padding-top: calc(var(--space-md) + var(--space-xs));
+  }
+
   .color-swatch--gamut-warning {
     border-color: var(--gamut-warning-border);
     border-width: var(--border-width-medium);
     padding-top: calc(var(--space-md) + var(--space-xs));
     box-shadow: inset 0 0 0 var(--border-width-thin) var(--swatch-inset-shadow-color);
+  }
+
+  .color-swatch--with-comparison-chip.color-swatch--gamut-warning {
+    padding-top: calc(var(--space-lg) + var(--space-sm));
+  }
+
+  .comparison-chip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target-min);
+    padding: calc(var(--space-xs) * 0.75) var(--space-xs);
+    border-right: var(--border-width-thin) solid transparent;
+    border-bottom: var(--border-width-thin) solid transparent;
+    border-bottom-right-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: var(--letter-spacing-wide);
+    line-height: 1;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .comparison-chip--neutral {
+    background: color-mix(in oklab, var(--bg-primary) 88%, transparent);
+    border-color: color-mix(in oklab, var(--border) 76%, transparent);
+    color: var(--text-primary);
+  }
+
+  .comparison-chip--improved {
+    background: color-mix(in oklab, var(--badge-pass-bg) 82%, transparent);
+    border-color: color-mix(in oklab, var(--badge-pass-border) 76%, transparent);
+    color: var(--badge-pass-text);
+  }
+
+  .comparison-chip--regressed {
+    background: color-mix(in oklab, var(--badge-fail-bg) 82%, transparent);
+    border-color: color-mix(in oklab, var(--badge-fail-border) 76%, transparent);
+    color: var(--badge-fail-text);
+  }
+
+  .comparison-chip--warning {
+    background: color-mix(in oklab, var(--badge-warning-bg) 82%, transparent);
+    border-color: color-mix(in oklab, var(--badge-warning-border) 76%, transparent);
+    color: var(--badge-warning-text);
   }
 
   .gamut-warning-tag {

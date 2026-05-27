@@ -6,6 +6,7 @@
     closeExportPreview,
     exportPreviewDialog,
     type ExportFormat,
+    type ExportPreviewData,
     type ExportScope
   } from '$lib/help/exportPreviewStore';
   import {
@@ -67,10 +68,22 @@
   let opener = $derived($exportPreviewDialog.opener);
   let scope = $derived<ExportScope>($exportPreviewDialog.scope);
   let initialFormat = $derived($exportPreviewDialog.initialFormat);
+  let dataOverride = $derived<ExportPreviewData | null>($exportPreviewDialog.dataOverride);
 
-  const scoped = $derived(scopeData(scope));
+  const exportSource = $derived(
+    dataOverride ?? {
+      neutrals,
+      palettes,
+      lowContrastColor,
+      displayNeutrals,
+      displayPalettes,
+      customNeutralName,
+      customPaletteNames
+    }
+  );
+  const scoped = $derived(scopeData(scope, exportSource));
   const exportNameOptions = $derived<ExportNameOptions>({
-    lowContrastColor,
+    lowContrastColor: exportSource.lowContrastColor ?? lowContrastColor,
     customNeutralName: scoped.customNeutralName,
     customPaletteNames: scoped.customPaletteNames
   });
@@ -216,7 +229,10 @@
     tabs[index]?.focus({ preventScroll: true });
   }
 
-  function scopeData(s: ExportScope): {
+  function scopeData(
+    s: ExportScope,
+    source: ExportPreviewData
+  ): {
     neutrals: string[];
     palettes: string[][];
     displayNeutrals: string[];
@@ -226,26 +242,26 @@
   } {
     if (s === 'all') {
       return {
-        neutrals,
-        palettes,
-        displayNeutrals,
-        displayPalettes,
-        customNeutralName,
-        customPaletteNames
+        neutrals: source.neutrals,
+        palettes: source.palettes,
+        displayNeutrals: source.displayNeutrals ?? source.neutrals,
+        displayPalettes: source.displayPalettes ?? source.palettes,
+        customNeutralName: source.customNeutralName,
+        customPaletteNames: source.customPaletteNames
       };
     }
     if (s === 'neutral') {
       return {
-        neutrals,
+        neutrals: source.neutrals,
         palettes: [],
-        displayNeutrals,
+        displayNeutrals: source.displayNeutrals ?? source.neutrals,
         displayPalettes: [],
-        customNeutralName,
+        customNeutralName: source.customNeutralName,
         customPaletteNames: undefined
       };
     }
     const i = s.paletteIndex;
-    if (i < 0 || i >= palettes.length) {
+    if (i < 0 || i >= source.palettes.length) {
       return {
         neutrals: [],
         palettes: [],
@@ -257,11 +273,13 @@
     }
     return {
       neutrals: [],
-      palettes: [palettes[i]],
+      palettes: [source.palettes[i]],
       displayNeutrals: [],
-      displayPalettes: displayPalettes[i] ? [displayPalettes[i]] : [],
+      displayPalettes: source.displayPalettes?.[i] ? [source.displayPalettes[i]] : [],
       customNeutralName: undefined,
-      customPaletteNames: customPaletteNames?.[i] ? [customPaletteNames[i]] : undefined
+      customPaletteNames: source.customPaletteNames?.[i]
+        ? [source.customPaletteNames[i]]
+        : undefined
     };
   }
 
