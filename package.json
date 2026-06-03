@@ -70,7 +70,7 @@
     "playwright": "^1.58.2",
     "png-to-ico": "^3.0.1",
     "prettier": "^3.8.3",
-    "prettier-plugin-svelte": "^3.5.2",
+    "prettier-plugin-svelte": "^4.1.0",
     "svelte": "^5.55.9",
     "svelte-check": "^4.4.8",
     "typescript": "^6.0.3",
