@@ -41,7 +41,7 @@
     "test:lighthouse": "rm -rf lighthouse-report .lighthouseci && lhci autorun; open $(node -e \"const m=require('./lighthouse-report/manifest.json');console.log(m.find(r=>r.isRepresentativeRun).htmlPath)\")"
   },
   "devDependencies": {
-    "@argos-ci/playwright": "^6.6.1",
+    "@argos-ci/playwright": "^7.0.5",
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.5.0",
     "@eslint/compat": "^2.0.3",
