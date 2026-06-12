@@ -65,19 +65,6 @@ function hexToSwatch(hex: string, stepIndex: number): RenderableSwatch {
 }
 
 /**
- * Convert a placeholder swatch marker to a renderable swatch
- */
-function placeholderToSwatch(
-  placeholder: ReturnType<typeof createPlaceholderSwatch>
-): RenderableSwatch {
-  return {
-    hex: placeholder.hex,
-    isPlaceholder: true,
-    stepIndex: null
-  };
-}
-
-/**
  * Build aligned neutral pair for side-by-side display.
  *
  * Applies swatch-level comparison mapping and creates placeholders
@@ -103,7 +90,7 @@ export function buildSideBySideNeutralAlignment(
         hexToSwatch(currentNeutrals[alignment.currentIndex]!, alignment.currentIndex)
       );
     } else {
-      currentSwatches.push(placeholderToSwatch(alignment.placeholder!));
+      currentSwatches.push(alignment.placeholder!);
     }
 
     // Reference side
@@ -112,7 +99,7 @@ export function buildSideBySideNeutralAlignment(
         hexToSwatch(referenceNeutrals[alignment.referenceIndex]!, alignment.referenceIndex)
       );
     } else {
-      referenceSwatches.push(placeholderToSwatch(alignment.placeholder!));
+      referenceSwatches.push(alignment.placeholder!);
     }
   }
 
@@ -172,7 +159,7 @@ export function buildSideBySidePaletteAlignments(
             hexToSwatch(currentPalette[swatchAlignment.currentIndex]!, swatchAlignment.currentIndex)
           );
         } else {
-          currentSwatches.push(placeholderToSwatch(swatchAlignment.placeholder!));
+          currentSwatches.push(swatchAlignment.placeholder!);
         }
 
         // Reference side
@@ -184,7 +171,7 @@ export function buildSideBySidePaletteAlignments(
             )
           );
         } else {
-          referenceSwatches.push(placeholderToSwatch(swatchAlignment.placeholder!));
+          referenceSwatches.push(swatchAlignment.placeholder!);
         }
       }
     } else if (paletteAlignment.currentIndex !== null && paletteAlignment.placeholder) {
@@ -202,7 +189,7 @@ export function buildSideBySidePaletteAlignments(
 
       for (let i = 0; i < currentPalette.length; i++) {
         currentSwatches.push(hexToSwatch(currentPalette[i]!, i));
-        referenceSwatches.push(placeholderToSwatch(refPlaceholder.swatches[i]!));
+        referenceSwatches.push(refPlaceholder.swatches[i]!);
       }
     } else if (paletteAlignment.referenceIndex !== null && paletteAlignment.placeholder) {
       // Reference has palette, current doesn't
@@ -218,7 +205,7 @@ export function buildSideBySidePaletteAlignments(
         }));
 
       for (let i = 0; i < referencePalette.length; i++) {
-        currentSwatches.push(placeholderToSwatch(refPlaceholder.swatches[i]!));
+        currentSwatches.push(refPlaceholder.swatches[i]!);
         referenceSwatches.push(hexToSwatch(referencePalette[i]!, i));
       }
     }

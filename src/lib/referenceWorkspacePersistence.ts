@@ -24,13 +24,6 @@ const VALID_VIEW_MODES: Array<'default' | 'reference' | 'comparison'> = [
   'comparison'
 ];
 
-/**
- * Type guard for validating ColorDifferenceMetric
- */
-function isValidComparisonMetric(value: unknown): value is ColorDifferenceMetric {
-  return isComparisonMetric(value);
-}
-
 function isValidThresholdsByMetric(
   value: unknown
 ): value is Partial<Record<ColorDifferenceMetric, number>> {
@@ -159,7 +152,7 @@ function isValidStoredReferenceWorkspace(value: unknown): value is StoredReferen
   }
 
   // Check comparisonMetric
-  if (!isValidComparisonMetric(candidate.comparisonMetric)) {
+  if (!isComparisonMetric(candidate.comparisonMetric)) {
     return false;
   }
 

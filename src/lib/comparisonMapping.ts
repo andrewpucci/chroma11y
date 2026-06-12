@@ -76,54 +76,6 @@ export function createPlaceholderPalette(stepCount: number): PlaceholderPalette 
 }
 
 /**
- * Maps neutral palettes (always index 0 to 0), handling step count differences.
- * Returns alignments with existing steps first, then placeholders.
- */
-export function mapNeutrals(
-  currentNeutrals: string[],
-  referenceNeutrals: string[]
-): SwatchAlignment[] {
-  const alignments: SwatchAlignment[] = [];
-
-  // First pass: map existing steps
-  for (let i = 0; i < Math.min(currentNeutrals.length, referenceNeutrals.length); i++) {
-    alignments.push({
-      currentIndex: i,
-      referenceIndex: i,
-      placeholder: null
-    });
-  }
-
-  // Second pass: add placeholders for extra steps on current side
-  for (
-    let i = Math.min(currentNeutrals.length, referenceNeutrals.length);
-    i < currentNeutrals.length;
-    i++
-  ) {
-    alignments.push({
-      currentIndex: i,
-      referenceIndex: null,
-      placeholder: createPlaceholderSwatch()
-    });
-  }
-
-  // Third pass: add placeholders for extra steps on reference side
-  for (
-    let i = Math.min(currentNeutrals.length, referenceNeutrals.length);
-    i < referenceNeutrals.length;
-    i++
-  ) {
-    alignments.push({
-      currentIndex: null,
-      referenceIndex: i,
-      placeholder: createPlaceholderSwatch()
-    });
-  }
-
-  return alignments;
-}
-
-/**
  * Maps generated palettes by slot index, handling palette count differences.
  * Returns alignments with existing palettes first, then placeholders.
  */
@@ -222,3 +174,9 @@ export function mapSwatchesByStepIndex(
 
   return alignments;
 }
+
+/**
+ * Maps neutral palettes (always index 0 to 0), handling step count differences.
+ * Neutrals align by step index exactly like swatches within a palette.
+ */
+export const mapNeutrals = mapSwatchesByStepIndex;
