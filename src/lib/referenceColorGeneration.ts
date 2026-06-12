@@ -124,16 +124,3 @@ export function formatReferenceColors(
     palettesSimulatedDisplay
   };
 }
-
-/**
- * Convenience composition of {@link generateReferenceColorObjects} and
- * {@link formatReferenceColors}. Prefer calling the two halves separately when
- * display settings change independently of the reference configuration.
- */
-export function generateColorsFromReference(
-  reference: ReferenceConfiguration,
-  settings: ReferenceRenderSettings
-): ReferenceGeneratedColors {
-  const colors = generateReferenceColorObjects(reference, settings.gamutSpace);
-  return formatReferenceColors(colors, settings);
-}

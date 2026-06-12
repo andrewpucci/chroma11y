@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  generateColorsFromReference,
+  formatReferenceColors,
+  generateReferenceColorObjects,
   type ReferenceRenderSettings
 } from './referenceColorGeneration';
 import type { ReferenceConfiguration } from './referenceConfiguration';
+
+function generateColorsFromReference(
+  reference: ReferenceConfiguration,
+  settings: ReferenceRenderSettings
+) {
+  return formatReferenceColors(
+    generateReferenceColorObjects(reference, settings.gamutSpace),
+    settings
+  );
+}
 
 function createReferenceConfiguration(
   overrides: Partial<ReferenceConfiguration> = {}
