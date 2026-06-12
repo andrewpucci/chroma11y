@@ -2,6 +2,12 @@ import { writable, derived } from 'svelte/store';
 import type Color from 'colorjs.io';
 import { colorToCssHex, colorToCssRender, colorToCssSwatchRender } from '$lib/colorUtils';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from '$lib/paletteNameUtils';
+import { createReferenceConfiguration } from '$lib/referenceConfiguration';
+import {
+  COMPARISON_METRICS,
+  DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC
+} from '$lib/comparisonMetrics';
+import { themePresets } from '$lib/themePresets';
 import type {
   DisplayColorSpace,
   GamutSpace,
@@ -15,13 +21,15 @@ import type {
   SolverAdjustmentSnapshot,
   ConstraintSolverSummary,
   ConstraintSolveRunState,
-  CvdMode
+  CvdMode,
+  ColorDifferenceMetric
 } from '$lib/types';
+import type { ReferenceConfiguration } from '$lib/referenceConfiguration';
 
 /**
  * Interface for color state
  */
-interface ColorState {
+export interface ColorState {
   numColors: number;
   numPalettes: number;
   baseColor: string;
@@ -65,6 +73,10 @@ interface ColorState {
   constraints: Constraint[];
   solverAdjustmentSnapshot: SolverAdjustmentSnapshot | null;
   constraintSolverSummary: ConstraintSolverSummary | null;
+  referenceConfiguration: ReferenceConfiguration | null;
+  comparisonMetric: ColorDifferenceMetric;
+  swatchChangeThreshold: number;
+  swatchChangeThresholdsByMetric: Record<ColorDifferenceMetric, number>;
   _lastUpdated?: number;
 }
 
@@ -72,6 +84,16 @@ export interface ActiveSwatchPicker {
   kind: 'contrast-reference' | 'constraint-target';
   target: 'low' | 'high' | string;
 }
+
+export const autoThemeRestoreLock = writable<'light' | 'dark' | null>(null);
+
+export const setAutoThemeRestoreLock = (theme: 'light' | 'dark' | null) => {
+  autoThemeRestoreLock.set(theme);
+};
+
+export const clearAutoThemeRestoreLock = () => {
+  autoThemeRestoreLock.set(null);
+};
 
 function createNeutralContrastReference(stepIndex: number): ContrastReference {
   return {
@@ -81,56 +103,10 @@ function createNeutralContrastReference(stepIndex: number): ContrastReference {
 }
 
 /**
- * Default color state values for light and dark modes
- */
-const THEME_PRESETS = {
-  light: {
-    numColors: 11,
-    numPalettes: 11,
-    baseColor: '#5EF784',
-    warmth: -7,
-    x1: 0.16,
-    y1: 0.0,
-    x2: 0.28,
-    y2: 0.38,
-    chromaMultiplier: 1,
-    contrastMode: 'auto' as const,
-    lowStep: 0,
-    highStep: 10,
-    lowReference: createNeutralContrastReference(0),
-    highReference: createNeutralContrastReference(10),
-    contrast: {
-      low: '#ffffff',
-      high: '#000000'
-    }
-  },
-  dark: {
-    numColors: 11,
-    numPalettes: 11,
-    baseColor: '#5EF784',
-    warmth: -7,
-    x1: 0.45,
-    y1: 0.08,
-    x2: 0.77,
-    y2: 0.96,
-    chromaMultiplier: 0.83,
-    contrastMode: 'auto' as const,
-    lowStep: 2,
-    highStep: 10,
-    lowReference: createNeutralContrastReference(2),
-    highReference: createNeutralContrastReference(10),
-    contrast: {
-      low: '#071531',
-      high: '#ffffff'
-    }
-  }
-};
-
-/**
  * Default color state values
  */
 const DEFAULT_STATE = {
-  ...THEME_PRESETS.light,
+  ...themePresets.light,
   neutrals: [] as Color[],
   palettes: [] as Color[][],
   lightnessNudgers: [] as number[],
@@ -159,12 +135,44 @@ const DEFAULT_STATE = {
   cvdMode: 'none' as CvdMode,
   constraints: [] as Constraint[],
   solverAdjustmentSnapshot: null as SolverAdjustmentSnapshot | null,
-  constraintSolverSummary: null as ConstraintSolverSummary | null
+  constraintSolverSummary: null as ConstraintSolverSummary | null,
+  referenceConfiguration: null as ReferenceConfiguration | null,
+  comparisonMetric: 'ok' as ColorDifferenceMetric,
+  swatchChangeThreshold: DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC.ok,
+  swatchChangeThresholdsByMetric: {
+    ...DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC
+  } as Record<ColorDifferenceMetric, number>
 };
 
+function normalizeSwatchChangeThresholdsByMetric(
+  thresholds: Partial<Record<ColorDifferenceMetric, number>> | undefined,
+  comparisonMetric: ColorDifferenceMetric,
+  swatchChangeThreshold: number
+): Record<ColorDifferenceMetric, number> {
+  const normalizedThreshold = Math.max(0, swatchChangeThreshold);
+
+  return COMPARISON_METRICS.reduce(
+    (result, metric) => {
+      result[metric] =
+        metric === comparisonMetric
+          ? normalizedThreshold
+          : Math.max(0, thresholds?.[metric] ?? DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC[metric]);
+      return result;
+    },
+    {} as Record<ColorDifferenceMetric, number>
+  );
+}
+
 function normalizeDisplayState(state: ColorState): ColorState {
+  const normalizedSwatchChangeThreshold = Math.max(0, state.swatchChangeThreshold);
   const normalizedState: ColorState = {
     ...state,
+    swatchChangeThreshold: normalizedSwatchChangeThreshold,
+    swatchChangeThresholdsByMetric: normalizeSwatchChangeThresholdsByMetric(
+      state.swatchChangeThresholdsByMetric,
+      state.comparisonMetric,
+      normalizedSwatchChangeThreshold
+    ),
     lowReference: state.lowReference ?? createNeutralContrastReference(state.lowStep),
     highReference: state.highReference ?? createNeutralContrastReference(state.highStep),
     customNeutralName: normalizeCustomPaletteName(state.customNeutralName),
@@ -353,6 +361,21 @@ export const activeConstraintSolveRunState = derived(
   ($constraintSolveRunState) => $constraintSolveRunState
 );
 
+// Derived store for reference configuration
+export const referenceConfiguration = derived(
+  colorStore,
+  ($colorStore) => $colorStore.referenceConfiguration
+);
+
+// Derived store for comparison metric (Delta E OK or 2000)
+export const comparisonMetric = derived(colorStore, ($colorStore) => $colorStore.comparisonMetric);
+
+// Derived store for swatch change threshold
+export const swatchChangeThreshold = derived(
+  colorStore,
+  ($colorStore) => $colorStore.swatchChangeThreshold
+);
+
 // Derived store for neutrals formatted in the selected display color space
 export const neutralsDisplay = derived(colorStore, ($colorStore) =>
   $colorStore.neutrals.map((c) =>
@@ -454,13 +477,13 @@ function resolveContrastReferenceHex(
  * This is called when the resolved theme changes (either from explicit preference or auto detection).
  */
 export const setTheme = (theme: 'light' | 'dark') => {
-  if (!THEME_PRESETS[theme]) {
+  if (!themePresets[theme]) {
     console.error(`Invalid theme: ${theme}. Must be 'light' or 'dark'`);
     return;
   }
 
   colorStore.update((currentState) => {
-    const themePreset = THEME_PRESETS[theme];
+    const themePreset = themePresets[theme];
     return normalizeDisplayState({
       ...currentState,
       ...themePreset,
@@ -476,10 +499,11 @@ export const setTheme = (theme: 'light' | 'dark') => {
  * When 'light' or 'dark', also applies the theme preset immediately.
  */
 export const setThemePreference = (preference: ThemePreference) => {
+  clearAutoThemeRestoreLock();
   colorStore.update((currentState) => {
     const newState = { ...currentState, themePreference: preference };
     if (preference !== 'auto') {
-      const themePreset = THEME_PRESETS[preference];
+      const themePreset = themePresets[preference];
       return normalizeDisplayState({
         ...newState,
         ...themePreset,
@@ -642,15 +666,109 @@ export const setConstraintSolveRunState = (runState: ConstraintSolveRunState) =>
   constraintSolveRunState.set(runState);
 };
 
+export const pinReferenceConfiguration = () => {
+  colorStore.update((currentState) => ({
+    ...currentState,
+    referenceConfiguration: createReferenceConfiguration(currentState)
+  }));
+};
+
+export const clearReferenceConfiguration = () => {
+  clearAutoThemeRestoreLock();
+  colorStore.update((currentState) => ({
+    ...currentState,
+    referenceConfiguration: null
+  }));
+};
+
+export const replaceReferenceConfiguration = () => {
+  colorStore.update((currentState) => {
+    if (!currentState.referenceConfiguration) return currentState;
+    return {
+      ...currentState,
+      referenceConfiguration: createReferenceConfiguration(currentState)
+    };
+  });
+};
+
+export const restoreReferenceConfiguration = () => {
+  let nextAutoThemeRestoreLock: 'light' | 'dark' | null = null;
+
+  colorStore.update((currentState) => {
+    const ref = currentState.referenceConfiguration;
+    if (!ref) return currentState;
+
+    nextAutoThemeRestoreLock = ref.themePreference === 'auto' ? ref.resolvedTheme : null;
+
+    return normalizeDisplayState({
+      ...currentState,
+      baseColor: ref.baseColor,
+      warmth: ref.warmth,
+      warmthHue: ref.warmthHue,
+      chromaMultiplier: ref.chromaMultiplier,
+      numColors: ref.numColors,
+      numPalettes: ref.numPalettes,
+      x1: ref.x1,
+      y1: ref.y1,
+      x2: ref.x2,
+      y2: ref.y2,
+      lightnessNudgers: [...ref.lightnessNudgers],
+      hueNudgers: [...ref.hueNudgers],
+      stepSaturationNudgers: [...ref.stepSaturationNudgers],
+      paletteSaturationNudgers: [...ref.paletteSaturationNudgers],
+      paletteChromaNudgers: [...ref.paletteChromaNudgers],
+      contrastMode: ref.contrastMode,
+      lowStep: ref.lowStep,
+      highStep: ref.highStep,
+      lowReference: structuredClone(ref.lowReference),
+      highReference: structuredClone(ref.highReference),
+      contrast: { low: ref.contrast.low, high: ref.contrast.high },
+      solveAdjacentStopLows: ref.solveAdjacentStopLows,
+      themePreference: ref.themePreference,
+      currentTheme: ref.resolvedTheme,
+      customNeutralName: ref.customNeutralName,
+      customPaletteNames: ref.customPaletteNames ? [...ref.customPaletteNames] : undefined,
+      constraints: structuredClone(ref.constraints),
+      _lastUpdated: Date.now()
+    });
+  });
+
+  setAutoThemeRestoreLock(nextAutoThemeRestoreLock);
+};
+
+export const setComparisonMetric = (metric: ColorDifferenceMetric) => {
+  colorStore.update((currentState) => ({
+    ...currentState,
+    comparisonMetric: metric,
+    swatchChangeThreshold: currentState.swatchChangeThresholdsByMetric[metric]
+  }));
+};
+
+export const setSwatchChangeThreshold = (threshold: number) => {
+  colorStore.update((currentState) => {
+    const nextThreshold = Math.max(0, threshold);
+
+    return {
+      ...currentState,
+      swatchChangeThreshold: nextThreshold,
+      swatchChangeThresholdsByMetric: {
+        ...currentState.swatchChangeThresholdsByMetric,
+        [currentState.comparisonMetric]: nextThreshold
+      }
+    };
+  });
+};
+
 /**
  * Resets the color state to default values
  */
 export const resetColorState = (theme?: 'light' | 'dark') => {
   constraintSolveRunState.set({ status: 'idle' });
+  clearAutoThemeRestoreLock();
   colorStore.update((currentState) => {
     const targetTheme =
-      theme && THEME_PRESETS[theme] ? theme : (currentState.currentTheme as 'light' | 'dark');
-    const themePreset = THEME_PRESETS[targetTheme];
+      theme && themePresets[theme] ? theme : (currentState.currentTheme as 'light' | 'dark');
+    const themePreset = themePresets[targetTheme];
 
     return normalizeDisplayState({
       ...currentState,
@@ -666,6 +784,10 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
       customPaletteNames: undefined,
       solverAdjustmentSnapshot: null,
       constraintSolverSummary: null,
+      referenceConfiguration: null,
+      comparisonMetric: 'ok' as ColorDifferenceMetric,
+      swatchChangeThreshold: DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC.ok,
+      swatchChangeThresholdsByMetric: structuredClone(DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC),
       _lastUpdated: Date.now()
     } as ColorState);
   });

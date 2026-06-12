@@ -6,6 +6,7 @@ import { get } from 'svelte/store';
 import Color from 'colorjs.io';
 import { colorToCssOklch, colorToCssOklchSwatch } from './colorUtils';
 import {
+  colorStore,
   currentTheme,
   contrastColors,
   contrastMode,
@@ -45,9 +46,14 @@ import {
   palettesDisplay,
   neutralsSwatchDisplay,
   palettesSwatchDisplay,
+  referenceConfiguration,
+  comparisonMetric,
+  swatchChangeThreshold,
   updateColorState,
   setTheme,
   setThemePreference,
+  setComparisonMetric,
+  setSwatchChangeThreshold,
   updateLightnessNudger,
   updateHueNudger,
   updateContrastFromNeutrals,
@@ -57,6 +63,10 @@ import {
   removeConstraint,
   setSolverAdjustmentSnapshot,
   setConstraintSolverSummary,
+  pinReferenceConfiguration,
+  clearReferenceConfiguration,
+  restoreReferenceConfiguration,
+  replaceReferenceConfiguration,
   resetColorState
 } from './stores';
 
@@ -213,6 +223,32 @@ describe('stores', () => {
       expect(get(constraints)).toEqual([]);
       expect(get(solverAdjustmentSnapshot)).toBeNull();
       expect(get(constraintSolverSummary)).toBeNull();
+    });
+
+    it('comparison settings default to Delta E OK with its default threshold', () => {
+      expect.assertions(2);
+      expect(get(comparisonMetric)).toBe('ok');
+      expect(get(swatchChangeThreshold)).toBe(0.02);
+    });
+  });
+
+  describe('comparison settings', () => {
+    it('restores the remembered swatch change threshold for each comparison metric', () => {
+      expect.assertions(5);
+
+      setSwatchChangeThreshold(0.04);
+      expect(get(swatchChangeThreshold)).toBe(0.04);
+
+      setComparisonMetric('2000');
+      expect(get(comparisonMetric)).toBe('2000');
+      expect(get(swatchChangeThreshold)).toBe(2);
+
+      setSwatchChangeThreshold(3);
+      setComparisonMetric('ok');
+      expect(get(swatchChangeThreshold)).toBe(0.04);
+
+      setComparisonMetric('2000');
+      expect(get(swatchChangeThreshold)).toBe(3);
     });
   });
 
@@ -692,6 +728,197 @@ describe('stores', () => {
       resetColorState('invalid');
 
       expect(get(currentTheme)).toBe('dark');
+    });
+  });
+
+  describe('reference configuration', () => {
+    it('referenceConfiguration derived store is null by default', () => {
+      expect.assertions(1);
+      expect(get(referenceConfiguration)).toBe(null);
+    });
+
+    it('pinReferenceConfiguration captures the current state', () => {
+      expect.assertions(1);
+      pinReferenceConfiguration();
+
+      const ref = get(referenceConfiguration);
+      expect(ref).not.toBe(null);
+    });
+
+    it('pinReferenceConfiguration captures all core parameters', () => {
+      expect.assertions(6);
+      updateColorState({
+        baseColor: '#FF0000',
+        warmth: 5,
+        chromaMultiplier: 0.8,
+        numColors: 9,
+        numPalettes: 6
+      });
+
+      pinReferenceConfiguration();
+
+      const ref = get(referenceConfiguration);
+      expect(ref?.baseColor).toBe('#FF0000');
+      expect(ref?.warmth).toBe(5);
+      expect(ref?.chromaMultiplier).toBe(0.8);
+      expect(ref?.numColors).toBe(9);
+      expect(ref?.numPalettes).toBe(6);
+      expect(ref?.pinnedAt).toBeDefined();
+    });
+
+    it('pinReferenceConfiguration captures authored theme and constraints but excludes shared inspection settings', () => {
+      expect.assertions(8);
+
+      updateColorState({
+        themePreference: 'auto',
+        currentTheme: 'dark',
+        displayColorSpace: 'oklch',
+        gamutSpace: 'p3',
+        contrastAlgorithm: 'APCA',
+        swatchLabels: 'none',
+        constraints: [
+          {
+            id: 'constraint-1',
+            type: 'target-color',
+            enabled: true,
+            targetHex: '#5EF784',
+            metric: 'ok'
+          }
+        ]
+      });
+
+      pinReferenceConfiguration();
+
+      const ref = get(referenceConfiguration);
+      expect(ref?.themePreference).toBe('auto');
+      expect(ref?.resolvedTheme).toBe('dark');
+      expect(ref?.constraints).toEqual([
+        {
+          id: 'constraint-1',
+          type: 'target-color',
+          enabled: true,
+          targetHex: '#5EF784',
+          metric: 'ok'
+        }
+      ]);
+      expect('displayColorSpace' in (ref ?? {})).toBe(false);
+      expect('gamutSpace' in (ref ?? {})).toBe(false);
+      expect('swatchLabels' in (ref ?? {})).toBe(false);
+      expect('showSwatchGamutWarnings' in (ref ?? {})).toBe(false);
+      expect('contrastAlgorithm' in (ref ?? {})).toBe(false);
+    });
+
+    it('clearReferenceConfiguration sets it to null', () => {
+      expect.assertions(2);
+      pinReferenceConfiguration();
+      expect(get(referenceConfiguration)).not.toBe(null);
+
+      clearReferenceConfiguration();
+
+      expect(get(referenceConfiguration)).toBe(null);
+    });
+
+    it('pinReferenceConfiguration can be called multiple times (overwrites previous)', () => {
+      expect.assertions(2);
+      updateColorState({ baseColor: '#FF0000' });
+      pinReferenceConfiguration();
+      const firstRef = get(referenceConfiguration);
+
+      updateColorState({ baseColor: '#00FF00' });
+      pinReferenceConfiguration();
+      const secondRef = get(referenceConfiguration);
+
+      expect(firstRef?.baseColor).toBe('#FF0000');
+      expect(secondRef?.baseColor).toBe('#00FF00');
+    });
+
+    it('resetColorState clears the reference configuration', () => {
+      expect.assertions(2);
+      pinReferenceConfiguration();
+      expect(get(referenceConfiguration)).not.toBe(null);
+
+      resetColorState('light');
+
+      expect(get(referenceConfiguration)).toBe(null);
+    });
+
+    it('replaceReferenceConfiguration replaces the pinned config with the current palette state', () => {
+      expect.assertions(2);
+
+      updateColorState({ baseColor: '#FF0000' });
+      pinReferenceConfiguration();
+
+      updateColorState({ baseColor: '#00FF00' });
+      replaceReferenceConfiguration();
+
+      const ref = get(referenceConfiguration);
+      expect(ref?.baseColor).toBe('#00FF00');
+      expect(ref?.pinnedAt).toBeDefined();
+    });
+
+    it('replaceReferenceConfiguration is a no-op when no reference is pinned', () => {
+      expect.assertions(1);
+
+      replaceReferenceConfiguration();
+
+      expect(get(referenceConfiguration)).toBeNull();
+    });
+
+    it('restoreReferenceConfiguration applies pinned config as current palette without clearing the reference', () => {
+      expect.assertions(3);
+
+      updateColorState({ baseColor: '#FF0000', numColors: 9 });
+      pinReferenceConfiguration();
+
+      updateColorState({ baseColor: '#00FF00', numColors: 13 });
+      restoreReferenceConfiguration();
+
+      const colorState = get(colorStore);
+      expect(colorState.baseColor).toBe('#FF0000');
+      expect(colorState.numColors).toBe(9);
+      expect(get(referenceConfiguration)).not.toBeNull();
+    });
+
+    it('restoreReferenceConfiguration reproduces the pinned theme while preserving shared inspection settings', () => {
+      expect.assertions(6);
+
+      updateColorState({
+        themePreference: 'auto',
+        currentTheme: 'light',
+        displayColorSpace: 'hex',
+        gamutSpace: 'srgb',
+        swatchLabels: 'both',
+        contrastAlgorithm: 'WCAG'
+      });
+      pinReferenceConfiguration();
+
+      updateColorState({
+        themePreference: 'dark',
+        currentTheme: 'dark',
+        displayColorSpace: 'oklch',
+        gamutSpace: 'p3',
+        swatchLabels: 'none',
+        contrastAlgorithm: 'APCA'
+      });
+
+      restoreReferenceConfiguration();
+
+      const colorState = get(colorStore);
+      expect(colorState.themePreference).toBe('auto');
+      expect(colorState.currentTheme).toBe('light');
+      expect(colorState.displayColorSpace).toBe('oklch');
+      expect(colorState.gamutSpace).toBe('p3');
+      expect(colorState.swatchLabels).toBe('none');
+      expect(colorState.contrastAlgorithm).toBe('APCA');
+    });
+
+    it('restoreReferenceConfiguration is a no-op when no reference is pinned', () => {
+      expect.assertions(1);
+
+      const before = get(colorStore).baseColor;
+      restoreReferenceConfiguration();
+
+      expect(get(colorStore).baseColor).toBe(before);
     });
   });
 });

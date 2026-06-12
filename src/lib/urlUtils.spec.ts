@@ -793,5 +793,22 @@ describe('urlUtils', () => {
       const encoded = encodeStateToUrl(state);
       expect(encoded).not.toContain('pcn=');
     });
+
+    it('does not encode reference workspace state — reference configuration stays local only', () => {
+      expect.assertions(4);
+
+      const state: UrlColorState = {
+        baseColor: '#5EF784',
+        numColors: 11,
+        warmth: -7
+      };
+
+      const encoded = encodeStateToUrl(state);
+
+      expect(encoded).not.toContain('referenceConfiguration');
+      expect(encoded).not.toContain('viewMode');
+      expect(encoded).not.toContain('comparisonMetric');
+      expect(encoded).not.toContain('swatchChangeThreshold');
+    });
   });
 });

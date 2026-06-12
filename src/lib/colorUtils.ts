@@ -358,11 +358,11 @@ function calculateDarkModeStartColor(targetColor: string = '#ffffff'): string {
 
 /**
  * Calculates the contrast ratio between two colors using WCAG 2.1 formula
- * @param color1 - First color (hex string)
- * @param color2 - Second color (hex string)
+ * @param color1 - First color (hex string or Color instance)
+ * @param color2 - Second color (hex string or Color instance)
  * @returns Contrast ratio between 1 and 21
  */
-export function getContrast(color1: string, color2: string): number {
+export function getContrast(color1: Color | string, color2: Color | string): number {
   try {
     return Color.contrast(new Color(color1), new Color(color2), 'WCAG21');
   } catch {
@@ -1228,11 +1228,11 @@ export const MIN_APCA_LC_LARGE = 45;
  * Calculates the APCA contrast (Lc value) between a text color and a background color.
  * APCA is asymmetric: the order of arguments matters (text on background).
  * Returns the absolute Lc value (always positive).
- * @param textColor - Foreground/text color (hex string)
- * @param bgColor - Background color (hex string)
+ * @param textColor - Foreground/text color (hex string or Color instance)
+ * @param bgColor - Background color (hex string or Color instance)
  * @returns Absolute Lc value (0–106)
  */
-export function getContrastAPCA(textColor: string, bgColor: string): number {
+export function getContrastAPCA(textColor: Color | string, bgColor: Color | string): number {
   try {
     const lc = Color.contrast(new Color(textColor), new Color(bgColor), 'APCA');
     return Math.abs(lc);
@@ -1255,8 +1255,8 @@ export function getPrintableContrastAPCA(textColor: string, bgColor: string): nu
  * requires (textColor, bgColor), so this function swaps internally for APCA.
  */
 export function getContrastForAlgorithm(
-  bgColor: string,
-  fgColor: string,
+  bgColor: Color | string,
+  fgColor: Color | string,
   algorithm: ContrastAlgorithm
 ): number {
   return algorithm === 'APCA' ? getContrastAPCA(fgColor, bgColor) : getContrast(fgColor, bgColor);

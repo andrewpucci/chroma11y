@@ -365,4 +365,49 @@ describe('ColorSwatch', () => {
     expect(get(activeSwatchPicker)).toBeNull();
     expect(onHistoryCommit).toHaveBeenCalledWith('Constraint target color changed');
   });
+
+  it('prefers the picker instruction over the comparison chip in the hover tooltip', () => {
+    expect.assertions(1);
+
+    activeSwatchPicker.set({ kind: 'contrast-reference', target: 'low' });
+
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#0066ff',
+        label: '20',
+        comparisonChip: {
+          label: 'Changed',
+          ariaLabel: 'Color changed compared with reference',
+          tone: 'neutral'
+        }
+      }
+    });
+
+    const swatch = container.querySelector('.color-swatch') as HTMLButtonElement;
+    // When a swatch is both an active picker target and carries a comparison chip,
+    // the tooltip should surface the actionable picker instruction (matching aria-label).
+    expect(swatch.getAttribute('title')).toBe('Select as low reference');
+  });
+
+  it('uses contrastColorsOverride for contrast calculations instead of the store value', () => {
+    expect.assertions(2);
+
+    // Store has white low reference → #767676 passes WCAG AA (ratio ≈ 4.54:1)
+    updateColorState({ contrast: { low: '#ffffff', high: '#000000' } });
+
+    // Without override, the store value gives AA pass
+    const { unmount } = render(ColorSwatch, { props: { color: '#767676', label: '50' } });
+    expect(screen.getByLabelText('Low contrast WCAG 2.2 AA pass')).toBeInTheDocument();
+    unmount();
+
+    // With override (low: #cccccc), #767676 fails WCAG AA (ratio ≈ 2.83:1) — override used, not store
+    render(ColorSwatch, {
+      props: {
+        color: '#767676',
+        label: '50',
+        contrastColorsOverride: { low: '#cccccc', high: '#000000' }
+      }
+    });
+    expect(screen.getByLabelText('Low contrast WCAG 2.2 AA fail')).toBeInTheDocument();
+  });
 });

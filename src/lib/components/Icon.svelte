@@ -13,7 +13,9 @@
     IconPencil,
     IconRefresh,
     IconShare,
-    IconX
+    IconX,
+    IconSettings,
+    IconContrast
   } from '@tabler/icons-svelte-runes';
 
   type IconName =
@@ -30,7 +32,10 @@
     | 'help'
     | 'chevron-down'
     | 'status-pass'
-    | 'status-fail';
+    | 'status-fail'
+    | 'settings'
+    | 'contrast'
+    | 'check';
 
   interface Props {
     name: IconName;
@@ -54,7 +59,10 @@
     'chevron-down': IconChevronDown,
     scss: IconBrandSass,
     'status-pass': IconCheck,
-    'status-fail': IconX
+    'status-fail': IconX,
+    settings: IconSettings,
+    contrast: IconContrast,
+    check: IconCheck
   } as const satisfies Record<IconName, typeof IconCopy>;
 
   let {
