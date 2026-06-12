@@ -81,6 +81,11 @@
   "browserslist": [
     "defaults and fully supports es6-module"
   ],
+  "overrides": {
+    "cookie": "^0.7.0",
+    "tmp": "^0.2.6",
+    "uuid": "^11.1.1"
+  },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
     "@fontsource-variable/atkinson-hyperlegible-mono": "^5.2.5",
