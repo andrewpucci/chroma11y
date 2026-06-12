@@ -366,6 +366,29 @@ describe('ColorSwatch', () => {
     expect(onHistoryCommit).toHaveBeenCalledWith('Constraint target color changed');
   });
 
+  it('prefers the picker instruction over the comparison chip in the hover tooltip', () => {
+    expect.assertions(1);
+
+    activeSwatchPicker.set({ kind: 'contrast-reference', target: 'low' });
+
+    const { container } = render(ColorSwatch, {
+      props: {
+        color: '#0066ff',
+        label: '20',
+        comparisonChip: {
+          label: 'Changed',
+          ariaLabel: 'Color changed compared with reference',
+          tone: 'neutral'
+        }
+      }
+    });
+
+    const swatch = container.querySelector('.color-swatch') as HTMLButtonElement;
+    // When a swatch is both an active picker target and carries a comparison chip,
+    // the tooltip should surface the actionable picker instruction (matching aria-label).
+    expect(swatch.getAttribute('title')).toBe('Select as low reference');
+  });
+
   it('uses contrastColorsOverride for contrast calculations instead of the store value', () => {
     expect.assertions(2);
 

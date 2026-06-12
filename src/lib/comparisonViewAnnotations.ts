@@ -9,6 +9,7 @@ import {
   MIN_CONTRAST_RATIO,
   requiresWideGamutWarning
 } from '$lib/colorUtils';
+import { deltaEForMetric } from '$lib/comparisonMetrics';
 import type { ColorDifferenceMetric, ContrastAlgorithm, GamutSpace } from '$lib/types';
 
 export interface ComparisonChip {
@@ -28,38 +29,38 @@ export interface ComparisonStatusConfig {
   gamutSpace: GamutSpace;
 }
 
-function toComparisonCssColor(color: Color | string, gamutSpace: GamutSpace): string {
+/**
+ * Resolves a swatch color into the single gamut-mapped Color used for contrast
+ * and color-difference comparison. Color instances are gamut-mapped into the
+ * comparison gamut; raw CSS strings are parsed as-is (matching prior behavior).
+ * Computed once per side so contrast and delta-E reuse the same parsed Color.
+ */
+function toComparisonColor(color: Color | string, gamutSpace: GamutSpace): Color {
   if (typeof color === 'string') {
-    return color;
+    return new Color(color);
   }
 
-  return colorToCssOklch(color, gamutSpace);
+  return new Color(colorToCssOklch(color, gamutSpace));
 }
 
 function computeColorDifference(
-  currentColor: Color | string,
-  referenceColor: Color | string,
-  currentGamutSpace: GamutSpace,
-  referenceGamutSpace: GamutSpace,
+  currentColor: Color,
+  referenceColor: Color,
   metric: ColorDifferenceMetric
 ): number {
   try {
-    const current = new Color(toComparisonCssColor(currentColor, currentGamutSpace));
-    const reference = new Color(toComparisonCssColor(referenceColor, referenceGamutSpace));
-
-    return metric === 'ok' ? current.deltaEOK(reference) : current.deltaE2000(reference);
+    return deltaEForMetric(currentColor, referenceColor, metric);
   } catch {
     return Number.POSITIVE_INFINITY;
   }
 }
 
 function getContrastStatusVector(
-  color: Color | string,
-  { contrast, contrastAlgorithm, gamutSpace }: ComparisonStatusConfig
+  color: Color,
+  { contrast, contrastAlgorithm }: ComparisonStatusConfig
 ): boolean[] {
-  const comparisonColor = toComparisonCssColor(color, gamutSpace);
-  const lowContrast = getContrastForAlgorithm(comparisonColor, contrast.low, contrastAlgorithm);
-  const highContrast = getContrastForAlgorithm(comparisonColor, contrast.high, contrastAlgorithm);
+  const lowContrast = getContrastForAlgorithm(color, contrast.low, contrastAlgorithm);
+  const highContrast = getContrastForAlgorithm(color, contrast.high, contrastAlgorithm);
 
   if (contrastAlgorithm === 'APCA') {
     return [
@@ -83,8 +84,8 @@ function getContrastStatusVector(
 }
 
 function getContrastDirection(
-  currentColor: Color | string,
-  referenceColor: Color | string,
+  currentColor: Color,
+  referenceColor: Color,
   currentConfig: ComparisonStatusConfig,
   referenceConfig: ComparisonStatusConfig
 ): 'up' | 'down' | null {
@@ -170,9 +171,21 @@ export function buildComparisonAnnotation(params: {
     referenceStatusConfig
   } = params;
 
-  const contrastDirection = getContrastDirection(
+  // Gamut-map each side's color once and reuse it for both contrast direction
+  // and color-difference. Gamut-warning detection below intentionally uses the
+  // original (un-mapped) color, since mapping would mask out-of-gamut state.
+  const currentComparisonColor = toComparisonColor(
     currentColor ?? currentHex,
+    currentStatusConfig.gamutSpace
+  );
+  const referenceComparisonColor = toComparisonColor(
     referenceColor ?? referenceHex,
+    referenceStatusConfig.gamutSpace
+  );
+
+  const contrastDirection = getContrastDirection(
+    currentComparisonColor,
+    referenceComparisonColor,
     currentStatusConfig,
     referenceStatusConfig
   );
@@ -227,10 +240,8 @@ export function buildComparisonAnnotation(params: {
   }
 
   const colorDifference = computeColorDifference(
-    currentColor ?? currentHex,
-    referenceColor ?? referenceHex,
-    currentStatusConfig.gamutSpace,
-    referenceStatusConfig.gamutSpace,
+    currentComparisonColor,
+    referenceComparisonColor,
     metric
   );
   if (colorDifference >= threshold) {

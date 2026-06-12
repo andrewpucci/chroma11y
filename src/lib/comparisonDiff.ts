@@ -197,12 +197,13 @@ function formatContrastReference(reference: unknown): string {
   }
 
   const candidate = reference as ContrastReference;
-  const step = candidate.stepIndex * 10;
+  const hasStep = typeof candidate.stepIndex === 'number' && Number.isFinite(candidate.stepIndex);
+  const stepSuffix = hasStep ? `, step ${candidate.stepIndex * 10}` : '';
   if (candidate.kind === 'palette') {
-    return `Palette ${(candidate.paletteIndex ?? 0) + 1}, step ${step}`;
+    return `Palette ${(candidate.paletteIndex ?? 0) + 1}${stepSuffix}`;
   }
 
-  return `Neutral, step ${step}`;
+  return `Neutral${stepSuffix}`;
 }
 
 function formatContrastMode(value: unknown): string {

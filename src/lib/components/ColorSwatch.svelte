@@ -387,8 +387,8 @@
       copyToClipboard(shownValue);
     }
   }}
-  title={comparisonChip?.ariaLabel ??
-    pickerInstruction ??
+  title={pickerInstruction ??
+    comparisonChip?.ariaLabel ??
     (oklchColor ? `View color details for ${shownValue}` : `Click to copy ${shownValue}`)}
   aria-label={pickerInstruction
     ? `${comparisonChipPrefix}${label ? `${label} ` : ''}${shownValue} — ${pickerInstruction.toLowerCase()}`

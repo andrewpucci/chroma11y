@@ -3,6 +3,10 @@ import type Color from 'colorjs.io';
 import { colorToCssHex, colorToCssRender, colorToCssSwatchRender } from '$lib/colorUtils';
 import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from '$lib/paletteNameUtils';
 import { createReferenceConfiguration } from '$lib/referenceConfiguration';
+import {
+  COMPARISON_METRICS,
+  DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC
+} from '$lib/comparisonMetrics';
 import { themePresets } from '$lib/themePresets';
 import type {
   DisplayColorSpace,
@@ -134,15 +138,11 @@ const DEFAULT_STATE = {
   constraintSolverSummary: null as ConstraintSolverSummary | null,
   referenceConfiguration: null as ReferenceConfiguration | null,
   comparisonMetric: 'ok' as ColorDifferenceMetric,
-  swatchChangeThreshold: 0.02,
+  swatchChangeThreshold: DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC.ok,
   swatchChangeThresholdsByMetric: {
-    ok: 0.02,
-    '2000': 2
+    ...DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC
   } as Record<ColorDifferenceMetric, number>
 };
-
-const DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC: Record<ColorDifferenceMetric, number> =
-  structuredClone(DEFAULT_STATE.swatchChangeThresholdsByMetric);
 
 function normalizeSwatchChangeThresholdsByMetric(
   thresholds: Partial<Record<ColorDifferenceMetric, number>> | undefined,
@@ -151,16 +151,16 @@ function normalizeSwatchChangeThresholdsByMetric(
 ): Record<ColorDifferenceMetric, number> {
   const normalizedThreshold = Math.max(0, swatchChangeThreshold);
 
-  return {
-    ok:
-      comparisonMetric === 'ok'
-        ? normalizedThreshold
-        : Math.max(0, thresholds?.ok ?? DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC.ok),
-    '2000':
-      comparisonMetric === '2000'
-        ? normalizedThreshold
-        : Math.max(0, thresholds?.['2000'] ?? DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC['2000'])
-  };
+  return COMPARISON_METRICS.reduce(
+    (result, metric) => {
+      result[metric] =
+        metric === comparisonMetric
+          ? normalizedThreshold
+          : Math.max(0, thresholds?.[metric] ?? DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC[metric]);
+      return result;
+    },
+    {} as Record<ColorDifferenceMetric, number>
+  );
 }
 
 function normalizeDisplayState(state: ColorState): ColorState {
@@ -786,7 +786,7 @@ export const resetColorState = (theme?: 'light' | 'dark') => {
       constraintSolverSummary: null,
       referenceConfiguration: null,
       comparisonMetric: 'ok' as ColorDifferenceMetric,
-      swatchChangeThreshold: 0.02,
+      swatchChangeThreshold: DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC.ok,
       swatchChangeThresholdsByMetric: structuredClone(DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC),
       _lastUpdated: Date.now()
     } as ColorState);

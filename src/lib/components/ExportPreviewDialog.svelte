@@ -275,7 +275,9 @@
       neutrals: [],
       palettes: [source.palettes[i]],
       displayNeutrals: [],
-      displayPalettes: source.displayPalettes?.[i] ? [source.displayPalettes[i]] : [],
+      // Fall back to the palette hex when no display values exist, mirroring the
+      // 'all' scope's `source.displayPalettes ?? source.palettes` behavior.
+      displayPalettes: [source.displayPalettes?.[i] ?? source.palettes[i]],
       customNeutralName: undefined,
       customPaletteNames: source.customPaletteNames?.[i]
         ? [source.customPaletteNames[i]]

@@ -79,8 +79,8 @@ export interface HistoryMenuEntry extends HistoryEntryMeta {
   ariaLabel: string;
 }
 
-export interface HistoryStepResult {
-  snapshot: HistorySnapshot;
+export interface HistoryStepResult<T> {
+  snapshot: T;
   entry: HistoryEntryMeta;
   steps: number;
 }
@@ -93,15 +93,15 @@ export interface HistoryViewModel {
   redoEntries: HistoryMenuEntry[];
 }
 
-function cloneSnapshot(snapshot: HistorySnapshot): HistorySnapshot {
+function cloneSnapshot<T>(snapshot: T): T {
   return structuredClone(snapshot);
 }
 
-function overwriteSnapshot(target: HistorySnapshot, snapshot: HistorySnapshot): void {
+function overwriteSnapshot<T extends object>(target: object, snapshot: T): void {
   Object.assign(target, cloneSnapshot(snapshot));
 }
 
-function snapshotsEqual(left: HistorySnapshot, right: HistorySnapshot): boolean {
+function snapshotsEqual<T>(left: T, right: T): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
@@ -127,9 +127,11 @@ function withPositions(entries: HistoryEntryMeta[]): HistoryEntryMeta[] {
 
 /**
  * Wraps Travels with app-specific metadata and labeled history menus.
+ * Generic over the snapshot shape so the same machinery backs both the palette
+ * history and the combined reference-workspace history.
  */
-export function createHistoryManager(initialSnapshot: HistorySnapshot) {
-  const travels = createTravels<HistorySnapshot>(cloneSnapshot(initialSnapshot), {
+export function createHistoryManager<T extends object>(initialSnapshot: T) {
+  const travels = createTravels<T>(cloneSnapshot(initialSnapshot), {
     maxHistory: MAX_HISTORY
   });
 
@@ -172,7 +174,7 @@ export function createHistoryManager(initialSnapshot: HistorySnapshot) {
     };
   }
 
-  function commit(snapshot: HistorySnapshot, label: string): boolean {
+  function commit(snapshot: T, label: string): boolean {
     if (snapshotsEqual(travels.getState(), snapshot)) {
       return false;
     }
@@ -198,7 +200,7 @@ export function createHistoryManager(initialSnapshot: HistorySnapshot) {
     return true;
   }
 
-  function undo(): HistoryStepResult | null {
+  function undo(): HistoryStepResult<T> | null {
     const currentPosition = getPosition();
     if (currentPosition === 0) {
       return null;
@@ -214,7 +216,7 @@ export function createHistoryManager(initialSnapshot: HistorySnapshot) {
     };
   }
 
-  function redo(): HistoryStepResult | null {
+  function redo(): HistoryStepResult<T> | null {
     const currentPosition = getPosition();
     if (currentPosition >= metadata.length - 1) {
       return null;
@@ -230,7 +232,7 @@ export function createHistoryManager(initialSnapshot: HistorySnapshot) {
     };
   }
 
-  function go(position: number): HistoryStepResult | null {
+  function go(position: number): HistoryStepResult<T> | null {
     const currentPosition = getPosition();
     if (position < 0 || position >= metadata.length || position === currentPosition) {
       return null;

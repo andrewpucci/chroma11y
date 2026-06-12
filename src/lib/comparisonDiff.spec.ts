@@ -169,6 +169,22 @@ describe('comparisonDiff', () => {
     );
   });
 
+  it('does not render NaN for a contrast reference missing a valid stepIndex', () => {
+    const reference = createConfig({
+      // Malformed/legacy reference object: passes the typeof-object guard but has no stepIndex
+      lowReference: { kind: 'neutral' }
+    });
+    const current = createConfig({
+      lowReference: { kind: 'neutral', stepIndex: 2 }
+    });
+
+    const diff = diffColorStates(current, reference);
+    const lowEntry = diff.contrastChanges.find((entry) => entry.field === 'lowReference');
+
+    expect(lowEntry?.referenceValue).not.toContain('NaN');
+    expect(lowEntry?.referenceValue).toBe('Neutral');
+  });
+
   it('reports manual contrast colors individually', () => {
     const reference = createConfig({
       contrastMode: 'manual',

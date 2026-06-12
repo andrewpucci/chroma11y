@@ -106,6 +106,20 @@ describe('ExportPreviewDialog', () => {
     expect(content).not.toContain('#ffffff');
   });
 
+  it('falls back to palette hex for a single-palette scope when displayPalettes is absent', async () => {
+    // No displayPalettes provided: single-palette scope should still render the hex,
+    // consistent with the "all" scope's hex fallback.
+    const propsWithoutDisplay = { ...sampleProps, displayPalettes: undefined };
+    render(ExportPreviewDialog, propsWithoutDisplay);
+    openExportPreview({ paletteIndex: 1 }, 'css');
+    await Promise.resolve();
+
+    await screen.findByRole('dialog');
+    const content = screen.getByTestId('export-preview-content').textContent ?? '';
+    expect(content).toContain('#ffe6f0');
+    expect(content).toContain('#ff1a75');
+  });
+
   it('scopes content to neutrals only when scope is "neutral"', async () => {
     render(ExportPreviewDialog, sampleProps);
     openExportPreview('neutral', 'list');

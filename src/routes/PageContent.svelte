@@ -74,13 +74,12 @@
   import type { ColorGenParams } from '$lib/colorUtils';
   import { clampChromaMultiplier } from '$lib/chromaMultiplier';
   import { evaluateConstraints } from '$lib/constraintUtils';
+  import { createHistoryManager, type HistoryViewModel } from '$lib/history';
   import type { HistorySnapshot } from '$lib/history';
-  import {
-    createReferenceHistoryManager,
-    type ReferenceHistorySnapshot,
-    type HistoryViewModel
-  } from '$lib/referenceHistoryManager';
-  import type { ReferenceWorkspaceSnapshot } from '$lib/referenceWorkspace';
+  import type {
+    ReferenceHistorySnapshot,
+    ReferenceWorkspaceSnapshot
+  } from '$lib/referenceWorkspace';
   import {
     saveReferenceWorkspaceToStorage,
     loadReferenceWorkspaceFromStorage
@@ -92,7 +91,12 @@
     resolveGeneratedPaletteNames,
     resolveNeutralPaletteName
   } from '$lib/paletteNameUtils';
-  import { generateColorsFromReference } from '$lib/referenceColorGeneration';
+  import {
+    formatReferenceColors,
+    generateReferenceColorObjects,
+    type ReferenceColorObjects,
+    type ReferenceGeneratedColors
+  } from '$lib/referenceColorGeneration';
   import ColorControls from '$lib/components/ColorControls.svelte';
   import ExportButtons from '$lib/components/ExportButtons.svelte';
   import NeutralPalette from '$lib/components/NeutralPalette.svelte';
@@ -185,8 +189,10 @@
   let swatchChangeThresholdLocal = $derived($swatchChangeThreshold);
   let autoThemeRestoreLockLocal = $derived($autoThemeRestoreLock);
 
-  // Generated colors from reference configuration (readonly, frozen)
-  let referenceColors = $state<ReturnType<typeof generateColorsFromReference> | null>(null);
+  // Solved reference Color objects (depend only on the frozen reference + gamut),
+  // and the display-formatted colors derived from them (readonly, frozen).
+  let referenceColorObjects = $state<ReferenceColorObjects | null>(null);
+  let referenceColors = $state<ReferenceGeneratedColors | null>(null);
 
   const CVD_BANNER_TEXT: Record<Exclude<CvdMode, 'none'>, string> = {
     protanopia: 'Simulating Protanopia (red-blind)',
@@ -250,7 +256,8 @@
   let isDraggingSlider = $state(false);
   let isDeferringBezierStoreSync = $state(false);
   let skipAutoThemeSync = $state(false);
-  let historyManager: ReturnType<typeof createReferenceHistoryManager> | null = null;
+  let historyManager: ReturnType<typeof createHistoryManager<ReferenceHistorySnapshot>> | null =
+    null;
   let historyShortcutResyncRevision = 0;
   let historyRestoreRevision = $state(0);
   let pendingNativeHistoryInput: 'historyUndo' | 'historyRedo' | null = null;
@@ -718,7 +725,7 @@
   }
 
   function initializeHistory(preferStoreGeneratorState: boolean = false): void {
-    historyManager = createReferenceHistoryManager(
+    historyManager = createHistoryManager<ReferenceHistorySnapshot>(
       captureHistorySnapshot(preferStoreGeneratorState)
     );
     refreshHistoryView();
@@ -1341,17 +1348,36 @@
     });
   });
 
-  // Generate reference colors whenever reference configuration changes
+  // Solve the frozen reference palettes only when the reference configuration or
+  // the generation gamut changes. Display-only settings must not re-trigger this.
   $effect(() => {
     if (referenceConfigurationLocal) {
       try {
-        referenceColors = generateColorsFromReference(referenceConfigurationLocal, {
+        referenceColorObjects = generateReferenceColorObjects(
+          referenceConfigurationLocal,
+          gamutSpaceLocal
+        );
+      } catch (error) {
+        console.error('Error generating reference colors:', error);
+        referenceColorObjects = null;
+      }
+    } else {
+      referenceColorObjects = null;
+    }
+  });
+
+  // Re-format the solved reference colors when display-only settings change
+  // (color space, CVD simulation, gamut) without re-running the palette solve.
+  $effect(() => {
+    if (referenceColorObjects) {
+      try {
+        referenceColors = formatReferenceColors(referenceColorObjects, {
           cvdMode: cvdModeLocal,
           displayColorSpace: displayColorSpaceLocal,
           gamutSpace: gamutSpaceLocal
         });
       } catch (error) {
-        console.error('Error generating reference colors:', error);
+        console.error('Error formatting reference colors:', error);
         referenceColors = null;
       }
     } else {

@@ -157,6 +157,58 @@ describe('referenceWorkspacePersistence', () => {
       });
     });
 
+    it('preserves a legacy single threshold by seeding the active metric slot', () => {
+      expect.assertions(1);
+
+      // Legacy format: only swatchChangeThreshold, no swatchChangeThresholdsByMetric
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(
+          createWorkspaceState({
+            comparisonMetric: 'ok',
+            swatchChangeThreshold: 0.05
+          })
+        )
+      );
+
+      const result = loadReferenceWorkspaceFromStorage();
+
+      // The custom 0.05 lands in the active metric's slot; the other metric keeps its default
+      expect(result).toMatchObject({
+        comparisonMetric: 'ok',
+        swatchChangeThreshold: 0.05,
+        swatchChangeThresholdsByMetric: {
+          ok: 0.05,
+          '2000': 2
+        }
+      });
+    });
+
+    it('seeds the active metric slot from a legacy threshold when that metric is 2000', () => {
+      expect.assertions(1);
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(
+          createWorkspaceState({
+            comparisonMetric: '2000',
+            swatchChangeThreshold: 5
+          })
+        )
+      );
+
+      const result = loadReferenceWorkspaceFromStorage();
+
+      expect(result).toMatchObject({
+        comparisonMetric: '2000',
+        swatchChangeThreshold: 5,
+        swatchChangeThresholdsByMetric: {
+          ok: 0.02,
+          '2000': 5
+        }
+      });
+    });
+
     it('returns null when nothing is stored', () => {
       expect.assertions(1);
 

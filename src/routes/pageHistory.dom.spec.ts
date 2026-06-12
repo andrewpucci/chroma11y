@@ -733,7 +733,7 @@ describe('page history integration', () => {
     expect(get(referenceConfiguration)).toBeNull();
   }, 20000);
 
-  it('falls back to per-metric defaults when loading a legacy persisted comparison threshold', async () => {
+  it('preserves a legacy persisted comparison threshold in its active metric slot', async () => {
     const seedWorkspace = {
       referenceConfiguration: { baseColor: '#5EF784', numColors: 11, pinnedAt: Date.now() },
       viewMode: 'reference',
@@ -744,8 +744,10 @@ describe('page history integration', () => {
 
     await renderPage({ openOutputAdvanced: false });
 
+    // The legacy single threshold was authored in the active metric's scale, so it
+    // is seeded into that metric's slot rather than discarded for the default.
     expect(get(comparisonMetric)).toBe('2000');
-    expect(get(swatchChangeThreshold)).toBe(2);
+    expect(get(swatchChangeThreshold)).toBe(42);
   }, 20000);
 
   it('restores remembered thresholds for both comparison metrics when the page loads', async () => {

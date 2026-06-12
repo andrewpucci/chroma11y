@@ -8,6 +8,11 @@
 import type { ReferenceWorkspaceSnapshot } from './referenceWorkspace';
 import type { ReferenceConfiguration } from './referenceConfiguration';
 import type { ColorDifferenceMetric, ContrastReference } from './types';
+import {
+  COMPARISON_METRICS,
+  DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC,
+  isComparisonMetric
+} from './comparisonMetrics';
 
 export type StoredReferenceWorkspace = ReferenceWorkspaceSnapshot;
 
@@ -18,17 +23,12 @@ const VALID_VIEW_MODES: Array<'default' | 'reference' | 'comparison'> = [
   'reference',
   'comparison'
 ];
-const VALID_COMPARISON_METRICS: ColorDifferenceMetric[] = ['ok', '2000'];
-const DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC: Record<ColorDifferenceMetric, number> = {
-  ok: 0.02,
-  '2000': 2
-};
 
 /**
  * Type guard for validating ColorDifferenceMetric
  */
 function isValidComparisonMetric(value: unknown): value is ColorDifferenceMetric {
-  return VALID_COMPARISON_METRICS.includes(value as ColorDifferenceMetric);
+  return isComparisonMetric(value);
 }
 
 function isValidThresholdsByMetric(
@@ -38,7 +38,7 @@ function isValidThresholdsByMetric(
   if (typeof value !== 'object' || value === null) return false;
 
   const candidate = value as Record<string, unknown>;
-  for (const metric of VALID_COMPARISON_METRICS) {
+  for (const metric of COMPARISON_METRICS) {
     if (candidate[metric] !== undefined && typeof candidate[metric] !== 'number') {
       return false;
     }
@@ -181,19 +181,23 @@ function migrateStoredReferenceWorkspace(
   const referenceConfiguration = isValidReferenceConfiguration(value.referenceConfiguration)
     ? value.referenceConfiguration
     : null;
-  const swatchChangeThresholdsByMetric = value.swatchChangeThresholdsByMetric
-    ? {
-        ok: Math.max(
-          0,
-          value.swatchChangeThresholdsByMetric.ok ?? DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC.ok
-        ),
-        '2000': Math.max(
-          0,
-          value.swatchChangeThresholdsByMetric['2000'] ??
-            DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC['2000']
-        )
-      }
-    : { ...DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC };
+  // Legacy workspaces stored only a single swatchChangeThreshold with no
+  // per-metric map. Seed the active metric's slot from that legacy value (it was
+  // authored in that metric's scale); other metrics keep their defaults.
+  const legacyThresholdsByMetric: Partial<Record<ColorDifferenceMetric, number>> = {
+    [value.comparisonMetric]: value.swatchChangeThreshold
+  };
+  const storedThresholdsByMetric = value.swatchChangeThresholdsByMetric ?? legacyThresholdsByMetric;
+  const swatchChangeThresholdsByMetric = COMPARISON_METRICS.reduce(
+    (result, metric) => {
+      result[metric] = Math.max(
+        0,
+        storedThresholdsByMetric[metric] ?? DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC[metric]
+      );
+      return result;
+    },
+    {} as Record<ColorDifferenceMetric, number>
+  );
 
   return {
     referenceConfiguration,
