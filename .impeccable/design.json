@@ -1,0 +1,407 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-12T00:00:00.000Z",
+  "title": "Design System: Chroma11y",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Instrument Blue",
+        "canonical": "oklch(0.50 0.25 265)",
+        "tonalRamp": [
+          "#0b1633",
+          "#0e1f55",
+          "#1035a0",
+          "#1348c0",
+          "#1862e6",
+          "#4a85f0",
+          "#80aaf5",
+          "#bbd1fb"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Pressed Blue",
+        "canonical": "oklch(0.44 0.25 265)",
+        "tonalRamp": [
+          "#09142b",
+          "#0c1a45",
+          "#0e288a",
+          "#103aad",
+          "#1352c4",
+          "#3d72e0",
+          "#7099ed",
+          "#adc3f7"
+        ]
+      },
+      "bg-primary": {
+        "role": "neutral",
+        "displayName": "Reference White",
+        "canonical": "oklch(1.00 0 0)",
+        "tonalRamp": [
+          "#111111",
+          "#222222",
+          "#3a3a3a",
+          "#555555",
+          "#888888",
+          "#bbbbbb",
+          "#e8e8e8",
+          "#ffffff"
+        ]
+      },
+      "bg-secondary": {
+        "role": "neutral",
+        "displayName": "Interface Grey",
+        "canonical": "oklch(0.97 0.005 240)",
+        "tonalRamp": [
+          "#0e1014",
+          "#1a1e24",
+          "#282e38",
+          "#3a424e",
+          "#5a6270",
+          "#8a9099",
+          "#c8cdd4",
+          "#f6f7f9"
+        ]
+      },
+      "bg-tertiary": {
+        "role": "neutral",
+        "displayName": "Elevated Surface",
+        "canonical": "oklch(0.94 0.008 240)",
+        "tonalRamp": [
+          "#0e1118",
+          "#181e28",
+          "#252d3a",
+          "#353e4e",
+          "#505b6a",
+          "#7a8494",
+          "#bac0cb",
+          "#eef0f4"
+        ]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Deep Ink",
+        "canonical": "oklch(0.18 0 0)",
+        "tonalRamp": [
+          "#080808",
+          "#111111",
+          "#1a1a1a",
+          "#2d2d2d",
+          "#444444",
+          "#636363",
+          "#909090",
+          "#d4d4d4"
+        ]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Annotation Grey",
+        "canonical": "oklch(0.48 0.012 240)",
+        "tonalRamp": [
+          "#151820",
+          "#202530",
+          "#2f3540",
+          "#424b58",
+          "#555f6e",
+          "#636a72",
+          "#8a9199",
+          "#c4c8cd"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Structural Mist",
+        "canonical": "oklch(0.88 0.010 240)",
+        "tonalRamp": [
+          "#1a1e24",
+          "#2a3038",
+          "#3e464e",
+          "#545e68",
+          "#6e7880",
+          "#96a0a8",
+          "#c0c8d0",
+          "#dee2e6"
+        ]
+      },
+      "status-pass-bg": {
+        "role": "semantic",
+        "displayName": "Accessible Green",
+        "canonical": "oklch(0.35 0.11 152)",
+        "tonalRamp": [
+          "#071a0e",
+          "#0c2815",
+          "#0f3a1e",
+          "#145028",
+          "#166534",
+          "#228b4a",
+          "#3daa62",
+          "#8dd9a6"
+        ]
+      },
+      "status-warning-bg": {
+        "role": "semantic",
+        "displayName": "Warning Amber",
+        "canonical": "oklch(0.40 0.13 35)",
+        "tonalRamp": [
+          "#1e0b04",
+          "#301006",
+          "#4a180a",
+          "#6e2210",
+          "#9a3412",
+          "#c04820",
+          "#e06a35",
+          "#f5b088"
+        ]
+      },
+      "status-fail-bg": {
+        "role": "semantic",
+        "displayName": "Fail Red",
+        "canonical": "oklch(0.38 0.14 22)",
+        "tonalRamp": [
+          "#1c0404",
+          "#2e0606",
+          "#4a0c0c",
+          "#6d1212",
+          "#991b1b",
+          "#c02424",
+          "#e04444",
+          "#f59090"
+        ]
+      },
+      "dark-bg-primary": {
+        "role": "neutral",
+        "displayName": "Deep Void",
+        "canonical": "oklch(0.10 0.015 240)",
+        "tonalRamp": [
+          "#03050a",
+          "#060a11",
+          "#0d1117",
+          "#161c24",
+          "#222a36",
+          "#334050",
+          "#4e6070",
+          "#8090a0"
+        ]
+      },
+      "dark-accent": {
+        "role": "primary",
+        "displayName": "Sky Blue",
+        "canonical": "oklch(0.72 0.18 240)",
+        "tonalRamp": [
+          "#0b1a38",
+          "#112a5a",
+          "#1a3d80",
+          "#2455a8",
+          "#3570cc",
+          "#58a6ff",
+          "#85c0ff",
+          "#c0ddff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Brand name and primary page heading. Used once per view."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card headings and section titles within the interface."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Form labels, descriptions, help text, general copy."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Button text, badge text, tight control labels."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Taglines, secondary annotations, export option descriptions."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Color values (hex, OKLCH, HSL, RGB), exported code output, keyboard shortcut hints."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating",
+        "value": "0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08)",
+        "purpose": "Dropdowns, tooltips, popovers, dialogs — elements that escape document flow. Never on cards or in-document surfaces."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0, 0, 0.2, 1)",
+        "purpose": "Default easing for all state transitions. Smooth deceleration."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Bidirectional transitions (collapse/expand, modal open/close)."
+      },
+      {
+        "name": "ease-emphasized",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Expand/enter transitions where arrival should feel deliberate."
+      },
+      {
+        "name": "duration-fast",
+        "value": "100ms",
+        "purpose": "Button state changes, hover feedback."
+      },
+      {
+        "name": "duration-normal",
+        "value": "200ms",
+        "purpose": "Most transitions: color changes, border shifts, opacity."
+      },
+      {
+        "name": "duration-slow",
+        "value": "300ms",
+        "purpose": "Panel expand/collapse, disclosure animation."
+      },
+      {
+        "name": "reduced-motion-override",
+        "value": "0ms (all durations)",
+        "purpose": "All duration tokens collapse to 0ms under prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "header-compact",
+        "value": "520px",
+        "purpose": "Header collapses to stacked layout below this width."
+      },
+      {
+        "name": "two-column",
+        "value": "980px",
+        "purpose": "Main layout switches from single-column to sidebar + content."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main call-to-action. Reserved for the single most important action per context.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"8 17 12 21 16 17\"></polyline><line x1=\"12\" y1=\"3\" x2=\"12\" y2=\"21\"></line></svg>Export JSON</button>",
+      "css": ".ds-btn-primary { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #1862e6; color: #ffffff; border: 1px solid #1040b8; border-radius: 12px; padding: 10px 16px; font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; line-height: 1; min-height: 44px; cursor: pointer; transition: background-color 100ms cubic-bezier(0,0,0.2,1), border-color 100ms cubic-bezier(0,0,0.2,1); } .ds-btn-primary:hover:not(:disabled) { background: #1352c4; border-color: #0e3898; } .ds-btn-primary:focus-visible { outline: 2px solid #1862e6; outline-offset: 2px; } .ds-btn-primary:active:not(:disabled) { transform: translateY(0); } .ds-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Supporting action. Fills with Elevated Surface, inherits Deep Ink text.",
+      "html": "<button class=\"ds-btn-secondary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><line x1=\"12\" y1=\"8\" x2=\"12\" y2=\"12\"></line><line x1=\"12\" y1=\"16\" x2=\"12.01\" y2=\"16\"></line></svg>Help</button>",
+      "css": ".ds-btn-secondary { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #eef0f4; color: #1a1a1a; border: 1px solid #dee2e6; border-radius: 12px; padding: 10px 16px; font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; line-height: 1; min-height: 44px; cursor: pointer; transition: border-color 100ms cubic-bezier(0,0,0.2,1); } .ds-btn-secondary:hover:not(:disabled) { border-color: color-mix(in oklab, #dee2e6 40%, #1862e6); } .ds-btn-secondary:focus-visible { outline: 2px solid #1862e6; outline-offset: 2px; } .ds-btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Lightweight action. Transparent fill, dashed border, muted text. Used for Reset and navigation.",
+      "html": "<button class=\"ds-btn-ghost\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polyline points=\"1 4 1 10 7 10\"></polyline><path d=\"M3.51 15a9 9 0 1 0 .49-4.44\"></path></svg>Reset</button>",
+      "css": ".ds-btn-ghost { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: #636a72; border: 1px dashed rgba(222,226,230,0.72); border-radius: 12px; padding: 10px 16px; font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; line-height: 1; min-height: 44px; cursor: pointer; transition: color 100ms cubic-bezier(0,0,0.2,1), border-color 100ms cubic-bezier(0,0,0.2,1); } .ds-btn-ghost:hover:not(:disabled) { color: #1a1a1a; border-color: color-mix(in oklab, #dee2e6 45%, #1862e6); } .ds-btn-ghost:focus-visible { outline: 2px solid #1862e6; outline-offset: 2px; } .ds-btn-ghost:disabled { opacity: 0.55; cursor: not-allowed; }"
+    },
+    {
+      "name": "Badge — Pass",
+      "kind": "chip",
+      "refersTo": "badge-pass",
+      "description": "Inline status indicator for WCAG AA/AAA contrast confirmation.",
+      "html": "<span class=\"ds-badge-pass\">4.5:1 AA</span>",
+      "css": ".ds-badge-pass { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: #166534; color: #f0fdf4; border: 1px solid #14532d; border-radius: 10px; font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; font-size: 0.75rem; font-weight: 700; line-height: 1; white-space: nowrap; }"
+    },
+    {
+      "name": "Badge — Warning",
+      "kind": "chip",
+      "refersTo": "badge-warning",
+      "description": "Inline status for near-miss contrast. User's palette is close but not meeting threshold.",
+      "html": "<span class=\"ds-badge-warning\">3.2:1 AA−</span>",
+      "css": ".ds-badge-warning { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: #9a3412; color: #fff7ed; border: 1px solid #c2410c; border-radius: 10px; font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; font-size: 0.75rem; font-weight: 700; line-height: 1; white-space: nowrap; }"
+    },
+    {
+      "name": "Badge — Fail",
+      "kind": "chip",
+      "refersTo": "badge-fail",
+      "description": "Inline status for contrast failure. Requires user action.",
+      "html": "<span class=\"ds-badge-fail\">2.1:1 Fail</span>",
+      "css": ".ds-badge-fail { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: #991b1b; color: #fef2f2; border: 1px solid #7f1d1d; border-radius: 10px; font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; font-size: 0.75rem; font-weight: 700; line-height: 1; white-space: nowrap; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Primary grouping surface. Flat with tonal background and muted border — no shadow.",
+      "html": "<section class=\"ds-card\"><div class=\"ds-card-header\"><h2 class=\"ds-card-title\">Base Color</h2><p class=\"ds-card-subtitle\">Starting color for palette generation</p></div><div class=\"ds-card-body\"><p>Card content goes here.</p></div></section>",
+      "css": ".ds-card { background: rgba(246,247,249,0.94); border: 1px solid rgba(222,226,230,0.60); border-radius: 10px; } .ds-card-header { padding: 16px 16px 10px 16px; border-bottom: 1px solid rgba(222,226,230,0.42); display: flex; flex-direction: column; gap: 5px; } .ds-card-title { font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; font-size: 1rem; font-weight: 600; line-height: 1.5; letter-spacing: -0.02em; color: #1a1a1a; margin: 0; } .ds-card-subtitle { font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; font-size: 0.875rem; font-weight: 400; color: #636a72; margin: 0; } .ds-card-body { padding: 16px; font-family: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; font-size: 0.875rem; color: #1a1a1a; }"
+    },
+    {
+      "name": "Color Swatch",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature component. Displays a palette color with pass/fail contrast badges and a copyable color value.",
+      "html": "<div class=\"ds-swatch\" style=\"--swatch-color: #1862e6;\"><div class=\"ds-swatch-color\"></div><div class=\"ds-swatch-meta\"><span class=\"ds-badge-pass\" style=\"font-size:0.7rem;padding:2px 6px;\">4.5 AA</span><span class=\"ds-swatch-value\">#1862E6</span></div></div>",
+      "css": ".ds-swatch { display: flex; flex-direction: column; border-radius: 10px; overflow: hidden; border: 1px solid rgba(222,226,230,0.60); } .ds-swatch-color { background: var(--swatch-color, #1862e6); aspect-ratio: 1; min-height: 60px; } .ds-swatch-meta { padding: 6px 8px; background: #f6f7f9; display: flex; flex-direction: column; gap: 4px; } .ds-swatch-value { font-family: 'Atkinson Hyperlegible Mono Variable', ui-monospace, monospace; font-size: 0.75rem; color: #1a1a1a; cursor: pointer; } .ds-swatch-value:hover { color: #1862e6; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Considered Tool",
+    "overview": "Chroma11y is expert tooling that has thought deeply about its own UX. It does not demonstrate sophistication through ornamentation — it communicates it through the quality of its constraints, the clarity of its controls, and the completeness of its output. Every element has earned its place. The surface stays calm so the color can speak.\n\nThe design is accessibility-first not as a gesture but as doctrine. The product's reason for existing is WCAG-compliant color systems, and the interface embodies that commitment in its own construction. WCAG 2.2 AA holds everywhere: in the focus ring, in the type scale, in the status badge contrast triads. The font was designed by the Braille Institute for low-vision readers. None of this is incidental.\n\nIt rejects three failure modes explicitly: the visual noise of dense enterprise ERP software; the glossy surface of generic SaaS products that flatten every domain into a growth dashboard; and the playful lightness of consumer color tools that undervalue the serious design-system workflow happening here.",
+    "keyCharacteristics": [
+      "Flat surfaces with tonal depth — no shadows at rest, depth through background steps",
+      "Atkinson Hyperlegible: a low-vision font that doubles as the brand voice",
+      "A single blue accent reserved strictly for primary actions, focus, and selection state",
+      "Light and dark themes as first-class citizens — both specified, both tested",
+      "Fluid type scale that scales with viewport as an accessibility feature, not decoration"
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Instrument Blue appears on ≤10% of any given screen. It marks the primary action, current selection, and keyboard focus only. It is never used as a decorative accent, a section highlight, or a data-viz color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Status Vocabulary Rule",
+        "body": "Green/amber/red are reserved for contrast pass/warning/fail. Never repurpose these colors for any other meaning. In a tool whose entire output is about color decisions, semantic ambiguity in status signals is a serious failure.",
+        "section": "colors"
+      },
+      {
+        "name": "The Atkinson Rule",
+        "body": "Never substitute a different typeface. Not for display headings, not for data output, not for decorative quotes. Atkinson Hyperlegible is the brand voice. Its legibility-first design is load-bearing: it is what makes 'expert without being intimidating' true at the character level.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-by-Default Rule",
+        "body": "If an element is part of the document layout, it has no shadow. Reach for a border or a tonal background step instead. If you find yourself adding a shadow to a card, you have the wrong solution.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use Instrument Blue (#1862e6) only for primary actions, active selection, and focus rings. Its scarcity is the point.",
+      "Do use the double-outline focus pattern (outline + box-shadow) on every interactive element.",
+      "Do maintain WCAG 2.2 AA minimum contrast everywhere — 4.5:1 for body text, 3:1 for large text — including in dark theme.",
+      "Do keep status colors (green/amber/red) reserved for contrast pass/warning/fail only.",
+      "Do use tonal background steps (--bg-secondary, --bg-tertiary) and reduced-opacity borders to create surface depth.",
+      "Do use the full 44px minimum touch target on all interactive controls.",
+      "Do honor prefers-reduced-motion — the duration token system collapses to 0ms automatically.",
+      "Do use <details>/<summary> for collapsible sections — native keyboard and screen reader support."
+    ],
+    "donts": [
+      "Don't add box-shadows to cards or any in-document surface.",
+      "Don't use any font other than Atkinson Hyperlegible Next (body) or Atkinson Hyperlegible Mono (code/values).",
+      "Don't add decorative color accents, gradient fills, or illustrations to the chrome.",
+      "Don't use enterprise ERP aesthetics — dense chrome, overwhelming panel-based toolbars.",
+      "Don't use generic SaaS startup UI patterns: soft purple accents, hero-metric dashboards, gradient CTAs.",
+      "Don't use consumer color app patterns (gradient text, candy colors, celebratory animations).",
+      "Don't use border-left or border-right greater than 1px as a colored stripe accent.",
+      "Don't use gradient text (background-clip: text with a gradient).",
+      "Don't introduce bounce or elastic easing (overshoot curves with control points outside 0-1). Motion decelerates with exponential ease-out.",
+      "Don't nest cards. One layer of card surface maximum."
+    ]
+  }
+}
