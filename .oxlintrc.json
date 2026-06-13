@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "promise"],
+  "categories": {
+    "correctness": "error"
+  },
+  "ignorePatterns": [
+    "build/",
+    ".svelte-kit/",
+    "dist/",
+    "coverage/",
+    "static/",
+    "playwright-report/",
+    "test-results/",
+    "lighthouse-report/"
+  ]
+}

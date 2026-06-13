@@ -2,6 +2,7 @@ import prettier from 'eslint-config-prettier';
 import { fileURLToPath } from 'node:url';
 import { includeIgnoreFile } from '@eslint/compat';
 import js from '@eslint/js';
+import oxlint from 'eslint-plugin-oxlint';
 import svelte from 'eslint-plugin-svelte';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
@@ -37,5 +38,8 @@ export default defineConfig(
         svelteConfig
       }
     }
-  }
+  },
+  // Keep last: turns off ESLint rules already covered by oxlint (.oxlintrc.json),
+  // so the two linters don't double-report. Svelte template rules remain ESLint-only.
+  ...oxlint.buildFromOxlintConfigFile('./.oxlintrc.json')
 );
