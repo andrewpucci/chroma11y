@@ -88,6 +88,7 @@
     z-index: 10;
     background: var(--bg-primary);
     border-bottom: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
+    container-type: inline-size;
   }
 
   .topbar-inner {
@@ -98,7 +99,6 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-lg);
-    container-type: inline-size;
   }
 
   .controls {

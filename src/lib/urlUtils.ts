@@ -646,7 +646,12 @@ export function updateBrowserUrl(state: UrlColorState): void {
   const queryString = encodeStateToUrl(state);
   const newUrl = queryString ? `?${queryString}` : window.location.pathname;
 
-  // Keep the URL in sync without triggering a navigation.
+  // Intentionally use the native History API, not `replaceState` from
+  // `$app/navigation`. The URL here is a serialization sink for shareable
+  // palette state, updated on every debounced control change; it must NOT
+  // engage SvelteKit's client router. SvelteKit logs a dev-only warning about
+  // this (stripped in production) — do not "fix" it by switching to the
+  // router API, which would re-run navigation/load logic on each keystroke.
   window.history.replaceState(window.history.state ?? {}, '', newUrl);
 }
 
