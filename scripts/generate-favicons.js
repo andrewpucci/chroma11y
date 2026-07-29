@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url';
 import { Resvg } from '@resvg/resvg-js';
 import pngToIco from 'png-to-ico';
 import { JSDOM } from 'jsdom';
+import { GENERATED_FAVICON_FILES, shouldGenerateFavicons } from './favicon-build-state.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATIC_DIR = resolve(__dirname, '..', 'static');
 const SVG_PATH = resolve(STATIC_DIR, 'favicon.svg');
+const IS_DIRECT_RUN = process.argv[1] === fileURLToPath(import.meta.url);
 
 // Best practice: single 32x32 for legacy browsers
 const ICO_SIZE = 32;
@@ -114,8 +116,24 @@ export async function generateFavicons() {
   );
 }
 
-// Run directly
-generateFavicons().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+export async function generateFaviconsIfNeeded() {
+  const shouldGenerate = await shouldGenerateFavicons({
+    sourcePath: SVG_PATH,
+    outputDir: STATIC_DIR
+  });
+
+  if (!shouldGenerate) {
+    console.log(`Favicons are up to date: ${GENERATED_FAVICON_FILES.join(', ')}`);
+    return false;
+  }
+
+  await generateFavicons();
+  return true;
+}
+
+if (IS_DIRECT_RUN) {
+  generateFaviconsIfNeeded().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

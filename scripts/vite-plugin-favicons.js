@@ -6,12 +6,22 @@ const SVG_PATH = resolve(__dirname, '..', 'static', 'favicon.svg');
 
 /** @returns {import('vite').Plugin} */
 export function faviconPlugin() {
+  let isBuild = false;
+
   return {
     name: 'generate-favicons',
 
+    configResolved(config) {
+      isBuild = config.command === 'build';
+    },
+
     async buildStart() {
-      const { generateFavicons } = await import('./generate-favicons.js');
-      await generateFavicons();
+      if (!isBuild) {
+        return;
+      }
+
+      const { generateFaviconsIfNeeded } = await import('./generate-favicons.js');
+      await generateFaviconsIfNeeded();
     },
 
     configureServer(server) {

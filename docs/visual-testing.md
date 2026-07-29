@@ -30,9 +30,13 @@ rebuilt into the test image.
 
 ### 2) Deploy Smoke (`.github/workflows/deploy-smoke.yml`)
 
-- Runs against the configured Cloudflare Pages URL
+- Runs automatically for same-repo pull requests after the Cloudflare Pages preview deployment for
+  the current commit succeeds
+- Runs automatically on pushes to `main` against production
+- Manual dispatch still accepts a `base_url` override for ad hoc smoke checks
 - Runs `e2e/deploy-smoke.spec.ts` only
 - Verifies load and core functional paths (no visual assertions)
+- Fork pull requests are skipped because Cloudflare Pages does not create preview URLs for forks
 
 ## Argos Capture Behavior
 

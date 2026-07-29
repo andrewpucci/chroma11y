@@ -11,7 +11,8 @@ Playwright end-to-end tests run against a production build. Full-suite CI parity
 CI pipelines:
 
 - `e2e.yml`: deterministic E2E execution + Argos visual capture
-- `deploy-smoke.yml`: deployed site functional smoke checks (no visual assertions)
+- `deploy-smoke.yml`: deployed site functional smoke checks after Cloudflare Pages deploys the
+  current commit (same-repo PRs, `main`, or manual `base_url`)
 
 ## Setup
 
