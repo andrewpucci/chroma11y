@@ -1,12 +1,13 @@
 /**
- * Netlify smoke tests run against deploy previews in CI and the local preview build in development.
+ * Cloudflare Pages smoke tests run against deployed Pages URLs in CI and local preview builds in
+ * development.
  * These checks intentionally avoid visual snapshot assertions.
  */
 
 import { test, expect } from '@playwright/test';
 import { waitForAppReady } from './test-utils';
 
-test.describe('Netlify Smoke', () => {
+test.describe('Deploy Smoke', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForAppReady(page);

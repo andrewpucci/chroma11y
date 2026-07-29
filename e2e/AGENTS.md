@@ -11,7 +11,7 @@ Playwright end-to-end tests run against a production build. Full-suite CI parity
 CI pipelines:
 
 - `e2e.yml`: deterministic E2E execution + Argos visual capture
-- `netlify-smoke.yml`: deploy-preview functional smoke checks (no visual assertions)
+- `deploy-smoke.yml`: deployed site functional smoke checks (no visual assertions)
 
 ## Setup
 
@@ -27,10 +27,10 @@ Run locally for debugging:
 npm run test:e2e:local
 ```
 
-Run deploy-preview smoke checks only:
+Run deployed Pages smoke checks only:
 
 ```sh
-npm run test:e2e:netlify-smoke
+npm run test:e2e:deploy-smoke
 ```
 
 See `docs/visual-testing.md` for the full visual workflow.
@@ -111,7 +111,7 @@ When adding a new E2E test file:
 - `export-validation.spec.ts` — export format and download correctness
 - `focus-indicators.spec.ts` — browser-rendered focus indicator assertions
 - `mobile-responsiveness.spec.ts` — responsive layout and touch-target behavior
-- `netlify-smoke.spec.ts` — deploy-preview smoke checks (non-visual)
+- `deploy-smoke.spec.ts` — deployed site smoke checks (non-visual)
 - `persistence.spec.ts` — representative URL/localStorage restore and precedence behavior
 - `ui-interactions.spec.ts` — browser-specific tooltip and compact-constraints interactions
 - `visual-regression.spec.ts` — Argos-only visual checkpoint suite

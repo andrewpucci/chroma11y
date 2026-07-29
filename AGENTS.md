@@ -59,7 +59,7 @@ npm run test:unit -- --run    # unit only, single run
 npm run test:coverage         # unit coverage report (V8 coverage provider)
 npm run test:e2e              # Docker (CI-matching, rebuilds test image)
 npm run test:e2e:local        # Playwright directly for fast local debugging, not the preferred parity run
-npm run test:e2e:netlify-smoke # deploy smoke checks (Chromium)
+npm run test:e2e:deploy-smoke # deploy smoke checks (Chromium)
 npm run test:lighthouse       # Lighthouse CI audit + opens representative report
 npm test                      # unit + e2e
 ```

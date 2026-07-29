@@ -6,13 +6,13 @@ Accessible color palette generator powered by OKLCH, with WCAG contrast checking
 [![Svelte 5](https://img.shields.io/badge/Svelte-5-orange.svg)](https://svelte.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![CI](https://github.com/andrewpucci/chroma11y/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/andrewpucci/chroma11y/actions/workflows/unit-tests.yml)
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://chroma11y.netlify.app)
+[![Website](https://img.shields.io/badge/chroma11y.app-live-brightgreen)](https://chroma11y.app)
 
 <p align="center">
   <img src="docs/screenshot.png" alt="Chroma11y screenshot showing color palette generator" width="800">
 </p>
 
-**[Try the Live Demo →](https://chroma11y.netlify.app)**
+**[Open Chroma11y](https://chroma11y.app)**
 
 ---
 
@@ -110,7 +110,7 @@ OKLCH (Oklch) is a perceptually uniform color space that ensures:
 git clone https://github.com/andrewpucci/chroma11y.git && cd chroma11y && npm install && npm run dev
 ```
 
-Or **[try the live demo](https://chroma11y.netlify.app)** instantly.
+Or **[open Chroma11y](https://chroma11y.app)** instantly.
 
 ---
 
