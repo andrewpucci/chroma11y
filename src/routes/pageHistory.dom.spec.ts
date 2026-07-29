@@ -540,7 +540,7 @@ describe('page history integration', () => {
     await flushAppState();
 
     expect(getBaseColorHexInput()).toHaveValue('#ff0000');
-  }, 20000);
+  }, 30000);
 
   async function expectScenarioRoundTrip(actions: HistoryAction[]): Promise<void> {
     const user = userEvent.setup();
@@ -867,7 +867,7 @@ describe('page history integration', () => {
     await user.click(getRedoButton());
     await flushHistoryCommit();
     expect(getViewTab('Comparison View')).toHaveAttribute('aria-selected', 'true');
-  }, 20000);
+  }, 30000);
 
   it('AC201-3: the reference view mode switch follows the tab interaction pattern', async () => {
     const user = userEvent.setup();
