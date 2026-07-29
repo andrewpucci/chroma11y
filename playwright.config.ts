@@ -24,6 +24,9 @@ export default defineConfig({
     baseURL,
     navigationTimeout: process.env.CI || process.env.PLAYWRIGHT_TEST_BASE_URL ? 60000 : 15000,
     actionTimeout: 10000,
+    launchOptions: {
+      args: ['--disable-lcd-text', '--font-render-hinting=none']
+    },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'
