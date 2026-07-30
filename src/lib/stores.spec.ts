@@ -1,7 +1,7 @@
 /**
  * Stores unit tests
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import Color from 'colorjs.io';
 import { colorToCssOklch, colorToCssOklchSwatch } from './colorUtils';
@@ -448,13 +448,17 @@ describe('stores', () => {
     });
 
     it('logs error for invalid theme', () => {
-      expect.assertions(1);
+      expect.assertions(2);
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const originalTheme = get(currentTheme);
 
       // @ts-expect-error Testing invalid input
       setTheme('invalid');
 
       expect(get(currentTheme)).toBe(originalTheme);
+      expect(errorSpy).toHaveBeenCalledWith("Invalid theme: invalid. Must be 'light' or 'dark'");
+
+      errorSpy.mockRestore();
     });
   });
 

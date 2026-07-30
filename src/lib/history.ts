@@ -132,7 +132,8 @@ function withPositions(entries: HistoryEntryMeta[]): HistoryEntryMeta[] {
  */
 export function createHistoryManager<T extends object>(initialSnapshot: T) {
   const travels = createTravels<T>(cloneSnapshot(initialSnapshot), {
-    maxHistory: MAX_HISTORY
+    maxHistory: MAX_HISTORY,
+    warnOnUnsupportedState: false
   });
 
   let metadata: HistoryEntryMeta[] = [createEntry(INITIAL_HISTORY_LABEL, 0)];

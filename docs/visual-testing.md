@@ -4,15 +4,15 @@ This project uses an Argos-only visual regression workflow for E2E tests:
 
 - **Deterministic E2E execution** against a local production preview (`npm run build && npm run preview`)
 - **Visual capture and review in Argos** (no Playwright file snapshot baselines in git)
-- **Netlify deploy smoke checks** for functional validation without pixel assertions
+- **Cloudflare Pages deploy smoke checks** for functional validation without pixel assertions
 
 ## Quick Reference
 
-| Command                          | Description                                        |
-| -------------------------------- | -------------------------------------------------- |
-| `npm run test:e2e`               | Run full E2E suite in Docker (CI parity)           |
-| `npm run test:e2e:local`         | Run Playwright tests locally (debugging)           |
-| `npm run test:e2e:netlify-smoke` | Run non-visual deploy smoke checks (Chromium only) |
+| Command                         | Description                                        |
+| ------------------------------- | -------------------------------------------------- |
+| `npm run test:e2e`              | Run full E2E suite in Docker (CI parity)           |
+| `npm run test:e2e:local`        | Run Playwright tests locally (debugging)           |
+| `npm run test:e2e:deploy-smoke` | Run non-visual deploy smoke checks (Chromium only) |
 
 `npm run test:e2e` runs `docker compose run --rm --build test` so app source changes are
 rebuilt into the test image.
@@ -28,11 +28,15 @@ rebuilt into the test image.
   - Pushes to `main`: `ARGOS_UPLOAD=true` (baseline refresh)
   - Fork PRs: `ARGOS_UPLOAD=false`
 
-### 2) Netlify Smoke (`.github/workflows/netlify-smoke.yml`)
+### 2) Deploy Smoke (`.github/workflows/deploy-smoke.yml`)
 
-- Waits for Netlify deploy preview URL
-- Runs `e2e/netlify-smoke.spec.ts` only
+- Runs automatically for same-repo pull requests after the Cloudflare Pages preview deployment for
+  the current commit succeeds
+- Runs automatically on pushes to `main` against production
+- Manual dispatch still accepts a `base_url` override for ad hoc smoke checks
+- Runs `e2e/deploy-smoke.spec.ts` only
 - Verifies load and core functional paths (no visual assertions)
+- Fork pull requests are skipped because Cloudflare Pages does not create preview URLs for forks
 
 ## Argos Capture Behavior
 

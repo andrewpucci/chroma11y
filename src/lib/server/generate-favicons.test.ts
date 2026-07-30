@@ -1,10 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, utimes } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import { Resvg } from '@resvg/resvg-js';
 import pngToIco from 'png-to-ico';
+import {
+  GENERATED_FAVICON_FILES,
+  shouldGenerateFavicons
+} from '../../../scripts/favicon-build-state.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = resolve(__dirname, '__test_favicons__');
@@ -46,6 +50,12 @@ async function generateFaviconsFromSvg(svgContent: string, outputDir: string) {
   }
 
   return { ico, icoPng };
+}
+
+async function writeGeneratedFiles(outputDir: string) {
+  await Promise.all(
+    GENERATED_FAVICON_FILES.map((filename) => writeFile(resolve(outputDir, filename), 'generated'))
+  );
 }
 
 describe('generate-favicons', () => {
@@ -190,6 +200,66 @@ describe('generate-favicons', () => {
       expect(() => {
         new Resvg('', { fitTo: { mode: 'width', value: 32 } });
       }).toThrow();
+    });
+  });
+
+  describe('freshness gate', () => {
+    it('should regenerate when a generated favicon is missing', async () => {
+      expect.assertions(1);
+
+      await writeGeneratedFiles(TEST_DIR);
+      await rm(resolve(TEST_DIR, GENERATED_FAVICON_FILES[0]));
+
+      await expect(
+        shouldGenerateFavicons({
+          sourcePath: TEST_SVG_PATH,
+          outputDir: TEST_DIR
+        })
+      ).resolves.toBe(true);
+    });
+
+    it('should regenerate when generated favicons are older than the source svg', async () => {
+      expect.assertions(1);
+
+      const olderTime = new Date('2026-01-01T00:00:00.000Z');
+      const newerTime = new Date('2026-01-02T00:00:00.000Z');
+
+      await writeGeneratedFiles(TEST_DIR);
+      await Promise.all(
+        GENERATED_FAVICON_FILES.map((filename) =>
+          utimes(resolve(TEST_DIR, filename), olderTime, olderTime)
+        )
+      );
+      await utimes(TEST_SVG_PATH, newerTime, newerTime);
+
+      await expect(
+        shouldGenerateFavicons({
+          sourcePath: TEST_SVG_PATH,
+          outputDir: TEST_DIR
+        })
+      ).resolves.toBe(true);
+    });
+
+    it('should skip regeneration when generated favicons are newer than the source svg', async () => {
+      expect.assertions(1);
+
+      const olderTime = new Date('2026-01-01T00:00:00.000Z');
+      const newerTime = new Date('2026-01-02T00:00:00.000Z');
+
+      await writeGeneratedFiles(TEST_DIR);
+      await utimes(TEST_SVG_PATH, olderTime, olderTime);
+      await Promise.all(
+        GENERATED_FAVICON_FILES.map((filename) =>
+          utimes(resolve(TEST_DIR, filename), newerTime, newerTime)
+        )
+      );
+
+      await expect(
+        shouldGenerateFavicons({
+          sourcePath: TEST_SVG_PATH,
+          outputDir: TEST_DIR
+        })
+      ).resolves.toBe(false);
     });
   });
 

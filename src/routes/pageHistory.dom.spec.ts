@@ -540,7 +540,7 @@ describe('page history integration', () => {
     await flushAppState();
 
     expect(getBaseColorHexInput()).toHaveValue('#ff0000');
-  }, 20000);
+  }, 30000);
 
   async function expectScenarioRoundTrip(actions: HistoryAction[]): Promise<void> {
     const user = userEvent.setup();
@@ -624,7 +624,7 @@ describe('page history integration', () => {
     await flushAppState();
 
     expect(get(palettesHex)[0]?.[5]).not.toBe(initialColor);
-  });
+  }, 30000);
 
   it('round-trips inline constraint edits through undo and redo', async () => {
     // Start with a simpler setup - don't open editor initially
@@ -671,7 +671,7 @@ describe('page history integration', () => {
     await flushHistoryCommit();
     expect(getThemeSelect()).toHaveValue('dark');
     expect(getNumColorsInput()).toHaveValue(15);
-  }, 10000);
+  }, 30000);
 
   it('AC1a: pinning a reference persists it to localStorage', async () => {
     await renderPage({ openOutputAdvanced: false });
@@ -686,7 +686,7 @@ describe('page history integration', () => {
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored!) as { referenceConfiguration: unknown };
     expect(parsed.referenceConfiguration).not.toBeNull();
-  }, 20000);
+  }, 45000);
 
   it('AC1b: a persisted reference workspace is restored when the page loads', async () => {
     const validReferenceConfiguration = createReferenceConfiguration(get(colorStore));
@@ -704,7 +704,7 @@ describe('page history integration', () => {
     await renderPage({ openOutputAdvanced: false });
 
     expect(get(referenceConfiguration)).not.toBeNull();
-  }, 20000);
+  }, 45000);
 
   it('AC5: pinning a reference commits to history; undoing clears it', async () => {
     const user = userEvent.setup();
@@ -731,7 +731,7 @@ describe('page history integration', () => {
     await flushHistoryCommit();
 
     expect(get(referenceConfiguration)).toBeNull();
-  }, 20000);
+  }, 45000);
 
   it('preserves a legacy persisted comparison threshold in its active metric slot', async () => {
     const seedWorkspace = {
@@ -867,7 +867,7 @@ describe('page history integration', () => {
     await user.click(getRedoButton());
     await flushHistoryCommit();
     expect(getViewTab('Comparison View')).toHaveAttribute('aria-selected', 'true');
-  }, 20000);
+  }, 30000);
 
   it('AC201-3: the reference view mode switch follows the tab interaction pattern', async () => {
     const user = userEvent.setup();

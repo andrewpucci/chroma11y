@@ -53,12 +53,7 @@ export type ContrastReferenceSide = 'low' | 'high';
 
 /** Constraint threshold keys for WCAG/APCA rule evaluation */
 export type ConstraintThresholdKey =
-  | 'wcagThreeToOne'
-  | 'wcagAA'
-  | 'wcagAAA'
-  | 'apcaLarge'
-  | 'apcaFluent'
-  | 'apcaBody';
+  'wcagThreeToOne' | 'wcagAA' | 'wcagAAA' | 'apcaLarge' | 'apcaFluent' | 'apcaBody';
 
 interface BaseConstraint {
   id: string;

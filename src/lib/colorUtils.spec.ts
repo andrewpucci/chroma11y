@@ -2,7 +2,7 @@
  * Color Utilities Unit Tests
  * Tests our custom color generation logic
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   getContrast,
   getPrintableContrast,
@@ -1144,9 +1144,15 @@ describe('colorUtils', () => {
 
   describe('getPaletteName edge cases', () => {
     it('handles palette with invalid hex values gracefully', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const palette = ['not-hex', '#ff0000', '#00ff00'];
+
       const name = getPaletteName(palette);
+
       expect(name).toBeTruthy();
+      expect(warnSpy).toHaveBeenCalledWith('Invalid color in palette for naming:', 'not-hex');
+
+      warnSpy.mockRestore();
     });
 
     it('handles palette where all colors are extremes', () => {
@@ -1156,9 +1162,15 @@ describe('colorUtils', () => {
     });
 
     it('handles string reference that is invalid hex', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const palette = ['#ff0000', '#00ff00', '#0000ff'];
+
       const name = getPaletteName(palette, 'invalid-hex');
+
       expect(name).toBe('Unnamed');
+      expect(warnSpy).toHaveBeenCalledWith('Invalid color in palette for naming:', 'invalid-hex');
+
+      warnSpy.mockRestore();
     });
 
     it('handles numeric index out of bounds', () => {
