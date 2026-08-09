@@ -44,7 +44,6 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           REPOSITORY: ${{ github.repository }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           REF_NAME: ${{ github.ref_name }}
           GITHUB_SHA: ${{ github.sha }}
@@ -54,22 +53,15 @@ jobs:
           should_wait_for_pages=false
           reason=
           deployment_sha="$GITHUB_SHA"
+          base_url=
 
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             if [[ "$HEAD_REPO" != "$REPOSITORY" ]]; then
               should_run=false
               reason="Cloudflare Pages preview URLs are not created for fork pull requests."
             else
-              branch_alias=$(printf '%s' "$HEAD_REF" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')
-
-              if [[ -z "$branch_alias" ]]; then
-                should_run=false
-                reason="Could not derive a valid Pages branch alias from branch '$HEAD_REF'."
-              else
-                base_url="https://${branch_alias}.chroma11y.pages.dev"
-                should_wait_for_pages=true
-                deployment_sha="$HEAD_SHA"
-              fi
+              should_wait_for_pages=true
+              deployment_sha="$HEAD_SHA"
             fi
           elif [[ "$EVENT_NAME" == "push" && "$REF_NAME" == "main" ]]; then
             base_url="https://chroma11y.app"
@@ -89,9 +81,11 @@ jobs:
         run: echo "${{ steps.target.outputs.reason }}"
 
       - name: Wait for Cloudflare Pages deployment for this commit
+        id: pages
         if: steps.target.outputs.should_run == 'true' && steps.target.outputs.should_wait_for_pages == 'true'
         shell: bash
         env:
+          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           SHA: ${{ steps.target.outputs.deployment_sha }}
@@ -107,6 +101,31 @@ jobs:
 
               if [[ "$status" == "completed" ]]; then
                 if [[ "$conclusion" == "success" ]]; then
+                  if [[ "$EVENT_NAME" == "pull_request" ]]; then
+                    resolved_base_url=$(
+                      jq -r '
+                        .check_runs[]
+                        | select(.app.slug == "cloudflare-workers-and-pages" and .name == "Cloudflare Pages")
+                        | .output.summary // ""
+                        | if test("Branch Preview URL:</strong></td><td>[[:space:]]*<a href='\''https://[^'\'']+") then
+                            capture("Branch Preview URL:</strong></td><td>[[:space:]]*<a href='\''(?<url>https://[^'\'']+)").url
+                          elif test("Preview URL:</strong></td><td>[[:space:]]*<a href='\''https://[^'\'']+") then
+                            capture("Preview URL:</strong></td><td>[[:space:]]*<a href='\''(?<url>https://[^'\'']+)").url
+                          else
+                            empty
+                          end
+                      ' <<<"$check_runs_json" | head -n1
+                    )
+
+                    if [[ -z "$resolved_base_url" ]]; then
+                      echo "Could not resolve a Cloudflare Pages preview URL from the successful check run for $SHA." >&2
+                      exit 1
+                    fi
+
+                    echo "Resolved Cloudflare Pages preview URL: $resolved_base_url"
+                    echo "base_url=$resolved_base_url" >> "$GITHUB_OUTPUT"
+                  fi
+
                   echo "Cloudflare Pages deployment is ready: $details_url"
                   exit 0
                 fi
@@ -127,7 +146,7 @@ jobs:
         if: steps.target.outputs.should_run == 'true'
         shell: bash
         env:
-          BASE_URL: ${{ steps.target.outputs.base_url }}
+          BASE_URL: ${{ steps.pages.outputs.base_url || steps.target.outputs.base_url }}
         run: |
           for attempt in {1..20}; do
             if curl --silent --show-error --fail --location --output /dev/null "$BASE_URL"; then
@@ -146,7 +165,7 @@ jobs:
         if: steps.target.outputs.should_run == 'true'
         run: npx playwright test e2e/deploy-smoke.spec.ts --project=chromium
         env:
-          PLAYWRIGHT_TEST_BASE_URL: ${{ steps.target.outputs.base_url }}
+          PLAYWRIGHT_TEST_BASE_URL: ${{ steps.pages.outputs.base_url || steps.target.outputs.base_url }}
           ARGOS_UPLOAD: 'false'
 
       - name: Upload smoke test report
