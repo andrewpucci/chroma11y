@@ -54,7 +54,7 @@
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^5.4.2",
-    "@testing-library/user-event": "^14.6.1",
+    "@testing-library/user-event": "^14.6.3",
     "@types/jsdom": "^28.0.3",
     "@types/node": "^25.9.2",
     "@vitest/coverage-v8": "^4.1.10",
