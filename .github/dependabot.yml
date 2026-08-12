@@ -1,85 +1,78 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
 version: 2
 updates:
-  - package-ecosystem: 'npm'
-    directory: '/'
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: 'weekly'
-      day: 'monday'
-      time: '09:00'
-      timezone: 'America/Los_Angeles'
-    open-pull-requests-limit: 3
-    labels:
-      - 'dependencies'
-      - 'security'
-    reviewers:
-      - 'andrewpucci'
-    assignees:
-      - 'andrewpucci'
-    rebase-strategy: 'auto'
-    commit-message:
-      prefix: 'chore'
-      include: 'scope'
-    groups:
-      lint-and-format:
-        patterns:
-          - 'eslint*'
-          - '@typescript-eslint*'
-          - 'prettier'
-          - 'prettier-plugin-svelte'
-          - 'eslint-config-prettier'
-          - 'eslint-plugin-svelte'
-          - 'globals'
-          - 'browserslist'
-        update-types:
-          - 'minor'
-          - 'patch'
-      test-and-qa:
-        patterns:
-          - 'vitest*'
-          - '@vitest*'
-          - '@testing-library*'
-          - 'playwright*'
-          - '@playwright*'
-          - 'jsdom'
-        update-types:
-          - 'minor'
-          - 'patch'
-      svelte-and-vite:
-        patterns:
-          - 'svelte*'
-          - '@sveltejs*'
-          - 'vite*'
-          - '@vitejs*'
-          - 'lightningcss'
-          - 'vite-plugin-*'
-        update-types:
-          - 'minor'
-          - 'patch'
-      types:
-        patterns:
-          - '@types/*'
-        update-types:
-          - 'minor'
-          - 'patch'
-
-  - package-ecosystem: 'github-actions'
-    directory: '/'
-    schedule:
-      interval: 'monthly'
-      day: 'monday'
-      time: '10:00'
-      timezone: 'America/Los_Angeles'
+      interval: weekly
+      day: tuesday
+      time: '08:00'
+      timezone: America/Los_Angeles
     open-pull-requests-limit: 2
     labels:
-      - 'dependencies'
-      - 'ci'
-    reviewers:
-      - 'andrewpucci'
+      - dependencies
+      - ci
     assignees:
-      - 'andrewpucci'
-    rebase-strategy: 'auto'
+      - andrewpucci
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+      github-actions-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: '09:00'
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+    assignees:
+      - andrewpucci
+    # Keep manifest ranges stable when they already admit the new release;
+    # Dependabot still updates the lockfile/resolved version.
+    versioning-strategy: increase-if-necessary
+    # SvelteKit and svelte-check do not yet publish TypeScript 7 support.
+    # Keep 6.x moving, but block new 7.x PRs until the watcher workflow opens
+    # a follow-up issue telling us to remove this ignore.
+    ignore:
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    groups:
+      npm-production-minor-patch:
+        dependency-type: production
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      npm-development-minor-patch:
+        dependency-type: development
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      npm-security-production:
+        applies-to: security-updates
+        dependency-type: production
+        patterns:
+          - '*'
+      npm-security-development:
+        applies-to: security-updates
+        dependency-type: development
+        patterns:
+          - '*'
