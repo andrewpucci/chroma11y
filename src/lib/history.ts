@@ -1,4 +1,5 @@
 import { createTravels } from 'travels';
+import type { Draft } from 'mutative';
 
 import type {
   ContrastAlgorithm,
@@ -186,7 +187,7 @@ export function createHistoryManager<T extends object>(initialSnapshot: T) {
         ? metadata.slice(0, previousPosition + 1)
         : metadata.slice();
 
-    travels.setState((draft) => {
+    travels.setState((draft: Draft<T>) => {
       overwriteSnapshot(draft, snapshot);
     });
 
