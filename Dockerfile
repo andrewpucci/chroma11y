@@ -1,14 +1,25 @@
 # Match GitHub Actions ubuntu-latest environment
 FROM ubuntu:22.04
 
-# Install Node.js 24 to match CI
+ARG NODE_VERSION=24.19.0
+ARG TARGETARCH
+
+# Install an exact Node.js LTS patch to match the pinned repo toolchain
 RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg \
     ca-certificates \
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update && apt-get install -y nodejs \
+    curl \
+    xz-utils \
+    && case "${TARGETARCH}" in \
+        amd64) node_arch='x64' ;; \
+        arm64) node_arch='arm64' ;; \
+        *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+      esac \
+    && curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" \
+    && curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt" \
+    && grep " node-v${NODE_VERSION}-linux-${node_arch}.tar.xz\$" SHASUMS256.txt | sha256sum -c - \
+    && tar -xJf "node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" -C /usr/local --strip-components=1 \
+    && rm "node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" SHASUMS256.txt \
+    && node --version \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Playwright browser dependencies to match CI
