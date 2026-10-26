@@ -26,7 +26,22 @@ export default defineConfig({
     actionTimeout: 10000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure'
+    video: {
+      mode: 'retain-on-failure',
+      size: { width: 1280, height: 720 },
+      fps: 30,
+      show: {
+        actions: {
+          duration: 1000,
+          style: {
+            point:
+              'width: 16px; height: 16px; border-radius: 50%; background: rgba(255, 59, 48, 0.8); border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5)',
+            highlight:
+              'border: 2px solid rgba(255, 59, 48, 0.8); background: rgba(255, 59, 48, 0.1)'
+          }
+        }
+      }
+    }
   },
   projects: [
     {
