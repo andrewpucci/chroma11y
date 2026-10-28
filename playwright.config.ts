@@ -33,6 +33,9 @@ export default defineConfig({
       show: {
         actions: {
           duration: 1000,
+          // Keep Playwright's synthetic cursor out of the page DOM between actions so it cannot
+          // leak into Argos screenshots; the red point marker still shows each action location.
+          cursor: 'none',
           style: {
             point:
               'width: 16px; height: 16px; border-radius: 50%; background: rgba(255, 59, 48, 0.8); border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.5)',
