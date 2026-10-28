@@ -26,11 +26,17 @@ Triage uses the canonical labels `needs-triage`, `needs-info`, `ready-for-agent`
 
 This repo uses a single-context domain-doc layout rooted at `CONTEXT.md` and `docs/adr/` when present. See `docs/agents/domain.md`.
 
+## Toolchain
+
+Use Node 24.19+ with its bundled npm 11. `devEngines` in `package.json` makes older npm versions
+fail, and CI fails if regenerating `package-lock.json` with the pinned npm changes it. Never edit
+the lockfile by hand or regenerate it with another npm version.
+
 ## Build commands
 
 | Command                     | Description                                   |
 | --------------------------- | --------------------------------------------- |
-| `npm install`               | Install dependencies                          |
+| `npm install`               | Install dependencies (requires npm >= 11.17)  |
 | `npm run dev`               | Start Vite dev server (http://localhost:5173) |
 | `npm run build`             | Build for production                          |
 | `npm run preview`           | Preview production build (port 4173)          |
