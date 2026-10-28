@@ -43,11 +43,21 @@ updates:
     # SvelteKit and svelte-check do not yet publish TypeScript 7 support.
     # Keep 6.x moving, but block new 7.x PRs until the watcher workflow opens
     # a follow-up issue telling us to remove this ignore.
+    #
+    # SvelteKit 3.x is a major breaking change (svelte.config.js removed,
+    # TypeScript 6 minimum, cookie v2, Node 22+). Block major updates for
+    # SvelteKit and its adapters until the migration is planned.
     ignore:
       - dependency-name: typescript
         update-types:
           - version-update:semver-major
       - dependency-name: '@types/node'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@sveltejs/kit'
+        update-types:
+          - version-update:semver-major
+      - dependency-name: '@sveltejs/adapter-static'
         update-types:
           - version-update:semver-major
     commit-message:
