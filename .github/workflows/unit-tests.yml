@@ -27,6 +27,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # npm ci accepts a lockfile written by another npm version (for example one that drops
+      # `libc` fields), so regenerate it with the pinned toolchain and fail on any drift.
+      - name: Verify lockfile matches pinned npm
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          git diff --exit-code package-lock.json
+
       - name: Run unit tests with coverage
         run: VITEST_MAX_WORKERS=1 npm run test:unit -- --run --coverage
 

@@ -45,6 +45,9 @@ Tests run in Chromium, Firefox, and WebKit.
 - Test files: `*.spec.ts`
 - Shared helpers: `test-utils.ts`
 - Use Playwright UI mode for local debugging: `npx playwright test --ui`
+- Failing CI runs keep a trace and a video from the first retry; open the trace first
+- For annotated local recordings (action markers on every run), set `PW_ANNOTATE=1`; it is ignored
+  in CI because annotations pause each action and change test timing
 - E2E should focus on full user flows, browser behavior, and integration outcomes
 - Do not add E2E coverage for browser-independent logic already covered by unit or DOM tests
 
