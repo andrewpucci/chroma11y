@@ -1,4 +1,4 @@
-import ConstraintSolveWorker from '#lib/constraintSolve.worker?worker';
+import ConstraintSolveWorker from '#lib/constraintSolve.worker.js?worker';
 import type {
   ConstraintSolveProfile,
   ConstraintSolveRequest,
