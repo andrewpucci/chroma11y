@@ -1,14 +1,14 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { announce } from '$lib/announce';
-  import { copyToClipboard } from '$lib/colorUtils';
+  import { announce } from '#lib/announce.js';
+  import { copyToClipboard } from '#lib/colorUtils.js';
   import {
     closeExportPreview,
     exportPreviewDialog,
     type ExportFormat,
     type ExportPreviewData,
     type ExportScope
-  } from '$lib/help/exportPreviewStore';
+  } from '#lib/help/exportPreviewStore.js';
   import {
     downloadFile,
     exportAsCSS,
@@ -16,7 +16,7 @@
     exportAsList,
     exportAsSCSS,
     type ExportNameOptions
-  } from '$lib/exportUtils';
+  } from '#lib/exportUtils.js';
   import Icon from './Icon.svelte';
 
   interface Props {

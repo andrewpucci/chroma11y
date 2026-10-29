@@ -1,4 +1,4 @@
-import type { GamutSpace } from '$lib/types';
+import type { GamutSpace } from '#lib/types.js';
 
 /** Saturation slider minimum, shared across all gamuts. */
 export const CHROMA_MULTIPLIER_MIN = 0;

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { GETTING_STARTED_CALLOUT_STORAGE_KEY, HELP_TOPICS } from '$lib/help/helpContent';
-  import { openGettingStartedGuide } from '$lib/help/helpDialogStore';
+  import { GETTING_STARTED_CALLOUT_STORAGE_KEY, HELP_TOPICS } from '#lib/help/helpContent.js';
+  import { openGettingStartedGuide } from '#lib/help/helpDialogStore.js';
 
   let ready = $state(false);
   let dismissed = $state(true);

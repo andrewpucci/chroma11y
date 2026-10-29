@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import SplitButton from '$lib/components/SplitButton.svelte';
+import SplitButton from '#lib/components/SplitButton.svelte';
 
 function makeProps(overrides: Record<string, unknown> = {}) {
   return {

@@ -60,62 +60,62 @@
     setThemePreference,
     setAutoThemeRestoreLock,
     clearAutoThemeRestoreLock
-  } from '$lib/stores';
-  import { getUrlState, updateBrowserUrl, type UrlColorState } from '$lib/urlUtils';
+  } from '#lib/stores.js';
+  import { getUrlState, updateBrowserUrl, type UrlColorState } from '#lib/urlUtils.js';
   import {
     loadStateFromStorage,
     saveStateToStorage,
     loadUiPreferencesFromStorage,
     saveUiPreferencesToStorage,
     type StoredUiPreferences
-  } from '$lib/storageUtils';
-  import { announce } from '$lib/announce';
-  import { generatePalettes } from '$lib/colorUtils';
-  import type { ColorGenParams } from '$lib/colorUtils';
-  import { clampChromaMultiplier } from '$lib/chromaMultiplier';
-  import { evaluateConstraints } from '$lib/constraintUtils';
-  import { createHistoryManager, type HistoryViewModel } from '$lib/history';
-  import type { HistorySnapshot } from '$lib/history';
+  } from '#lib/storageUtils.js';
+  import { announce } from '#lib/announce.js';
+  import { generatePalettes } from '#lib/colorUtils.js';
+  import type { ColorGenParams } from '#lib/colorUtils.js';
+  import { clampChromaMultiplier } from '#lib/chromaMultiplier.js';
+  import { evaluateConstraints } from '#lib/constraintUtils.js';
+  import { createHistoryManager, type HistoryViewModel } from '#lib/history.js';
+  import type { HistorySnapshot } from '#lib/history.js';
   import type {
     ReferenceHistorySnapshot,
     ReferenceWorkspaceSnapshot
-  } from '$lib/referenceWorkspace';
+  } from '#lib/referenceWorkspace.js';
   import {
     saveReferenceWorkspaceToStorage,
     loadReferenceWorkspaceFromStorage
-  } from '$lib/referenceWorkspacePersistence';
-  import type { ReferenceConfiguration } from '$lib/referenceConfiguration';
-  import { createPageScheduler, type PageScheduler } from '$lib/pageScheduler';
+  } from '#lib/referenceWorkspacePersistence.js';
+  import type { ReferenceConfiguration } from '#lib/referenceConfiguration.js';
+  import { createPageScheduler, type PageScheduler } from '#lib/pageScheduler.js';
   import {
     DEFAULT_NEUTRAL_PALETTE_NAME,
     resolveGeneratedPaletteNames,
     resolveNeutralPaletteName
-  } from '$lib/paletteNameUtils';
+  } from '#lib/paletteNameUtils.js';
   import {
     formatReferenceColors,
     generateReferenceColorObjects,
     type ReferenceColorObjects,
     type ReferenceGeneratedColors
-  } from '$lib/referenceColorGeneration';
-  import ColorControls from '$lib/components/ColorControls.svelte';
-  import ExportButtons from '$lib/components/ExportButtons.svelte';
-  import NeutralPalette from '$lib/components/NeutralPalette.svelte';
-  import PaletteGrid from '$lib/components/PaletteGrid.svelte';
-  import ContrastControls from '$lib/components/ContrastControls.svelte';
-  import ConstraintsControls from '$lib/components/ConstraintsControls.svelte';
-  import DisplaySettings from '$lib/components/DisplaySettings.svelte';
-  import Card from '$lib/components/Card.svelte';
-  import AppHeader from '$lib/components/AppHeader.svelte';
-  import Sidebar from '$lib/components/Sidebar.svelte';
-  import ColorInfoDrawer from '$lib/components/ColorInfoDrawer.svelte';
-  import ExportPreviewDialog from '$lib/components/ExportPreviewDialog.svelte';
-  import GettingStartedDialog from '$lib/components/GettingStartedDialog.svelte';
-  import GettingStartedCallout from '$lib/components/GettingStartedCallout.svelte';
-  import NoticeBanner from '$lib/components/NoticeBanner.svelte';
-  import ReferenceView from '$lib/components/ReferenceView.svelte';
-  import ComparisonControls from '$lib/components/ComparisonControls.svelte';
-  import ConfigurationDiffDisplay from '$lib/components/ConfigurationDiffDisplay.svelte';
-  import type { CvdMode } from '$lib/types';
+  } from '#lib/referenceColorGeneration.js';
+  import ColorControls from '#lib/components/ColorControls.svelte';
+  import ExportButtons from '#lib/components/ExportButtons.svelte';
+  import NeutralPalette from '#lib/components/NeutralPalette.svelte';
+  import PaletteGrid from '#lib/components/PaletteGrid.svelte';
+  import ContrastControls from '#lib/components/ContrastControls.svelte';
+  import ConstraintsControls from '#lib/components/ConstraintsControls.svelte';
+  import DisplaySettings from '#lib/components/DisplaySettings.svelte';
+  import Card from '#lib/components/Card.svelte';
+  import AppHeader from '#lib/components/AppHeader.svelte';
+  import Sidebar from '#lib/components/Sidebar.svelte';
+  import ColorInfoDrawer from '#lib/components/ColorInfoDrawer.svelte';
+  import ExportPreviewDialog from '#lib/components/ExportPreviewDialog.svelte';
+  import GettingStartedDialog from '#lib/components/GettingStartedDialog.svelte';
+  import GettingStartedCallout from '#lib/components/GettingStartedCallout.svelte';
+  import NoticeBanner from '#lib/components/NoticeBanner.svelte';
+  import ReferenceView from '#lib/components/ReferenceView.svelte';
+  import ComparisonControls from '#lib/components/ComparisonControls.svelte';
+  import ConfigurationDiffDisplay from '#lib/components/ConfigurationDiffDisplay.svelte';
+  import type { CvdMode } from '#lib/types.js';
 
   interface Props {
     scheduler?: PageScheduler;

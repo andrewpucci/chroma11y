@@ -4,8 +4,8 @@ import { tick } from 'svelte';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { PageScheduler } from '$lib/pageScheduler';
-import { createReferenceConfiguration } from '$lib/referenceConfiguration';
+import type { PageScheduler } from '#lib/pageScheduler.js';
+import { createReferenceConfiguration } from '#lib/referenceConfiguration.js';
 import {
   colorStore,
   palettesHex,
@@ -17,7 +17,7 @@ import {
   setComparisonMetric,
   resetColorState,
   updateColorState
-} from '$lib/stores';
+} from '#lib/stores.js';
 import PageContent from './PageContent.svelte';
 
 interface HistoryUiState {

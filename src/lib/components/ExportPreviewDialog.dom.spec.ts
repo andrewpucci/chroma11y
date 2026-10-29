@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/colorUtils', async (importOriginal) => {
+vi.mock('#lib/colorUtils.js', async (importOriginal) => {
   const actual = (await importOriginal()) as object;
   return {
     ...actual,
@@ -10,14 +10,14 @@ vi.mock('$lib/colorUtils', async (importOriginal) => {
   };
 });
 
-vi.mock('$lib/announce', () => ({
+vi.mock('#lib/announce.js', () => ({
   announce: vi.fn()
 }));
 
-import ExportPreviewDialog from '$lib/components/ExportPreviewDialog.svelte';
-import { copyToClipboard } from '$lib/colorUtils';
-import { announce } from '$lib/announce';
-import { closeExportPreview, openExportPreview } from '$lib/help/exportPreviewStore';
+import ExportPreviewDialog from '#lib/components/ExportPreviewDialog.svelte';
+import { copyToClipboard } from '#lib/colorUtils.js';
+import { announce } from '#lib/announce.js';
+import { closeExportPreview, openExportPreview } from '#lib/help/exportPreviewStore.js';
 
 const sampleProps = {
   neutrals: ['#ffffff', '#000000'],

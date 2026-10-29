@@ -7,19 +7,19 @@
     comparisonMetric,
     gamutSpace,
     swatchChangeThreshold
-  } from '$lib/stores';
+  } from '#lib/stores.js';
   import {
     buildComparisonAnnotation,
     type ComparisonAnnotation,
     type ComparisonStatusConfig
-  } from '$lib/comparisonViewAnnotations';
+  } from '#lib/comparisonViewAnnotations.js';
   import {
     buildSideBySideNeutralAlignment,
     buildSideBySidePaletteAlignments
-  } from '$lib/comparisonRender';
+  } from '#lib/comparisonRender.js';
   import type Color from 'colorjs.io';
-  import type { ReferenceWorkspaceSnapshot } from '$lib/referenceWorkspace';
-  import type { ContrastAlgorithm, GamutSpace } from '$lib/types';
+  import type { ReferenceWorkspaceSnapshot } from '#lib/referenceWorkspace.js';
+  import type { ContrastAlgorithm, GamutSpace } from '#lib/types.js';
 
   interface Props {
     viewMode: Extract<ReferenceWorkspaceSnapshot['viewMode'], 'reference' | 'comparison'>;

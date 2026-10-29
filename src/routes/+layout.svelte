@@ -1,12 +1,12 @@
 <script lang="ts">
   import '@fontsource-variable/atkinson-hyperlegible-next';
   import '@fontsource-variable/atkinson-hyperlegible-mono';
-  import '$lib/styles/reset.css';
-  import '$lib/styles/utilities.css';
-  import '$lib/styles/tokens.css';
-  import '$lib/styles/global.css';
-  import { currentTheme } from '$lib/stores';
-  import { browser } from '$app/environment';
+  import '#lib/styles/reset.css';
+  import '#lib/styles/utilities.css';
+  import '#lib/styles/tokens.css';
+  import '#lib/styles/global.css';
+  import { currentTheme } from '#lib/stores.js';
+  import { browser } from '$app/env';
   import { onMount } from 'svelte';
   import type { Snippet } from 'svelte';
 

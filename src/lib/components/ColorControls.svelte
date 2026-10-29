@@ -1,13 +1,13 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { HELP_TOPICS } from '$lib/help/helpContent';
+  import { HELP_TOPICS } from '#lib/help/helpContent.js';
   import BezierEditor from './BezierEditor.svelte';
   import CheckboxRow from './CheckboxRow.svelte';
   import HelpTooltip from './HelpTooltip.svelte';
   import Icon from './Icon.svelte';
   import SliderNumberField from './SliderNumberField.svelte';
-  import { getChromaMultiplierBounds } from '$lib/chromaMultiplier';
-  import type { GamutSpace } from '$lib/types';
+  import { getChromaMultiplierBounds } from '#lib/chromaMultiplier.js';
+  import type { GamutSpace } from '#lib/types.js';
 
   interface Props {
     baseColor?: string;

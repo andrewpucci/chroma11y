@@ -8,9 +8,9 @@ import {
   MIN_APCA_LC_LARGE,
   MIN_CONTRAST_RATIO,
   requiresWideGamutWarning
-} from '$lib/colorUtils';
-import { deltaEForMetric } from '$lib/comparisonMetrics';
-import type { ColorDifferenceMetric, ContrastAlgorithm, GamutSpace } from '$lib/types';
+} from '#lib/colorUtils.js';
+import { deltaEForMetric } from '#lib/comparisonMetrics.js';
+import type { ColorDifferenceMetric, ContrastAlgorithm, GamutSpace } from '#lib/types.js';
 
 export interface ComparisonChip {
   label: 'Changed' | 'Contrast down' | 'Contrast up' | 'Gamut added' | 'Gamut cleared';

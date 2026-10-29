@@ -4,8 +4,8 @@ import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import Color from 'colorjs.io';
 
-import NeutralPalette from '$lib/components/NeutralPalette.svelte';
-import { customNeutralName, lightnessNudgers, resetColorState } from '$lib/stores';
+import NeutralPalette from '#lib/components/NeutralPalette.svelte';
+import { customNeutralName, lightnessNudgers, resetColorState } from '#lib/stores.js';
 
 describe('NeutralPalette', () => {
   beforeEach(() => {

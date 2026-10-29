@@ -2,8 +2,8 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { GETTING_STARTED_CALLOUT_STORAGE_KEY } from '$lib/help/helpContent';
-import { closeGettingStartedGuide } from '$lib/help/helpDialogStore';
+import { GETTING_STARTED_CALLOUT_STORAGE_KEY } from '#lib/help/helpContent.js';
+import { closeGettingStartedGuide } from '#lib/help/helpDialogStore.js';
 import GettingStartedCallout from './GettingStartedCallout.svelte';
 import GettingStartedDialog from './GettingStartedDialog.svelte';
 

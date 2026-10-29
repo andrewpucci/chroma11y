@@ -1,3 +1,5 @@
+import adapter from '@sveltejs/adapter-static';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { faviconPlugin } from './scripts/vite-plugin-favicons.js';
@@ -5,8 +7,13 @@ import { browserslistToTargets } from 'lightningcss';
 import browserslist from 'browserslist';
 
 export default defineConfig({
-  plugins: [sveltekit(), ...(process.env.VITEST ? [] : [faviconPlugin()])],
-
+  plugins: [
+    sveltekit({
+      preprocess: vitePreprocess(),
+      adapter: adapter({ fallback: 'index.html' })
+    }),
+    ...(process.env.VITEST ? [] : [faviconPlugin()])
+  ],
   css: {
     transformer: 'lightningcss',
     lightningcss: {

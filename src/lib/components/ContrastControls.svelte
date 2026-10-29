@@ -12,18 +12,18 @@
     customNeutralName,
     customPaletteNames,
     updateColorState
-  } from '$lib/stores';
-  import { announce } from '$lib/announce';
-  import { isValidHexColor } from '$lib/colorUtils';
+  } from '#lib/stores.js';
+  import { announce } from '#lib/announce.js';
+  import { isValidHexColor } from '#lib/colorUtils.js';
   import {
     DEFAULT_NEUTRAL_PALETTE_NAME,
     resolveGeneratedPaletteNames,
     resolveNeutralPaletteName
-  } from '$lib/paletteNameUtils';
-  import { HELP_TOPICS } from '$lib/help/helpContent';
+  } from '#lib/paletteNameUtils.js';
+  import { HELP_TOPICS } from '#lib/help/helpContent.js';
   import CheckboxRow from './CheckboxRow.svelte';
   import HelpTooltip from './HelpTooltip.svelte';
-  import type { ContrastAlgorithm, SwatchContrastIndicators } from '$lib/types';
+  import type { ContrastAlgorithm, SwatchContrastIndicators } from '#lib/types.js';
 
   interface Props {
     onHistoryCommit?: (label: string) => void;

@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { HELP_RESOURCES } from '$lib/help/helpContent';
-import { closeGettingStartedGuide, gettingStartedDialog } from '$lib/help/helpDialogStore';
+import { HELP_RESOURCES } from '#lib/help/helpContent.js';
+import { closeGettingStartedGuide, gettingStartedDialog } from '#lib/help/helpDialogStore.js';
 import AppHeader from './AppHeader.svelte';
 import GettingStartedDialog from './GettingStartedDialog.svelte';
 

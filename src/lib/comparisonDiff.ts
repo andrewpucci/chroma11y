@@ -1,13 +1,13 @@
-import { getConstraintThresholdLabel, getTargetColorMetricLabel } from '$lib/constraintUtils';
-import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from '$lib/paletteNameUtils';
-import { themePresets } from '$lib/themePresets';
+import { getConstraintThresholdLabel, getTargetColorMetricLabel } from '#lib/constraintUtils.js';
+import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from '#lib/paletteNameUtils.js';
+import { themePresets } from '#lib/themePresets.js';
 import type {
   ColorDifferenceMetric,
   Constraint,
   ConstraintThresholdKey,
   ContrastAlgorithm,
   ContrastReference
-} from '$lib/types';
+} from '#lib/types.js';
 
 export interface DiffEntry {
   field: string;

@@ -4,8 +4,8 @@
     swatchChangeThreshold,
     setComparisonMetric,
     setSwatchChangeThreshold
-  } from '$lib/stores';
-  import type { ColorDifferenceMetric } from '$lib/types';
+  } from '#lib/stores.js';
+  import type { ColorDifferenceMetric } from '#lib/types.js';
   import SelectField from './SelectField.svelte';
   import SliderNumberField from './SliderNumberField.svelte';
 

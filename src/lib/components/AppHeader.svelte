@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { HistoryMenuEntry } from '$lib/history';
-  import { gettingStartedDialog, openGettingStartedGuide } from '$lib/help/helpDialogStore';
+  import type { HistoryMenuEntry } from '#lib/history.js';
+  import { gettingStartedDialog, openGettingStartedGuide } from '#lib/help/helpDialogStore.js';
   import Brand from './Brand.svelte';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';

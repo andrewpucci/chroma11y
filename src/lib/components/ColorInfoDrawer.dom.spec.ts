@@ -4,25 +4,25 @@ import Color from 'colorjs.io';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { openDrawer, closeDrawer, drawerIsOpen } from '$lib/drawerStore';
-import { resetColorState, updateColorState } from '$lib/stores';
+import { openDrawer, closeDrawer, drawerIsOpen } from '#lib/drawerStore.js';
+import { resetColorState, updateColorState } from '#lib/stores.js';
 
-vi.mock('$lib/announce', () => ({
+vi.mock('#lib/announce.js', () => ({
   announce: vi.fn()
 }));
 
-vi.mock('$lib/colorUtils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/colorUtils')>();
+vi.mock('#lib/colorUtils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/colorUtils.js')>();
   return {
     ...actual,
     copyToClipboard: vi.fn()
   };
 });
 
-import { announce } from '$lib/announce';
-import { copyToClipboard, colorToCssOklch, colorToCssOklchSwatch } from '$lib/colorUtils';
-import ColorInfoDrawer from '$lib/components/ColorInfoDrawer.svelte';
-import ColorSwatch from '$lib/components/ColorSwatch.svelte';
+import { announce } from '#lib/announce.js';
+import { copyToClipboard, colorToCssOklch, colorToCssOklchSwatch } from '#lib/colorUtils.js';
+import ColorInfoDrawer from '#lib/components/ColorInfoDrawer.svelte';
+import ColorSwatch from '#lib/components/ColorSwatch.svelte';
 
 /** Helper: build a DrawerColorData payload for a given hex */
 function makeDrawerData(hex = '#5a95ff', step = '500', paletteName = 'Blue') {

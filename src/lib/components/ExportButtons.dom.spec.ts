@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/exportUtils', async (importOriginal) => {
+vi.mock('#lib/exportUtils.js', async (importOriginal) => {
   const actual = (await importOriginal()) as object;
   return {
     ...actual,
@@ -13,7 +13,7 @@ vi.mock('$lib/exportUtils', async (importOriginal) => {
   };
 });
 
-vi.mock('$lib/colorUtils', async (importOriginal) => {
+vi.mock('#lib/colorUtils.js', async (importOriginal) => {
   const actual = (await importOriginal()) as object;
   return {
     ...actual,
@@ -21,15 +21,15 @@ vi.mock('$lib/colorUtils', async (importOriginal) => {
   };
 });
 
-vi.mock('$lib/announce', () => ({
+vi.mock('#lib/announce.js', () => ({
   announce: vi.fn()
 }));
 
-import ExportButtons from '$lib/components/ExportButtons.svelte';
-import { copyToClipboard } from '$lib/colorUtils';
-import { downloadDesignTokens, downloadCSS, downloadSCSS } from '$lib/exportUtils';
-import { announce } from '$lib/announce';
-import { closeExportPreview, exportPreviewDialog } from '$lib/help/exportPreviewStore';
+import ExportButtons from '#lib/components/ExportButtons.svelte';
+import { copyToClipboard } from '#lib/colorUtils.js';
+import { downloadDesignTokens, downloadCSS, downloadSCSS } from '#lib/exportUtils.js';
+import { announce } from '#lib/announce.js';
+import { closeExportPreview, exportPreviewDialog } from '#lib/help/exportPreviewStore.js';
 import { get } from 'svelte/store';
 
 const sampleProps = {

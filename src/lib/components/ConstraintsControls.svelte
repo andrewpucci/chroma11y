@@ -42,9 +42,9 @@
     x2,
     y1,
     y2
-  } from '$lib/stores';
-  import { announce } from '$lib/announce';
-  import { colorToCssHex, isValidHexColor } from '$lib/colorUtils';
+  } from '#lib/stores.js';
+  import { announce } from '#lib/announce.js';
+  import { colorToCssHex, isValidHexColor } from '#lib/colorUtils.js';
   import {
     computeAdjacentStopContrast,
     createDefaultContrastRuleConstraint,
@@ -54,14 +54,14 @@
     getTargetColorMetricLabel,
     getConstraintThresholdValue,
     getThresholdOptionsForAlgorithm
-  } from '$lib/constraintUtils';
-  import { getConstraintSolveRequestHash } from '$lib/constraintSolve';
-  import { startSolveConstraintsInWorker } from '$lib/constraintSolveClient';
+  } from '#lib/constraintUtils.js';
+  import { getConstraintSolveRequestHash } from '#lib/constraintSolve.js';
+  import { startSolveConstraintsInWorker } from '#lib/constraintSolveClient.js';
   import {
     DEFAULT_NEUTRAL_PALETTE_NAME,
     resolveGeneratedPaletteNames,
     resolveNeutralPaletteName
-  } from '$lib/paletteNameUtils';
+  } from '#lib/paletteNameUtils.js';
   import Badge from './Badge.svelte';
   import Button from './Button.svelte';
   import CheckboxRow from './CheckboxRow.svelte';
@@ -75,8 +75,8 @@
     ContrastAlgorithm,
     ContrastRuleConstraintResult,
     TargetColorConstraintResult
-  } from '$lib/types';
-  import { MAX_MUST_PASS_TARGETS } from '$lib/types';
+  } from '#lib/types.js';
+  import { MAX_MUST_PASS_TARGETS } from '#lib/types.js';
 
   interface Props {
     onHistoryCommit?: (label: string) => void;

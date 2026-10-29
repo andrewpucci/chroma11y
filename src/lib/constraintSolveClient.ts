@@ -1,10 +1,10 @@
-import ConstraintSolveWorker from '$lib/constraintSolve.worker?worker';
+import ConstraintSolveWorker from '#lib/constraintSolve.worker?worker';
 import type {
   ConstraintSolveProfile,
   ConstraintSolveRequest,
   ConstraintSolveResponse
-} from '$lib/types';
-import { getConstraintSolveRequestHash } from '$lib/constraintSolve';
+} from '#lib/types.js';
+import { getConstraintSolveRequestHash } from '#lib/constraintSolve.js';
 
 const CACHE_STORAGE_KEY = 'chroma11y-solve-cache';
 

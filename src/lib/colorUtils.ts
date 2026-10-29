@@ -5,14 +5,14 @@
 import Color from 'colorjs.io';
 import { colornames as shortColorNames } from 'color-name-list/short';
 import easing from 'bezier-easing';
-import { announce } from '$lib/announce';
+import { announce } from '#lib/announce.js';
 import type {
   DisplayColorSpace,
   GamutSpace,
   ContrastAlgorithm,
   OklchDisplaySignificantDigits,
   CvdMode
-} from '$lib/types';
+} from '#lib/types.js';
 
 // Re-export Color so consumers can use it as the OKLCH type
 export type { default as ColorType } from 'colorjs.io';

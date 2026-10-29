@@ -14,7 +14,7 @@ import type {
   SwatchLabels,
   ThemePreference,
   ColorDifferenceMetric
-} from '$lib/types';
+} from '#lib/types.js';
 
 const INITIAL_HISTORY_LABEL = 'Starting state';
 const MAX_HISTORY = 100;

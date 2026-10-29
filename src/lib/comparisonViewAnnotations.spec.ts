@@ -1,7 +1,7 @@
 import Color from 'colorjs.io';
 import { describe, expect, it } from 'vitest';
 
-import { buildComparisonAnnotation } from '$lib/comparisonViewAnnotations';
+import { buildComparisonAnnotation } from '#lib/comparisonViewAnnotations.js';
 
 const baseConfig = {
   contrast: { low: '#ffffff', high: '#000000' },

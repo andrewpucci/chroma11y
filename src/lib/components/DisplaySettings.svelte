@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { HELP_TOPICS } from '$lib/help/helpContent';
+  import { HELP_TOPICS } from '#lib/help/helpContent.js';
   import Icon from './Icon.svelte';
   import CheckboxRow from './CheckboxRow.svelte';
   import HelpTooltip from './HelpTooltip.svelte';
@@ -14,10 +14,10 @@
     cvdMode,
     updateColorState,
     setThemePreference
-  } from '$lib/stores';
+  } from '#lib/stores.js';
   import SliderNumberField from './SliderNumberField.svelte';
-  import { announce } from '$lib/announce';
-  import { clampOklchDisplaySignificantDigits } from '$lib/colorUtils';
+  import { announce } from '#lib/announce.js';
+  import { clampOklchDisplaySignificantDigits } from '#lib/colorUtils.js';
   import type {
     DisplayColorSpace,
     GamutSpace,
@@ -25,7 +25,7 @@
     SwatchLabels,
     OklchDisplaySignificantDigits,
     CvdMode
-  } from '$lib/types';
+  } from '#lib/types.js';
 
   interface Props {
     onHistoryCommit?: (label: string) => void;

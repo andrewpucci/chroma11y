@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { announce } from '$lib/announce';
-  import { referenceConfiguration } from '$lib/stores';
+  import { announce } from '#lib/announce.js';
+  import { referenceConfiguration } from '#lib/stores.js';
   import {
     pinReferenceConfiguration,
     clearReferenceConfiguration,
     replaceReferenceConfiguration,
     restoreReferenceConfiguration
-  } from '$lib/stores';
+  } from '#lib/stores.js';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
 

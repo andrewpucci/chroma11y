@@ -3,8 +3,8 @@ import { get } from 'svelte/store';
 import Color from 'colorjs.io';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import ConstraintsControls from '$lib/components/ConstraintsControls.svelte';
-import { announce } from '$lib/announce';
+import ConstraintsControls from '#lib/components/ConstraintsControls.svelte';
+import { announce } from '#lib/announce.js';
 import {
   activeConstraintSolveRunState,
   constraints,
@@ -12,17 +12,17 @@ import {
   solveAdjacentStopLows,
   setConstraintSolverSummary,
   updateColorState
-} from '$lib/stores';
+} from '#lib/stores.js';
 
 const { startSolveConstraintsInWorker } = vi.hoisted(() => ({
   startSolveConstraintsInWorker: vi.fn()
 }));
 
-vi.mock('$lib/announce', () => ({
+vi.mock('#lib/announce.js', () => ({
   announce: vi.fn()
 }));
 
-vi.mock('$lib/constraintSolveClient', () => ({
+vi.mock('#lib/constraintSolveClient.js', () => ({
   startSolveConstraintsInWorker
 }));
 

@@ -1,13 +1,13 @@
 import { writable, derived } from 'svelte/store';
 import type Color from 'colorjs.io';
-import { colorToCssHex, colorToCssRender, colorToCssSwatchRender } from '$lib/colorUtils';
-import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from '$lib/paletteNameUtils';
-import { createReferenceConfiguration } from '$lib/referenceConfiguration';
+import { colorToCssHex, colorToCssRender, colorToCssSwatchRender } from '#lib/colorUtils.js';
+import { normalizeCustomPaletteName, normalizeCustomPaletteNames } from '#lib/paletteNameUtils.js';
+import { createReferenceConfiguration } from '#lib/referenceConfiguration.js';
 import {
   COMPARISON_METRICS,
   DEFAULT_SWATCH_CHANGE_THRESHOLDS_BY_METRIC
-} from '$lib/comparisonMetrics';
-import { themePresets } from '$lib/themePresets';
+} from '#lib/comparisonMetrics.js';
+import { themePresets } from '#lib/themePresets.js';
 import type {
   DisplayColorSpace,
   GamutSpace,
@@ -23,8 +23,8 @@ import type {
   ConstraintSolveRunState,
   CvdMode,
   ColorDifferenceMetric
-} from '$lib/types';
-import type { ReferenceConfiguration } from '$lib/referenceConfiguration';
+} from '#lib/types.js';
+import type { ReferenceConfiguration } from '#lib/referenceConfiguration.js';
 
 /**
  * Interface for color state

@@ -4,7 +4,7 @@ import {
   CHROMA_MULTIPLIER_MIN,
   clampChromaMultiplier,
   getChromaMultiplierBounds
-} from '$lib/chromaMultiplier';
+} from '#lib/chromaMultiplier.js';
 import {
   colorToCssHex,
   generatePalettes,
@@ -13,11 +13,11 @@ import {
   isValidHexColor,
   LIGHTNESS_NUDGER_BOUNDS,
   type ColorGenParams
-} from '$lib/colorUtils';
+} from '#lib/colorUtils.js';
 import {
   DEFAULT_NEUTRAL_PALETTE_NAME,
   getGeneratedPaletteFallbackName
-} from '$lib/paletteNameUtils';
+} from '#lib/paletteNameUtils.js';
 import type {
   AdjacentStopContrastEntry,
   ColorDifferenceMetric,
@@ -31,7 +31,7 @@ import type {
   ContrastRuleConstraint,
   SolverAdjustmentSnapshot,
   TargetColorConstraint
-} from '$lib/types';
+} from '#lib/types.js';
 
 export const DELTA_E_OK_PASS_MAX = 0.02;
 export const DELTA_E_OK_WARNING_MAX = 0.05;

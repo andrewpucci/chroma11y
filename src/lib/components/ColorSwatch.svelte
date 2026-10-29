@@ -10,7 +10,7 @@
     MIN_APCA_LC_FLUENT,
     MIN_APCA_LC_BODY,
     MIN_APCA_LC_LARGE
-  } from '$lib/colorUtils';
+  } from '#lib/colorUtils.js';
   import {
     contrastColors,
     swatchLabels,
@@ -22,13 +22,13 @@
     activeSwatchPicker,
     updateConstraint,
     updateContrastReference
-  } from '$lib/stores';
-  import type { ComparisonChip } from '$lib/comparisonViewAnnotations';
-  import { openDrawer } from '$lib/drawerStore';
-  import { announce } from '$lib/announce';
+  } from '#lib/stores.js';
+  import type { ComparisonChip } from '#lib/comparisonViewAnnotations.js';
+  import { openDrawer } from '#lib/drawerStore.js';
+  import { announce } from '#lib/announce.js';
   import Icon from './Icon.svelte';
   import Color from 'colorjs.io';
-  import type { ContrastAlgorithm } from '$lib/types';
+  import type { ContrastAlgorithm } from '#lib/types.js';
 
   interface Props {
     color: string;

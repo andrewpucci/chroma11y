@@ -4,8 +4,8 @@ import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import Color from 'colorjs.io';
 
-import PaletteGrid from '$lib/components/PaletteGrid.svelte';
-import { customPaletteNames, hueNudgers, resetColorState } from '$lib/stores';
+import PaletteGrid from '#lib/components/PaletteGrid.svelte';
+import { customPaletteNames, hueNudgers, resetColorState } from '#lib/stores.js';
 
 describe('PaletteGrid', () => {
   beforeEach(() => {
