@@ -1,6 +1,5 @@
 {
   "extends": "$app/tsconfig",
-  "exclude": ["scripts"],
   "compilerOptions": {
     "rewriteRelativeImportExtensions": true,
     "sourceMap": true,

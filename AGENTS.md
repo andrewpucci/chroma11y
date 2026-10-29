@@ -133,7 +133,7 @@ npm run check:watch # svelte-check in watch mode
 
 1. Svelte/core (`svelte`, `svelte/store`)
 2. Third-party (`colorjs.io`, etc.)
-3. `$lib/` relative imports
+3. `#lib/` subpath imports (with explicit `.js` extensions for TS modules)
 4. Same directory
 
 ### Naming conventions
