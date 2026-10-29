@@ -7,7 +7,6 @@ import svelte from 'eslint-plugin-svelte';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import ts from 'typescript-eslint';
-import svelteConfig from './svelte.config.js';
 
 const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 
@@ -30,12 +29,15 @@ export default defineConfig(
   {
     files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 
+    // No `svelteConfig`: the parser only reads compilerOptions, warningFilter and
+    // kit.files.routes from it, and vite.config.ts sets none of them. Loading it would
+    // run the whole Vite config on every lint. If any of those get configured, move them
+    // to a small module that both vite.config.ts and this file import.
     languageOptions: {
       parserOptions: {
         projectService: true,
         extraFileExtensions: ['.svelte'],
-        parser: ts.parser,
-        svelteConfig
+        parser: ts.parser
       }
     }
   },

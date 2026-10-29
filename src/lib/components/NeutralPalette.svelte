@@ -1,22 +1,22 @@
 <script lang="ts">
-  import { announce } from '$lib/announce';
-  import { resolveNeutralPaletteName } from '$lib/paletteNameUtils';
+  import { announce } from '#lib/announce.js';
+  import { resolveNeutralPaletteName } from '#lib/paletteNameUtils.js';
   import {
     contrastColors,
     customNeutralName,
     updateColorState,
     updateLightnessNudger
-  } from '$lib/stores';
-  import Card from '$lib/components/Card.svelte';
-  import PaletteNameEditor from '$lib/components/PaletteNameEditor.svelte';
+  } from '#lib/stores.js';
+  import Card from '#lib/components/Card.svelte';
+  import PaletteNameEditor from '#lib/components/PaletteNameEditor.svelte';
   import Button from './Button.svelte';
   import ColorSwatch from './ColorSwatch.svelte';
   import Icon from './Icon.svelte';
-  import { openExportPreview } from '$lib/help/exportPreviewStore';
-  import '$lib/styles/nudger.css';
+  import { openExportPreview } from '#lib/help/exportPreviewStore.js';
+  import '#lib/styles/nudger.css';
   import type Color from 'colorjs.io';
-  import type { ComparisonAnnotation } from '$lib/comparisonViewAnnotations';
-  import type { ContrastAlgorithm } from '$lib/types';
+  import type { ComparisonAnnotation } from '#lib/comparisonViewAnnotations.js';
+  import type { ContrastAlgorithm } from '#lib/types.js';
 
   interface Props {
     neutrals?: (Color | null)[];

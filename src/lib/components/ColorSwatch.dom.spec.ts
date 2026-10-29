@@ -3,15 +3,15 @@ import Color from 'colorjs.io';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import ColorSwatch from '$lib/components/ColorSwatch.svelte';
-import { drawerIsOpen } from '$lib/drawerStore';
+import ColorSwatch from '#lib/components/ColorSwatch.svelte';
+import { drawerIsOpen } from '#lib/drawerStore.js';
 import {
   activeSwatchPicker,
   constraints,
   lowReference,
   resetColorState,
   updateColorState
-} from '$lib/stores';
+} from '#lib/stores.js';
 
 describe('ColorSwatch', () => {
   beforeEach(() => {

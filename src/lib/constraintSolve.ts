@@ -4,7 +4,7 @@ import {
   CHROMA_MULTIPLIER_MIN,
   clampChromaMultiplier,
   getChromaMultiplierBounds
-} from '$lib/chromaMultiplier';
+} from '#lib/chromaMultiplier.js';
 import {
   colorToCssHex,
   generatePalettes,
@@ -16,13 +16,13 @@ import {
   PALETTE_SATURATION_NUDGER_BOUNDS,
   STEP_SATURATION_NUDGER_BOUNDS,
   type ColorGenParams
-} from '$lib/colorUtils';
+} from '#lib/colorUtils.js';
 import {
   evaluateConstraints,
   getAdjacentStopLowPairThreshold,
   getConstraintThresholdValue,
   getTargetColorThresholds
-} from '$lib/constraintUtils';
+} from '#lib/constraintUtils.js';
 import type {
   Constraint,
   ConstraintResult,
@@ -35,9 +35,9 @@ import type {
   ContrastRuleConstraint,
   SolverAdjustmentSnapshot,
   TargetColorConstraint
-} from '$lib/types';
-import { MAX_MUST_PASS_TARGETS } from '$lib/types';
-import { simplexOptimize } from '$lib/simplexOptimizer';
+} from '#lib/types.js';
+import { MAX_MUST_PASS_TARGETS } from '#lib/types.js';
+import { simplexOptimize } from '#lib/simplexOptimizer.js';
 
 const SOLVER_BEZIER_PRESETS = [
   { x1: 0.16, y1: 0, x2: 0.28, y2: 0.38 },

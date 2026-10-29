@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { HistoryMenuEntry } from '$lib/history';
+  import type { HistoryMenuEntry } from '#lib/history.js';
   import Icon from './Icon.svelte';
   import SplitButton, { type SplitButtonMenuItem } from './SplitButton.svelte';
 

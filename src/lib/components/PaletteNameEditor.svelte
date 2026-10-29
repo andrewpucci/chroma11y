@@ -10,7 +10,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
 
-  import { normalizeCustomPaletteName } from '$lib/paletteNameUtils';
+  import { normalizeCustomPaletteName } from '#lib/paletteNameUtils.js';
   import Icon from './Icon.svelte';
 
   interface Props {

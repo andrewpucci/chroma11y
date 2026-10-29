@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Color from 'colorjs.io';
-import ContrastControls from '$lib/components/ContrastControls.svelte';
+import ContrastControls from '#lib/components/ContrastControls.svelte';
 import {
   activeSwatchPicker,
   contrastColors,
@@ -15,10 +15,10 @@ import {
   lowReference,
   resetColorState,
   updateColorState
-} from '$lib/stores';
-import { announce } from '$lib/announce';
+} from '#lib/stores.js';
+import { announce } from '#lib/announce.js';
 
-vi.mock('$lib/announce', () => ({
+vi.mock('#lib/announce.js', () => ({
   announce: vi.fn()
 }));
 

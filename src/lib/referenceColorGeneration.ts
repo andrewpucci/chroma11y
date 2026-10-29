@@ -2,8 +2,8 @@
  * Reference color generation utilities for rendering frozen reference configurations
  */
 
-import { generatePalettes, type ColorGenParams } from '$lib/colorUtils';
-import { colorToCssHex, colorToCssRender, colorToCssSwatchRender } from '$lib/colorUtils';
+import { generatePalettes, type ColorGenParams } from '#lib/colorUtils.js';
+import { colorToCssHex, colorToCssRender, colorToCssSwatchRender } from '#lib/colorUtils.js';
 import type Color from 'colorjs.io';
 import type { ReferenceConfiguration } from './referenceConfiguration';
 import type { CvdMode, DisplayColorSpace, GamutSpace } from './types';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import DynamicSvg from '$lib/components/DynamicSvg.svelte';
+  import DynamicSvg from '#lib/components/DynamicSvg.svelte';
 
   interface Props {
     title?: string;

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { HELP_TOPICS } from '$lib/help/helpContent';
+  import { HELP_TOPICS } from '#lib/help/helpContent.js';
   import {
     downloadDesignTokens,
     downloadCSS,
@@ -8,10 +8,10 @@
     exportAsCSS,
     exportAsDesignTokens,
     exportAsSCSS
-  } from '$lib/exportUtils';
-  import { copyToClipboard } from '$lib/colorUtils';
-  import { announce } from '$lib/announce';
-  import { openExportPreview, type ExportFormat } from '$lib/help/exportPreviewStore';
+  } from '#lib/exportUtils.js';
+  import { copyToClipboard } from '#lib/colorUtils.js';
+  import { announce } from '#lib/announce.js';
+  import { openExportPreview, type ExportFormat } from '#lib/help/exportPreviewStore.js';
   import Button from './Button.svelte';
   import HelpTooltip from './HelpTooltip.svelte';
   import Icon from './Icon.svelte';

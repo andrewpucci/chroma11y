@@ -2,8 +2,8 @@ import type {
   ConstraintSolveProfile,
   ConstraintSolveRequest,
   ConstraintSolveResponse
-} from '$lib/types';
-import { solveConstraintsWithProfile } from '$lib/constraintSolve';
+} from '#lib/types.js';
+import { solveConstraintsWithProfile } from '#lib/constraintSolve.js';
 
 interface ConstraintSolveWorkerRequest {
   request: ConstraintSolveRequest;

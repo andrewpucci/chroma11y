@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { GETTING_STARTED_SECTIONS, HELP_RESOURCES, HELP_TOPICS } from '$lib/help/helpContent';
-  import { closeGettingStartedGuide, gettingStartedDialog } from '$lib/help/helpDialogStore';
+  import { GETTING_STARTED_SECTIONS, HELP_RESOURCES, HELP_TOPICS } from '#lib/help/helpContent.js';
+  import { closeGettingStartedGuide, gettingStartedDialog } from '#lib/help/helpDialogStore.js';
   import Icon from './Icon.svelte';
 
   const dialogId = 'getting-started-dialog';

@@ -1,4 +1,4 @@
-import type { ContrastReference } from '$lib/types';
+import type { ContrastReference } from '#lib/types.js';
 
 function createNeutralContrastReference(stepIndex: number): ContrastReference {
   return {

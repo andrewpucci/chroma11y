@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { Snippet } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import Card from '$lib/components/Card.svelte';
+import Card from '#lib/components/Card.svelte';
 
 const testSnippet = (() => {}) as unknown as Snippet;
 

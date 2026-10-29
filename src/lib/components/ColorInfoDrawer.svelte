@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { drawerIsOpen, drawerData, closeDrawer } from '$lib/drawerStore';
+  import { drawerIsOpen, drawerData, closeDrawer } from '#lib/drawerStore.js';
   import {
     copyToClipboard,
     nearestFriendlyColorName,
@@ -21,9 +21,9 @@
     mapColorToGamut,
     requiresWideGamutWarning,
     isStrictlyRepresentableInSrgb
-  } from '$lib/colorUtils';
-  import { contrastColors, displayColorSpace, gamutSpace } from '$lib/stores';
-  import { announce } from '$lib/announce';
+  } from '#lib/colorUtils.js';
+  import { contrastColors, displayColorSpace, gamutSpace } from '#lib/stores.js';
+  import { announce } from '#lib/announce.js';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
 

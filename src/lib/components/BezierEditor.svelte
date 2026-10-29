@@ -100,7 +100,10 @@
   let capturedElement: Element | null = $state(null);
   let hasPendingKeyboardCommit = false;
 
-  import { getLastInteractionWasKeyboard, initializeGlobalFocusListeners } from '$lib/focusUtils';
+  import {
+    getLastInteractionWasKeyboard,
+    initializeGlobalFocusListeners
+  } from '#lib/focusUtils.js';
 
   // Focus state for showing focus rings (only on keyboard navigation, like :focus-visible)
   let p1FocusVisible = $state(false);

@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import ColorControls from '$lib/components/ColorControls.svelte';
+import ColorControls from '#lib/components/ColorControls.svelte';
 
 describe('ColorControls', () => {
   it('renders base color controls and keeps color input in sync with hex input', async () => {

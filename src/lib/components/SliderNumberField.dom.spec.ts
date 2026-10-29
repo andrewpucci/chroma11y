@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 
-import SliderNumberField from '$lib/components/SliderNumberField.svelte';
+import SliderNumberField from '#lib/components/SliderNumberField.svelte';
 
 describe('SliderNumberField', () => {
   it('renders grouped slider controls with shared described-by content', () => {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { diffColorStates, type DiffEntry } from '$lib/comparisonDiff';
+  import { diffColorStates, type DiffEntry } from '#lib/comparisonDiff.js';
   import Badge from './Badge.svelte';
   import Card from './Card.svelte';
   import Icon from './Icon.svelte';

@@ -18,7 +18,7 @@ import {
   getTargetColorStatus,
   getThresholdOptionsForAlgorithm
 } from './constraintUtils';
-import type { ConstraintResult } from '$lib/types';
+import type { ConstraintResult } from '#lib/types.js';
 
 describe('constraintUtils', () => {
   it('buckets deltaEOK values at the configured boundaries', () => {

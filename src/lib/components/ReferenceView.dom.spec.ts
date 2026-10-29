@@ -2,10 +2,10 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import Color from 'colorjs.io';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import ExportPreviewDialog from '$lib/components/ExportPreviewDialog.svelte';
-import ReferenceView from '$lib/components/ReferenceView.svelte';
-import { closeExportPreview } from '$lib/help/exportPreviewStore';
-import { resetColorState, updateColorState } from '$lib/stores';
+import ExportPreviewDialog from '#lib/components/ExportPreviewDialog.svelte';
+import ReferenceView from '#lib/components/ReferenceView.svelte';
+import { closeExportPreview } from '#lib/help/exportPreviewStore.js';
+import { resetColorState, updateColorState } from '#lib/stores.js';
 
 function toColors(hexes: string[]): Color[] {
   return hexes.map((hex) => new Color(hex));

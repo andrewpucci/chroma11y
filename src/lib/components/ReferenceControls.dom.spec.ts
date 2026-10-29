@@ -3,19 +3,19 @@ import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/announce', () => ({
+vi.mock('#lib/announce.js', () => ({
   announce: vi.fn()
 }));
 
-import ReferenceControls from '$lib/components/ReferenceControls.svelte';
-import { announce } from '$lib/announce';
+import ReferenceControls from '#lib/components/ReferenceControls.svelte';
+import { announce } from '#lib/announce.js';
 import {
   colorStore,
   pinReferenceConfiguration,
   referenceConfiguration,
   resetColorState,
   updateColorState
-} from '$lib/stores';
+} from '#lib/stores.js';
 
 describe('ReferenceControls', () => {
   beforeEach(() => {
@@ -97,7 +97,7 @@ describe('ReferenceControls', () => {
     it('calls replaceReferenceConfiguration when Replace Reference is clicked', async () => {
       expect.assertions(1);
       const user = userEvent.setup();
-      const spy = vi.spyOn(await import('$lib/stores'), 'replaceReferenceConfiguration');
+      const spy = vi.spyOn(await import('#lib/stores.js'), 'replaceReferenceConfiguration');
 
       render(ReferenceControls);
 
@@ -139,7 +139,7 @@ describe('ReferenceControls', () => {
     it('calls restoreReferenceConfiguration when Restore Reference is clicked', async () => {
       expect.assertions(1);
       const user = userEvent.setup();
-      const spy = vi.spyOn(await import('$lib/stores'), 'restoreReferenceConfiguration');
+      const spy = vi.spyOn(await import('#lib/stores.js'), 'restoreReferenceConfiguration');
 
       render(ReferenceControls);
 

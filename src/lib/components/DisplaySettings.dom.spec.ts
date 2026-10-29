@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/announce', () => ({
+vi.mock('#lib/announce.js', () => ({
   announce: vi.fn()
 }));
 
-import DisplaySettings from '$lib/components/DisplaySettings.svelte';
+import DisplaySettings from '#lib/components/DisplaySettings.svelte';
 import {
   displayColorSpace,
   gamutSpace,
@@ -17,8 +17,8 @@ import {
   oklchDisplaySignificantDigits,
   updateColorState,
   setThemePreference
-} from '$lib/stores';
-import { announce } from '$lib/announce';
+} from '#lib/stores.js';
+import { announce } from '#lib/announce.js';
 
 describe('DisplaySettings', () => {
   function getAdvancedSummary(): HTMLElement {
