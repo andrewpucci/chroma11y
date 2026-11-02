@@ -16,7 +16,7 @@
   ],
   "license": "GPL-3.0",
   "engines": {
-    "node": ">=24.19.0"
+    "node": ">=26.13.0"
   },
   "devEngines": {
     "packageManager": {
@@ -39,8 +39,8 @@
     "lint": "prettier --check . && oxlint && eslint .",
     "lint:fix": "prettier --write . && oxlint --fix && eslint . --fix",
     "lint-staged": "lint-staged",
-    "test:unit": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:unit": "NODE_OPTIONS=--no-experimental-webstorage vitest",
+    "test:coverage": "NODE_OPTIONS=--no-experimental-webstorage vitest run --coverage",
     "test": "npm run test:unit -- --run && npm run test:e2e",
     "test:e2e": "docker compose run --rm --build test",
     "test:e2e:local": "playwright test",

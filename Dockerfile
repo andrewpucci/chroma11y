@@ -1,13 +1,14 @@
 # Match GitHub Actions ubuntu-latest environment
 FROM ubuntu:22.04
 
-ARG NODE_VERSION=24.19.0
+ARG NODE_VERSION=26.13.0
 ARG TARGETARCH
 
 # Install an exact Node.js LTS patch to match the pinned repo toolchain
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
+    libatomic1 \
     xz-utils \
     && case "${TARGETARCH}" in \
         amd64) node_arch='x64' ;; \
