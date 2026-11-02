@@ -28,9 +28,12 @@ This repo uses a single-context domain-doc layout rooted at `CONTEXT.md` and `do
 
 ## Toolchain
 
-Use Node 24.19+ with its bundled npm 11. `devEngines` in `package.json` makes older npm versions
+Use Node 26.13+ with its bundled npm 11. `devEngines` in `package.json` makes older npm versions
 fail, and CI fails if regenerating `package-lock.json` with the pinned npm changes it. Never edit
 the lockfile by hand or regenerate it with another npm version.
+
+The Vitest scripts disable Node's Web Storage implementation so jsdom provides browser-faithful
+`localStorage` in DOM tests. Keep that option when updating the Node test toolchain.
 
 ## Build commands
 
