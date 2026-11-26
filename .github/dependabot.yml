@@ -55,6 +55,14 @@ updates:
       prefix-development: chore
       include: scope
     groups:
+      # vitest and @vitest/* pin each other as exact peers, so every update,
+      # majors included, must land in one PR or npm ci fails (see #297).
+      # Dependabot puts a dependency in the first group it matches, so keep
+      # this group above the catch-all groups below.
+      vitest:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
       npm-production-minor-patch:
         dependency-type: production
         patterns:
